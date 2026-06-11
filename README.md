@@ -2,6 +2,6 @@
 
 Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 
-| Image | Tags | Description |
-|---|---|---|
-| `m11s/rclone` | `latest-inotify`, `1.74-inotify` | rclone with inotify-tools |
+| Image | Description |
+|---|---|
+| `m11s/rclone` | rclone with inotify-tools |
