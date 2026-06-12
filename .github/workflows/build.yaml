@@ -28,7 +28,7 @@ jobs:
               m11s/rclone:1.74-inotify
           - context: decap-cms
             tags: |
-              m11s/decap-cms:latest
+              m11s/decap-cms:latest-s3
               m11s/decap-cms:0.1.0-s3
     steps:
       - name: Checkout

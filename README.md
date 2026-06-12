@@ -10,13 +10,13 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | Image | Description | Version |
 |-------|-------------|---------|
 | [m11s/rclone](https://hub.docker.com/r/m11s/rclone) | rclone with inotify-tools | ![Version](https://img.shields.io/docker/v/m11s/rclone/latest-inotify?label=) |
-| [m11s/decap-cms](https://hub.docker.com/r/m11s/decap-cms) | Decap CMS with S3 media library | ![Version](https://img.shields.io/docker/v/m11s/decap-cms/latest?label=) |
+| [m11s/decap-cms](https://hub.docker.com/r/m11s/decap-cms) | Decap CMS with S3 media library | ![Version](https://img.shields.io/docker/v/m11s/decap-cms/latest-s3?label=) |
 
 ## Quick Start
 
 ```bash
 docker pull m11s/rclone:latest-inotify
-docker pull m11s/decap-cms:latest
+docker pull m11s/decap-cms:latest-s3
 ```
 
 ## Publishing
