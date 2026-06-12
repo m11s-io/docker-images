@@ -59,6 +59,37 @@ render_tenant() {
   echo "  configured: /$slug -> $tenant_dir"
 }
 
+generate_landing_page() {
+  local links="$1"
+  cat > /usr/share/nginx/html/landing.html << EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decap CMS</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 80px auto; padding: 0 24px; color: #1a1a1a; }
+    h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 1.5rem; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { border-bottom: 1px solid #eee; }
+    li:first-child { border-top: 1px solid #eee; }
+    a { display: block; padding: 12px 0; color: #2563eb; text-decoration: none; font-size: 1rem; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>Decap CMS</h1>
+  <ul>
+$links
+  </ul>
+</body>
+</html>
+EOF
+}
+
+LINKS=""
+
 if [ -f "$TENANTS_FILE" ]; then
   echo "Multi-tenant mode: loading $TENANTS_FILE"
   jq -e 'type == "array"' "$TENANTS_FILE" >/dev/null
@@ -78,12 +109,18 @@ if [ -f "$TENANTS_FILE" ]; then
     UPLOAD_URL=$(jq -r ".[$i].uploadUrl" "$TENANTS_FILE")
 
     render_tenant "$SLUG" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
+    LINKS="${LINKS}    <li><a href=\"/${SLUG}/\">${SLUG}</a></li>\n"
     i=$((i + 1))
   done
 
 else
   echo "Single-tenant mode: using environment variables"
-  render_tenant "${DECAP_SLUG:-default}" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
+  SLUG="${DECAP_SLUG:-default}"
+  render_tenant "$SLUG" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
+  LINKS="    <li><a href=\"/${SLUG}/\">${SLUG}</a></li>"
 fi
+
+generate_landing_page "$(printf '%b' "$LINKS")"
+echo "  landing page: /"
 
 exec "$@"
