@@ -7,10 +7,10 @@
     <title>Content Manager</title>
   </head>
   <body>
+    <script src="https://unpkg.com/@m11s-io/decap-cms-media-library-s3@0.1.1/dist/index.global.js"></script>
     <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-    <script type="module">
-      import S3MediaLibrary from 'https://unpkg.com/@m11s-io/decap-cms-media-library-s3@0.1.0/dist/index.mjs';
-      CMS.registerMediaLibrary(S3MediaLibrary);
+    <script>
+      CMS.registerMediaLibrary(S3MediaLibrary.default);
     </script>
   </body>
 </html>
