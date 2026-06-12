@@ -36,7 +36,7 @@ jobs:
           - context: rclone-inotify
             tags: m11s/rclone:1.74-inotify
           - context: decap-cms
-            tags: m11s/decap-cms:0.2.2-s3
+            tags: m11s/decap-cms:0.2.3-s3
           - context: s3-upload-proxy
             tags: m11s/s3-upload-proxy:0.1.2
     steps:
