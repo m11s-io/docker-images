@@ -6,6 +6,7 @@ on:
     paths:
       - "rclone-inotify/**"
       - "decap-cms/**"
+      - "s3-upload-proxy/**"
   workflow_dispatch:
     inputs:
       image:
@@ -17,6 +18,7 @@ on:
           - all
           - decap-cms
           - rclone-inotify
+          - s3-upload-proxy
       skip_push:
         description: 'Dry-run: build without pushing to Docker Hub'
         required: false
@@ -39,6 +41,10 @@ jobs:
             tags: |
               m11s/decap-cms:latest
               m11s/decap-cms:0.2.2-s3
+          - context: s3-upload-proxy
+            tags: |
+              m11s/s3-upload-proxy:latest
+              m11s/s3-upload-proxy:0.1.1
     steps:
       - name: Checkout
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
