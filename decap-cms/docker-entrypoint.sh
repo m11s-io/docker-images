@@ -63,7 +63,7 @@ render_tenant() {
 
 generate_landing_page() {
   local links="$1"
-  cat > /usr/share/nginx/html/landing.html << EOF
+  cat > /usr/share/nginx/html/tenants/landing.html << EOF
 <!DOCTYPE html>
 <html lang="en">
 <head>
