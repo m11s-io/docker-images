@@ -38,7 +38,7 @@ jobs:
           - context: decap-cms
             tags: |
               m11s/decap-cms:latest
-              m11s/decap-cms:0.2.1-s3
+              m11s/decap-cms:0.2.2-s3
     steps:
       - name: Checkout
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}

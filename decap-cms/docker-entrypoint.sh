@@ -10,42 +10,43 @@ mkdir -p "$HTML_DIR"
 require_value() {
   local value="$1"
   local name="$2"
-  local tenant="$3"
+  local slug="$3"
 
   if [ -z "$value" ] || [ "$value" = "null" ]; then
-    echo "Missing required field '$name' for tenant '$tenant'" >&2
+    echo "Missing required field '$name' for tenant '$slug'" >&2
     exit 1
   fi
 }
 
-validate_hostname() {
-  local hostname="$1"
+validate_slug() {
+  local slug="$1"
 
-  case "$hostname" in
-    *[!A-Za-z0-9.-]* | .* | *..* | *.)
-      echo "Invalid tenant hostname: $hostname" >&2
-      exit 1
-      ;;
+  case "$slug" in
+    [a-z0-9]*) ;;
+    *) echo "Invalid tenant slug (must start with [a-z0-9]): $slug" >&2; exit 1 ;;
+  esac
+  case "$slug" in
+    *[!a-z0-9-]*) echo "Invalid tenant slug (only [a-z0-9-] allowed): $slug" >&2; exit 1 ;;
   esac
 }
 
 render_tenant() {
-  local hostname
+  local slug
   local gitlab_repo="$2"
   local gitlab_branch="$3"
   local gitlab_app_id="$4"
   local upload_url="$5"
   local tenant_dir
 
-  hostname=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
-  tenant_dir="$HTML_DIR/$hostname/admin"
+  slug=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  tenant_dir="$HTML_DIR/$slug"
 
-  require_value "$hostname" hostname "$hostname"
-  require_value "$gitlab_repo" gitlabRepo "$hostname"
-  require_value "$gitlab_branch" gitlabBranch "$hostname"
-  require_value "$gitlab_app_id" gitlabAppId "$hostname"
-  require_value "$upload_url" uploadUrl "$hostname"
-  validate_hostname "$hostname"
+  require_value "$slug" slug "$slug"
+  require_value "$gitlab_repo" gitlabRepo "$slug"
+  require_value "$gitlab_branch" gitlabBranch "$slug"
+  require_value "$gitlab_app_id" gitlabAppId "$slug"
+  require_value "$upload_url" uploadUrl "$slug"
+  validate_slug "$slug"
 
   mkdir -p "$tenant_dir"
   cp /usr/share/nginx/html/index.html "$tenant_dir/index.html"
@@ -55,7 +56,7 @@ render_tenant() {
   envsubst '${GITLAB_REPO} ${GITLAB_BRANCH} ${GITLAB_APP_ID} ${UPLOAD_URL}' \
     < "$CONFIG_TEMPLATE" > "$tenant_dir/config.yml"
 
-  echo "  configured: $hostname -> $tenant_dir"
+  echo "  configured: /$slug -> $tenant_dir"
 }
 
 if [ -f "$TENANTS_FILE" ]; then
@@ -70,19 +71,19 @@ if [ -f "$TENANTS_FILE" ]; then
 
   i=0
   while [ "$i" -lt "$COUNT" ]; do
-    HOSTNAME=$(jq -r ".[$i].hostname" "$TENANTS_FILE")
+    SLUG=$(jq -r ".[$i].slug" "$TENANTS_FILE")
     GITLAB_REPO=$(jq -r ".[$i].gitlabRepo" "$TENANTS_FILE")
     GITLAB_BRANCH=$(jq -r ".[$i].gitlabBranch" "$TENANTS_FILE")
     GITLAB_APP_ID=$(jq -r ".[$i].gitlabAppId" "$TENANTS_FILE")
     UPLOAD_URL=$(jq -r ".[$i].uploadUrl" "$TENANTS_FILE")
 
-    render_tenant "$HOSTNAME" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
+    render_tenant "$SLUG" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
     i=$((i + 1))
   done
 
 else
   echo "Single-tenant mode: using environment variables"
-  render_tenant "${DECAP_HOSTNAME:-localhost}" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
+  render_tenant "${DECAP_SLUG:-default}" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
 fi
 
 exec "$@"
