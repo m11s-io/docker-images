@@ -36,6 +36,7 @@ render_tenant() {
   local gitlab_branch="$3"
   local gitlab_app_id="$4"
   local upload_url="$5"
+  local publish_mode="${6:-simple}"
   local tenant_dir
 
   slug=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
@@ -53,7 +54,8 @@ render_tenant() {
 
   GITLAB_REPO="$gitlab_repo" GITLAB_BRANCH="$gitlab_branch" \
   GITLAB_APP_ID="$gitlab_app_id" UPLOAD_URL="$upload_url" \
-  envsubst '${GITLAB_REPO} ${GITLAB_BRANCH} ${GITLAB_APP_ID} ${UPLOAD_URL}' \
+  PUBLISH_MODE="$publish_mode" \
+  envsubst '${GITLAB_REPO} ${GITLAB_BRANCH} ${GITLAB_APP_ID} ${UPLOAD_URL} ${PUBLISH_MODE}' \
     < "$CONFIG_TEMPLATE" > "$tenant_dir/config.yml"
 
   echo "  configured: /$slug -> $tenant_dir"
@@ -107,8 +109,9 @@ if [ -f "$TENANTS_FILE" ]; then
     GITLAB_BRANCH=$(jq -r ".[$i].gitlabBranch" "$TENANTS_FILE")
     GITLAB_APP_ID=$(jq -r ".[$i].gitlabAppId" "$TENANTS_FILE")
     UPLOAD_URL=$(jq -r ".[$i].uploadUrl" "$TENANTS_FILE")
+    PUBLISH_MODE=$(jq -r ".[$i].publishMode // \"simple\"" "$TENANTS_FILE")
 
-    render_tenant "$SLUG" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
+    render_tenant "$SLUG" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL" "$PUBLISH_MODE"
     LINKS="${LINKS}    <li><a href=\"/${SLUG}/\">${SLUG}</a></li>\n"
     i=$((i + 1))
   done
@@ -116,7 +119,7 @@ if [ -f "$TENANTS_FILE" ]; then
 else
   echo "Single-tenant mode: using environment variables"
   SLUG="${DECAP_SLUG:-default}"
-  render_tenant "$SLUG" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL"
+  render_tenant "$SLUG" "$GITLAB_REPO" "$GITLAB_BRANCH" "$GITLAB_APP_ID" "$UPLOAD_URL" "${PUBLISH_MODE:-simple}"
   LINKS="    <li><a href=\"/${SLUG}/\">${SLUG}</a></li>"
 fi
 

@@ -5,6 +5,8 @@ backend:
   auth_type: pkce
   app_id: ${GITLAB_APP_ID}
 
+publish_mode: ${PUBLISH_MODE}
+
 media_library:
   name: s3
   config:
