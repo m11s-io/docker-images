@@ -33,11 +33,11 @@ jobs:
         include:
           - context: rclone-inotify
             tags: |
-              m11s/rclone:latest-inotify
+              m11s/rclone:latest
               m11s/rclone:1.74-inotify
           - context: decap-cms
             tags: |
-              m11s/decap-cms:latest-s3
+              m11s/decap-cms:latest
               m11s/decap-cms:0.2.1-s3
     steps:
       - name: Checkout
