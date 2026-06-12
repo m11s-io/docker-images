@@ -7,10 +7,12 @@
     <title>Content Manager</title>
   </head>
   <body>
+    <script>window.CMS_MANUAL_INIT = true;</script>
     <script src="https://unpkg.com/@m11s-io/decap-cms-media-library-s3@0.1.1/dist/index.global.js"></script>
     <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
     <script>
-      CMS.registerMediaLibrary(S3MediaLibrary.default);
+      CMS.registerMediaLibrary(S3MediaLibrary.default || S3MediaLibrary);
+      CMS.init();
     </script>
   </body>
 </html>
