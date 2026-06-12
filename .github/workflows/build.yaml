@@ -38,7 +38,7 @@ jobs:
           - context: decap-cms
             tags: m11s/decap-cms:0.2.2-s3
           - context: s3-upload-proxy
-            tags: m11s/s3-upload-proxy:0.1.1
+            tags: m11s/s3-upload-proxy:0.1.2
     steps:
       - name: Checkout
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
