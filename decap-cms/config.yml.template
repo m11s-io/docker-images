@@ -1,0 +1,24 @@
+backend:
+  name: gitlab
+  repo: ${GITLAB_REPO}
+  branch: ${GITLAB_BRANCH}
+  auth_type: pkce
+  app_id: ${GITLAB_APP_ID}
+
+media_library:
+  name: s3
+  config:
+    upload_url: ${UPLOAD_URL}
+
+collections:
+  - name: posts
+    label: Posts
+    folder: posts
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Publish Date, name: date, widget: datetime }
+      - { label: Excerpt, name: excerpt, widget: text, required: false }
+      - { label: Tags, name: tags, widget: list, required: false }
+      - { label: Body, name: body, widget: markdown }
