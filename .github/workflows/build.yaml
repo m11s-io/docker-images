@@ -8,6 +8,15 @@ on:
       - "decap-cms/**"
   workflow_dispatch:
     inputs:
+      image:
+        description: 'Image to build'
+        required: false
+        type: choice
+        default: all
+        options:
+          - all
+          - decap-cms
+          - rclone-inotify
       skip_push:
         description: 'Dry-run: build without pushing to Docker Hub'
         required: false
@@ -29,21 +38,25 @@ jobs:
           - context: decap-cms
             tags: |
               m11s/decap-cms:latest-s3
-              m11s/decap-cms:0.1.0-s3
+              m11s/decap-cms:0.2.0-s3
     steps:
       - name: Checkout
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Log in to Docker Hub
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
       - name: Set up Docker Buildx
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
       - name: Build and push
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: ${{ matrix.context }}

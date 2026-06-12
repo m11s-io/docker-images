@@ -1,7 +1,9 @@
 FROM nginx:alpine
 
+RUN apk add --no-cache gettext jq
+
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY index.html /usr/share/nginx/html/admin/index.html
+COPY index.html /usr/share/nginx/html/index.html
 COPY config.yml.template /etc/decap/config.yml.template
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
