@@ -31,7 +31,8 @@ Mount a `tenants.json` at `/etc/decap/tenants.json`. The entrypoint generates a 
     "gitlabRepo": "myorg/myrepo",
     "gitlabBranch": "main",
     "gitlabAppId": "abc123",
-    "uploadUrl": "https://upload.example.com/upload"
+    "uploadUrl": "https://upload.example.com/upload",
+    "postsFolder": "website/src/content/posts"
   },
   {
     "hostname": "cms.other.com",
@@ -55,6 +56,7 @@ docker run -p 80:80 \
   -e GITLAB_BRANCH=main \
   -e GITLAB_APP_ID=abc123 \
   -e UPLOAD_URL=https://upload.example.com/upload \
+  -e POSTS_FOLDER=website/src/content/posts \
   m11s/decap-cms:latest-s3
 ```
 
@@ -71,4 +73,4 @@ Use the Application ID as `GITLAB_APP_ID` / `gitlabAppId`.
 
 ## config.yml
 
-The default `config.yml.template` defines a single `posts` collection. For custom collections, mount your own `config.yml.template` at `/etc/decap/config.yml.template` using the same `${VAR}` placeholders, or provide complete per-tenant configs via a mounted directory.
+The default `config.yml.template` defines a single `posts` collection. Set `postsFolder` per tenant (or `POSTS_FOLDER` in single-tenant mode) when posts do not live in the repository-root `posts` directory. For custom collections, mount your own `config.yml.template` at `/etc/decap/config.yml.template` using the same `${VAR}` placeholders, or provide complete per-tenant configs via a mounted directory.
