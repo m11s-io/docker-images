@@ -46,7 +46,7 @@ jobs:
           - context: redis-http-proxy
             tags: m11s/redis-http-proxy:0.1.0
           - context: comfyui
-            tags: m11s/comfyui:0.1.0
+            tags: m11s/comfyui:0.2.0
     steps:
       - name: Checkout
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
