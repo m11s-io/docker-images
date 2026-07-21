@@ -5,7 +5,7 @@
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.3.0 .
+#   docker build -t m11s/comfyui:0.3.1 .
 
 FROM nvidia/cuda:13.0.3-cudnn-runtime-ubuntu22.04
 
@@ -58,10 +58,4 @@ USER comfyui
 
 EXPOSE 8188
 
-# --disable-cuda-malloc: torch's cudaMallocAsync allocator hangs the server
-# unresponsive on this CUDA 13.0 + torch 2.11 build (accepts TCP, never
-# answers HTTP). Forcing the native allocator via ComfyUI's own flag avoids
-# it; overriding PYTORCH_CUDA_ALLOC_CONF as an env var instead crashes at
-# import with a PyTorch internal assert (allocator backend mismatch between
-# load time and runtime).
-ENTRYPOINT ["python3.11", "main.py", "--listen", "0.0.0.0", "--port", "8188", "--disable-cuda-malloc"]
+ENTRYPOINT ["python3.11", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
