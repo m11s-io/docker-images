@@ -5,11 +5,12 @@
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.3.1 .
+#   docker build -t m11s/comfyui:0.4.0 .
 
 FROM nvidia/cuda:13.0.3-cudnn-runtime-ubuntu22.04
 
 ARG COMFYUI_REF=v0.28.2
+ARG COMFYUI_GGUF_REF=main
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -48,6 +49,15 @@ RUN git clone --branch ${COMFYUI_REF} --depth 1 \
         https://github.com/comfyanonymous/ComfyUI.git .
 
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt
+
+# ComfyUI-GGUF adds GGUF-quantized model loaders (UnetLoaderGGUF,
+# DualCLIPLoaderGGUF, etc.) alongside the built-in safetensors loaders -
+# additive, doesn't change how existing fp8/safetensors workflows load.
+# Lets 16GB-VRAM workflows fit with headroom (e.g. Flux Q5_K_M ~8-9GB vs
+# ~16GB combined at fp8) instead of swap-thrashing UNET/CLIP every run.
+RUN git clone --branch ${COMFYUI_GGUF_REF} --depth 1 \
+        https://github.com/city96/ComfyUI-GGUF.git custom_nodes/ComfyUI-GGUF && \
+    python3.11 -m pip install --no-cache-dir -r custom_nodes/ComfyUI-GGUF/requirements.txt
 
 RUN groupadd --system --gid 10001 comfyui && \
     useradd --system --uid 10001 --gid comfyui --no-create-home comfyui && \
