@@ -1,0 +1,12 @@
+.git
+.gitignore
+**/.next
+**/node_modules
+**/.turbo
+**/dist
+**/build
+**/*.log
+.env
+.env.*
+!.env.example
+README.md
