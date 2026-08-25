@@ -11,12 +11,14 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 |-------|-------------|---------|
 | [m11s/rclone](https://hub.docker.com/r/m11s/rclone) | rclone with inotify-tools | ![Version](https://img.shields.io/docker/v/m11s/rclone/latest-inotify?label=) |
 | [m11s/decap-cms](https://hub.docker.com/r/m11s/decap-cms) | Decap CMS with S3 media library | ![Version](https://img.shields.io/docker/v/m11s/decap-cms/latest-s3?label=) |
+| [m11s/caddy](https://hub.docker.com/r/m11s/caddy) | Caddy with the caddy-dns/cloudflare DNS-01 module | ![Version](https://img.shields.io/docker/v/m11s/caddy/latest-cloudflare?label=) |
 
 ## Quick Start
 
 ```bash
 docker pull m11s/rclone:latest-inotify
 docker pull m11s/decap-cms:latest-s3
+docker pull m11s/caddy:latest-cloudflare
 ```
 
 ## Publishing

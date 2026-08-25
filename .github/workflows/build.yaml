@@ -9,6 +9,7 @@ on:
       - "s3-upload-proxy/**"
       - "redis-http-proxy/**"
       - "comfyui/**"
+      - "caddy-cloudflare/**"
   workflow_dispatch:
     inputs:
       image:
@@ -23,6 +24,7 @@ on:
           - s3-upload-proxy
           - redis-http-proxy
           - comfyui
+          - caddy-cloudflare
       skip_push:
         description: 'Dry-run: build without pushing to Docker Hub'
         required: false
@@ -47,6 +49,8 @@ jobs:
             tags: m11s/redis-http-proxy:0.1.0
           - context: comfyui
             tags: m11s/comfyui:0.4.0
+          - context: caddy-cloudflare
+            tags: m11s/caddy:2.11.4-cloudflare
     steps:
       - name: Checkout
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
