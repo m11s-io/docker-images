@@ -32,7 +32,43 @@ on:
         default: false
 
 jobs:
+  changes:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      rclone-inotify: ${{ steps.filter.outputs.rclone-inotify }}
+      decap-cms: ${{ steps.filter.outputs.decap-cms }}
+      s3-upload-proxy: ${{ steps.filter.outputs.s3-upload-proxy }}
+      redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
+      comfyui: ${{ steps.filter.outputs.comfyui }}
+      caddy-cloudflare: ${{ steps.filter.outputs.caddy-cloudflare }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4.0.3
+        with:
+          filters: |
+            rclone-inotify:
+              - 'rclone-inotify/**'
+            decap-cms:
+              - 'decap-cms/**'
+            s3-upload-proxy:
+              - 's3-upload-proxy/**'
+            redis-http-proxy:
+              - 'redis-http-proxy/**'
+            comfyui:
+              - 'comfyui/**'
+            caddy-cloudflare:
+              - 'caddy-cloudflare/**'
+
   build:
+    needs: [changes]
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -53,22 +89,22 @@ jobs:
             tags: m11s/caddy:2.11.4-cloudflare
     steps:
       - name: Checkout
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Log in to Docker Hub
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
       - name: Set up Docker Buildx
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e  # v4.3.0
 
       - name: Build and push
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.image == 'all' || inputs.image == matrix.context }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
         with:
           context: ${{ matrix.context }}
