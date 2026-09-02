@@ -1,0 +1,20 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Keep the published vllm-openai-orjson tag in sync with the upstream vllm/vllm-openai base image it wraps (Dockerfile's ARG is already tracked by Renovate's default dockerfile manager)",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/build\\.yaml$/"
+      ],
+      "matchStrings": [
+        "- context: vllm-openai-orjson\\s*\\n\\s*tags: m11s/vllm-openai-orjson:(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "vllm/vllm-openai"
+    }
+  ]
+}
