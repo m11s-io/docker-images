@@ -10,7 +10,7 @@ on:
       - "redis-http-proxy/**"
       - "comfyui/**"
       - "caddy-cloudflare/**"
-      - "vllm-openai-orjson/**"
+      - "vllm-openai/**"
   workflow_dispatch:
     inputs:
       image:
@@ -26,7 +26,7 @@ on:
           - redis-http-proxy
           - comfyui
           - caddy-cloudflare
-          - vllm-openai-orjson
+          - vllm-openai
       skip_push:
         description: 'Dry-run: build without pushing to Docker Hub'
         required: false
@@ -46,7 +46,7 @@ jobs:
       redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
       comfyui: ${{ steps.filter.outputs.comfyui }}
       caddy-cloudflare: ${{ steps.filter.outputs.caddy-cloudflare }}
-      vllm-openai-orjson: ${{ steps.filter.outputs.vllm-openai-orjson }}
+      vllm-openai: ${{ steps.filter.outputs.vllm-openai }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -68,8 +68,8 @@ jobs:
               - 'comfyui/**'
             caddy-cloudflare:
               - 'caddy-cloudflare/**'
-            vllm-openai-orjson:
-              - 'vllm-openai-orjson/**'
+            vllm-openai:
+              - 'vllm-openai/**'
 
   build:
     needs: [changes]
@@ -93,8 +93,8 @@ jobs:
           - context: caddy-cloudflare
             tags: m11s/caddy:2.11.4-cloudflare
           # renovate: depName=vllm/vllm-openai
-          - context: vllm-openai-orjson
-            tags: m11s/vllm-openai-orjson:v0.28.0-x86_64
+          - context: vllm-openai
+            tags: m11s/vllm-openai:v0.28.0-x86_64
     steps:
       - name: Checkout
         if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
