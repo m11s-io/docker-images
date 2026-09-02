@@ -92,6 +92,7 @@ jobs:
             tags: m11s/comfyui:0.4.0
           - context: caddy-cloudflare
             tags: m11s/caddy:2.11.4-cloudflare
+          # renovate: depName=vllm/vllm-openai
           - context: vllm-openai-orjson
             tags: m11s/vllm-openai-orjson:v0.28.0-x86_64
     steps:

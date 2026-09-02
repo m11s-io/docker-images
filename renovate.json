@@ -6,15 +6,14 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Keep the published vllm-openai-orjson tag in sync with the upstream vllm/vllm-openai base image it wraps (Dockerfile's ARG is already tracked by Renovate's default dockerfile manager)",
+      "description": "Generic across every image in this monorepo, not just one - a matrix entry's own tag isn't a package manager Renovate recognizes, so any context whose published tag is meant to track an upstream base image opts in the same way: a `# renovate: depName=...` comment (same convention as m11s/kubernetes/registry) directly above its matrix entry in build.yaml. Each Dockerfile's own FROM/ARG line is already tracked separately by Renovate's default dockerfile manager - this just keeps the matrix tag string in lockstep with it.",
       "managerFilePatterns": [
         "/^\\.github/workflows/build\\.yaml$/"
       ],
       "matchStrings": [
-        "- context: vllm-openai-orjson\\s*\\n\\s*tags: m11s/vllm-openai-orjson:(?<currentValue>\\S+)"
+        "#\\s*renovate:\\s*depName=(?<depName>\\S+)\\s*\\n\\s*- context: [\\w-]+\\s*\\n\\s*tags: m11s/[\\w-]+:(?<currentValue>\\S+)"
       ],
-      "datasourceTemplate": "docker",
-      "depNameTemplate": "vllm/vllm-openai"
+      "datasourceTemplate": "docker"
     }
   ]
 }
