@@ -15,7 +15,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/s3-upload-proxy](https://hub.docker.com/r/m11s/s3-upload-proxy) | Proxies browser multipart uploads to any S3-compatible store (MinIO, R2, S3) | ![Version](https://img.shields.io/docker/v/m11s/s3-upload-proxy?label=) |
 | [m11s/redis-http-proxy](https://hub.docker.com/r/m11s/redis-http-proxy) | Bearer-token-authenticated HTTP proxy in front of a Redis instance | ![Version](https://img.shields.io/docker/v/m11s/redis-http-proxy?label=) |
 | [m11s/comfyui](https://hub.docker.com/r/m11s/comfyui) | ComfyUI built from source on a CUDA runtime base, with the ComfyUI-GGUF loader | ![Version](https://img.shields.io/docker/v/m11s/comfyui?label=) |
-| [m11s/vllm-openai](https://hub.docker.com/r/m11s/vllm-openai) | vLLM's official OpenAI-compatible server image, plus orjson and lmcache | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai?label=) |
+| [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM's official OpenAI-compatible server image with orjson for faster JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson?label=) |
 
 ## Quick Start
 
@@ -26,7 +26,7 @@ docker pull m11s/caddy:latest-cloudflare
 docker pull m11s/s3-upload-proxy:0.1.3
 docker pull m11s/redis-http-proxy:0.1.0
 docker pull m11s/comfyui:0.4.0
-docker pull m11s/vllm-openai:v0.28.0-x86_64
+docker pull m11s/vllm-openai-orjson:v0.28.0-x86_64
 ```
 
 ## Publishing
