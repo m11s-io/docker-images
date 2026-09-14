@@ -23,10 +23,10 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 docker pull m11s/rclone:latest-inotify
 docker pull m11s/decap-cms:latest-s3
 docker pull m11s/caddy:latest-cloudflare
-docker pull m11s/s3-upload-proxy:0.1.3
-docker pull m11s/redis-http-proxy:0.1.0
-docker pull m11s/comfyui:0.4.0
-docker pull m11s/vllm-openai-orjson:v0.29.0-x86_64
+docker pull m11s/s3-upload-proxy:latest
+docker pull m11s/redis-http-proxy:latest
+docker pull m11s/comfyui:latest
+docker pull m11s/vllm-openai-orjson:latest-x86_64
 ```
 
 ## Publishing
