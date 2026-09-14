@@ -1,9 +1,9 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 #
 # Optional ComfyUI-GGUF extension for m11s/comfyui. Keep the generic image
 # free of community nodes; this variant has the same ComfyUI/CUDA release.
 
-FROM m11s/comfyui:0.5.2
+FROM m11s/comfyui:0.5.2@sha256:098b62a2e886ad5ed0947273cca4f3a3fb3939f7c3d466eaa12f33bb7e89709d
 
 ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 
