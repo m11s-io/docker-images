@@ -9,7 +9,7 @@
 
 FROM nvidia/cuda:13.3.1-cudnn-runtime-ubuntu22.04@sha256:d613b00c36d11fc3acc8923ef5d7672d30f469c1a9049906fbd993dd2ba8155f
 
-ARG COMFYUI_REF=v0.28.2
+ARG COMFYUI_REF=v0.35.0
 ARG COMFYUI_GGUF_REF=main
 
 ENV DEBIAN_FRONTEND=noninteractive
