@@ -93,7 +93,7 @@ jobs:
             tags: m11s/redis-http-proxy:0.1.0
             latest: m11s/redis-http-proxy:latest
           - context: comfyui
-            tags: m11s/comfyui:0.5.0
+            tags: m11s/comfyui:0.5.1
             latest: m11s/comfyui:latest
           - context: caddy-cloudflare
             tags: m11s/caddy:2.11.4-cloudflare
@@ -127,5 +127,18 @@ jobs:
           tags: |
             ${{ matrix.tags }}
             ${{ matrix.latest }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push ComfyUI-GGUF variant
+        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
+        with:
+          context: comfyui
+          file: comfyui/Dockerfile.gguf
+          push: ${{ github.event.inputs.skip_push != 'true' }}
+          tags: |
+            m11s/comfyui:0.5.1-gguf
+            m11s/comfyui:latest-gguf
           cache-from: type=gha
           cache-to: type=gha,mode=max

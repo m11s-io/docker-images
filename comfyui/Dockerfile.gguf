@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+#
+# Optional ComfyUI-GGUF extension for m11s/comfyui. Keep the generic image
+# free of community nodes; this variant has the same ComfyUI/CUDA release.
+
+FROM m11s/comfyui:0.5.1
+
+ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
+
+USER root
+
+RUN git init custom_nodes/ComfyUI-GGUF && \
+    git -C custom_nodes/ComfyUI-GGUF remote add origin https://github.com/city96/ComfyUI-GGUF.git && \
+    git -C custom_nodes/ComfyUI-GGUF fetch --depth 1 origin ${COMFYUI_GGUF_REF} && \
+    git -C custom_nodes/ComfyUI-GGUF checkout --detach FETCH_HEAD && \
+    python3.14 -m pip install --no-cache-dir -r custom_nodes/ComfyUI-GGUF/requirements.txt && \
+    chown -R comfyui:comfyui custom_nodes/ComfyUI-GGUF
+
+USER comfyui
