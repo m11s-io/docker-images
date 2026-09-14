@@ -94,7 +94,7 @@ jobs:
             tags: m11s/caddy:2.11.4-cloudflare
           # renovate: depName=vllm/vllm-openai
           - context: vllm-openai-orjson
-            tags: m11s/vllm-openai-orjson:v0.28.0-x86_64
+            tags: m11s/vllm-openai-orjson:v0.29.0-x86_64
     steps:
       - name: Checkout
         if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
