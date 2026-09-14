@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # ComfyUI, built from upstream source (comfyanonymous/ComfyUI publishes no
-# official image) on a CUDA 13.0 runtime base. TORCH_CUDA_ARCH_LIST includes
+# official image) on a CUDA 13.3 runtime base. TORCH_CUDA_ARCH_LIST includes
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
@@ -37,12 +37,15 @@ WORKDIR /app
 # resolve to a CPU-only wheel from the default PyPI index. Install CUDA
 # wheels explicitly first, then constrain pip so requirements.txt can't
 # silently replace them.
+#
+# torchaudio stays at 2.11.0: it's in maintenance mode and hasn't cut a
+# release matching the 2.12+ torch line.
 RUN python3.11 -m pip install --no-cache-dir \
-        --extra-index-url https://download.pytorch.org/whl/cu130 \
-        torch==2.11.0 \
-        torchvision==0.26.0 \
+        --extra-index-url https://download.pytorch.org/whl/cu132 \
+        torch==2.14.0 \
+        torchvision==0.29.0 \
         torchaudio==2.11.0 && \
-    printf 'torch==2.11.0\ntorchvision==0.26.0\ntorchaudio==2.11.0\n' > /etc/pip-constraints.txt
+    printf 'torch==2.14.0\ntorchvision==0.29.0\ntorchaudio==2.11.0\n' > /etc/pip-constraints.txt
 ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
 
 RUN git clone --branch ${COMFYUI_REF} --depth 1 \
