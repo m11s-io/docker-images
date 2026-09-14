@@ -93,7 +93,7 @@ jobs:
             tags: m11s/redis-http-proxy:0.1.0
             latest: m11s/redis-http-proxy:latest
           - context: comfyui
-            tags: m11s/comfyui:0.5.1
+            tags: m11s/comfyui:0.5.2
             latest: m11s/comfyui:latest
           - context: caddy-cloudflare
             tags: m11s/caddy:2.11.4-cloudflare
@@ -138,7 +138,7 @@ jobs:
           file: comfyui/Dockerfile.gguf
           push: ${{ github.event.inputs.skip_push != 'true' }}
           tags: |
-            m11s/comfyui:0.5.1-gguf
+            m11s/comfyui:0.5.2-gguf
             m11s/comfyui:latest-gguf
           cache-from: type=gha
           cache-to: type=gha,mode=max

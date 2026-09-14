@@ -5,7 +5,7 @@
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.5.1 .
+#   docker build -t m11s/comfyui:0.5.2 .
 
 FROM nvidia/cuda:13.3.1-cudnn-runtime-ubuntu22.04@sha256:d613b00c36d11fc3acc8923ef5d7672d30f469c1a9049906fbd993dd2ba8155f
 
@@ -37,14 +37,15 @@ WORKDIR /app
 # wheels explicitly first, then constrain pip so requirements.txt can't
 # silently replace them.
 #
-# torchaudio stays at 2.11.0: it's in maintenance mode and hasn't cut a
-# release matching the 2.12+ torch line.
+# TorchAudio 2.11 publishes cu130, but not cu132. Keep all three PyTorch
+# packages on cu130 so their native extensions use one CUDA ABI. The CUDA
+# 13.3 base remains supported by the host driver independently.
 RUN python3.14 -m pip install --no-cache-dir \
-        --extra-index-url https://download.pytorch.org/whl/cu132 \
-        torch==2.14.0 \
-        torchvision==0.29.0 \
-        torchaudio==2.11.0 && \
-    printf 'torch==2.14.0\ntorchvision==0.29.0\ntorchaudio==2.11.0\n' > /etc/pip-constraints.txt
+        --index-url https://download.pytorch.org/whl/cu130 \
+        torch==2.14.0+cu130 \
+        torchvision==0.29.0+cu130 \
+        torchaudio==2.11.0+cu130 && \
+    printf 'torch==2.14.0+cu130\ntorchvision==0.29.0+cu130\ntorchaudio==2.11.0+cu130\n' > /etc/pip-constraints.txt
 ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
 
 RUN git clone --branch ${COMFYUI_REF} --depth 1 \
