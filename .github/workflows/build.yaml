@@ -93,7 +93,7 @@ jobs:
             tags: m11s/redis-http-proxy:0.1.0
             latest: m11s/redis-http-proxy:latest
           - context: comfyui
-            tags: m11s/comfyui:0.4.0
+            tags: m11s/comfyui:0.5.0
             latest: m11s/comfyui:latest
           - context: caddy-cloudflare
             tags: m11s/caddy:2.11.4-cloudflare
