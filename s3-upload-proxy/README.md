@@ -52,7 +52,7 @@ docker run -p 8082:8082 \
   -e S3_ACCESS_KEY=mykey \
   -e S3_SECRET_KEY=mysecret \
   -e S3_KEY_PREFIX=uploads \
-  m11s/s3-upload-proxy:0.1.1
+  m11s/s3-upload-proxy:0.1.3
 ```
 
 Upload a file:
