@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+# Comfy MCP variant kept in the ComfyUI image family so both images release
+# from the same ComfyUI workspace and version.
+
+FROM m11s/comfyui:0.5.4-gguf
+
+ARG COMFY_CLI_REF=v1.20.0
+ARG COMFY_MCP_REF=v0.10.0
+
+USER root
+WORKDIR /tmp/comfy-mcp-build
+
+RUN git clone --depth 1 --branch "${COMFY_CLI_REF}" https://github.com/Comfy-Org/comfy-cli.git comfy-cli && \
+    git clone --depth 1 --branch "${COMFY_MCP_REF}" https://github.com/Comfy-Org/comfy-mcp.git comfy-mcp && \
+    sed -i "s/version = \"0.0.0\"/version = \"${COMFY_CLI_REF#v}\"/" comfy-cli/pyproject.toml && \
+    python3.14 -m pip install --no-cache-dir ./comfy-cli ./comfy-mcp && \
+    comfy --version && comfy-mcp --version && \
+    rm -rf /tmp/comfy-mcp-build
+
+COPY comfy-mcp/entrypoint.py comfy-mcp/healthcheck.py /opt/comfy-mcp-image/
+
+ENV HOME=/home/comfyui \
+    PATH=/usr/local/bin:$PATH \
+    COMFY_BIN=/usr/local/bin/comfy \
+    COMFY_PROJECT=/app
+
+WORKDIR /app
+USER comfyui
+RUN comfy set-default /app
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["python3.14", "/opt/comfy-mcp-image/healthcheck.py"]
+ENTRYPOINT ["python3.14", "/opt/comfy-mcp-image/entrypoint.py"]
