@@ -1,12 +1,12 @@
 name: comfy-mcp
 title: ComfyUI
 type: server
-image: m11s/comfy-mcp:0.2.1
+image: m11s/comfy-mcp:0.2.2
 description: Drive an approved ComfyUI instance through the Comfy MCP server.
 allowHosts:
   - host.docker.internal:8188
 env:
-  - name: COMFYUI_URL
+  - name: COMFY_LOCAL_URL
     value: "{{comfy-mcp.comfy_local_url}}"
 config:
   - name: comfy-mcp

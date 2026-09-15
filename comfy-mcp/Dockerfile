@@ -31,7 +31,10 @@ LABEL org.opencontainers.image.title="m11s/comfy-mcp" \
 COPY --from=builder /opt/venv /opt/venv
 COPY entrypoint.py healthcheck.py /opt/comfy-mcp-image/
 
-RUN groupadd --system --gid 10001 comfy && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --system --gid 10001 comfy && \
     useradd --system --uid 10001 --gid comfy --create-home --home-dir /workspace comfy && \
     chown comfy:comfy /workspace
 

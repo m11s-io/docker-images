@@ -11,7 +11,7 @@ not contain ComfyUI, CUDA, models, or a browser UI.
 | --- | --- |
 | `latest` | Current Comfy MCP image |
 | `0.1.0` | Pinned release using comfy-mcp `0.10.0` and comfy-cli `1.20.0` |
-| `0.2.1` | Current Streamable HTTP release |
+| `0.2.2` | Current Streamable HTTP release, including the `git` runtime required by comfy-cli |
 
 ## Docker MCP Toolkit
 
@@ -59,8 +59,8 @@ library, or model data.
 
 ```bash
 docker run --rm -p 8080:8080 \
-  -e COMFYUI_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
-  m11s/comfy-mcp:0.2.1 \
+  -e COMFY_LOCAL_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
+  m11s/comfy-mcp:0.2.2 \
   --transport streamable-http --host 0.0.0.0 --port 8080
 ```
 
