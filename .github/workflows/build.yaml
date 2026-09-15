@@ -115,7 +115,7 @@ jobs:
           - context: comfy-mcp
             repository: m11s/comfy-mcp
             description: Comfy MCP server with stdio and native Streamable HTTP transports.
-            tags: m11s/comfy-mcp:0.2.0
+            tags: m11s/comfy-mcp:0.2.1
             latest: m11s/comfy-mcp:latest
             platforms: linux/amd64,linux/arm64
           - context: caddy-cloudflare
