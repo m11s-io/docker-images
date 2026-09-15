@@ -5,7 +5,7 @@
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.5.2 .
+#   docker build -t m11s/comfyui:0.5.3 .
 
 FROM nvidia/cuda:13.3.1-cudnn-runtime-ubuntu22.04@sha256:d613b00c36d11fc3acc8923ef5d7672d30f469c1a9049906fbd993dd2ba8155f
 
@@ -54,7 +54,8 @@ RUN git clone --branch ${COMFYUI_REF} --depth 1 \
 RUN python3.14 -m pip install --no-cache-dir -r requirements.txt
 
 RUN groupadd --system --gid 10001 comfyui && \
-    useradd --system --uid 10001 --gid comfyui --no-create-home comfyui && \
+    useradd --system --uid 10001 --gid comfyui \
+        --create-home --home-dir /home/comfyui comfyui && \
     mkdir -p /app/models /app/output /app/input /app/user && \
     chown -R comfyui:comfyui /app
 

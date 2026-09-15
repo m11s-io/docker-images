@@ -103,7 +103,7 @@ jobs:
           - context: comfyui
             repository: m11s/comfyui
             description: CUDA-enabled ComfyUI image, with an optional GGUF variant.
-            tags: m11s/comfyui:0.5.2
+            tags: m11s/comfyui:0.5.3
             latest: m11s/comfyui:latest
           - context: caddy-cloudflare
             repository: m11s/caddy
@@ -152,7 +152,7 @@ jobs:
           file: comfyui/Dockerfile.gguf
           push: ${{ github.event.inputs.skip_push != 'true' }}
           tags: |
-            m11s/comfyui:0.5.2-gguf
+            m11s/comfyui:0.5.3-gguf
             m11s/comfyui:latest-gguf
           cache-from: type=gha
           cache-to: type=gha,mode=max
