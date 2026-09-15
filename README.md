@@ -34,3 +34,10 @@ docker pull m11s/vllm-openai-orjson:latest-x86_64
 ## Publishing
 
 Images are maintained in the private monorepo and published here via CI on push to `main`.
+
+## MCP catalog
+
+CI publishes [`m11s/mcp-catalog:latest`](https://hub.docker.com/r/m11s/mcp-catalog)
+from the version-controlled MCP server definitions. Docker Desktop users import
+that OCI reference in **MCP Toolkit → Catalog → Import catalog**, then add an
+approved server to a profile. The catalog currently contains `comfy-mcp`.

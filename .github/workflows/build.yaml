@@ -179,3 +179,53 @@ jobs:
           short-description: ${{ matrix.description }}
           readme-filepath: ./${{ matrix.context }}/README.md
           enable-url-completion: true
+
+  publish-mcp-catalog:
+    needs: [changes, build]
+    if: >-
+      ${{
+        always() &&
+        needs.build.result == 'success' &&
+        github.event.inputs.skip_push != 'true' &&
+        (
+          (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'comfy-mcp')) ||
+          (github.event_name != 'workflow_dispatch' && needs.changes.outputs.comfy-mcp == 'true')
+        )
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Install Docker MCP CLI
+        env:
+          DOCKER_MCP_VERSION: v0.43.3
+        run: |
+          curl --fail --location --show-error --silent \
+            --output /tmp/docker-mcp.tar.gz \
+            "https://github.com/docker/mcp-gateway/releases/download/${DOCKER_MCP_VERSION}/docker-mcp-linux-amd64.tar.gz"
+          tar --extract --gzip --file /tmp/docker-mcp.tar.gz --directory /tmp
+          install --directory "$HOME/.docker/cli-plugins"
+          install --mode 0755 /tmp/docker-mcp "$HOME/.docker/cli-plugins/docker-mcp"
+          docker mcp version
+
+      - name: Publish MCP catalog
+        env:
+          DOCKER_MCP_IN_CONTAINER: "1"
+        run: |
+          install --directory "$HOME/.docker/mcp/catalogs"
+          install --mode 0644 comfy-mcp/server.yaml "$HOME/.docker/mcp/catalogs/comfy-mcp.yaml"
+          docker mcp catalog create m11s/mcp-catalog:0.1.0 \
+            --title "m11s MCP Catalog" \
+            --server file://comfy-mcp.yaml
+          docker mcp catalog push m11s/mcp-catalog:0.1.0
+          docker mcp catalog tag m11s/mcp-catalog:0.1.0 m11s/mcp-catalog:latest
+          docker mcp catalog push m11s/mcp-catalog:latest
