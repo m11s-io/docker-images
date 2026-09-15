@@ -13,15 +13,16 @@ WORKDIR /tmp/comfy-mcp-build
 RUN git clone --depth 1 --branch "${COMFY_CLI_REF}" https://github.com/Comfy-Org/comfy-cli.git comfy-cli && \
     git clone --depth 1 --branch "${COMFY_MCP_REF}" https://github.com/Comfy-Org/comfy-mcp.git comfy-mcp && \
     sed -i "s/version = \"0.0.0\"/version = \"${COMFY_CLI_REF#v}\"/" comfy-cli/pyproject.toml && \
-    python3.14 -m pip install --no-cache-dir ./comfy-cli ./comfy-mcp && \
-    comfy --version && comfy-mcp --version && \
+    python3.14 -m venv /opt/comfy-mcp-venv && \
+    /opt/comfy-mcp-venv/bin/pip install --no-cache-dir ./comfy-cli ./comfy-mcp && \
+    /opt/comfy-mcp-venv/bin/comfy --version && /opt/comfy-mcp-venv/bin/comfy-mcp --version && \
     rm -rf /tmp/comfy-mcp-build
 
 COPY comfy-mcp/entrypoint.py comfy-mcp/healthcheck.py /opt/comfy-mcp-image/
 
 ENV HOME=/home/comfyui \
-    PATH=/usr/local/bin:$PATH \
-    COMFY_BIN=/usr/local/bin/comfy \
+    PATH=/opt/comfy-mcp-venv/bin:/usr/local/bin:$PATH \
+    COMFY_BIN=/opt/comfy-mcp-venv/bin/comfy \
     COMFY_PROJECT=/app
 
 WORKDIR /app
