@@ -10,6 +10,7 @@ on:
       - "redis-http-proxy/**"
       - "comfyui/**"
       - "comfy-mcp/**"
+      - ".github/workflows/build.yaml"
       - "caddy-cloudflare/**"
       - "vllm-openai-orjson/**"
   workflow_dispatch:
@@ -71,6 +72,7 @@ jobs:
               - 'comfyui/**'
             comfy-mcp:
               - 'comfy-mcp/**'
+              - '.github/workflows/build.yaml'
             caddy-cloudflare:
               - 'caddy-cloudflare/**'
             vllm-openai-orjson:
