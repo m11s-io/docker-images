@@ -70,7 +70,6 @@ jobs:
               - 'redis-http-proxy/**'
             comfyui:
               - 'comfyui/**'
-              - 'comfy-mcp/**'
             comfy-mcp:
               - 'comfy-mcp/**'
               - '.github/workflows/build.yaml'
@@ -169,19 +168,6 @@ jobs:
           tags: |
             m11s/comfyui:0.5.4-gguf
             m11s/comfyui:latest-gguf
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push ComfyUI-MCP variant
-        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
-        with:
-          context: .
-          file: comfyui/Dockerfile.mcp
-          push: ${{ github.event.inputs.skip_push != 'true' }}
-          tags: |
-            m11s/comfyui:0.5.4-gguf-mcp
-            m11s/comfyui:latest-gguf-mcp
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
