@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 #
-# A stdio MCP server for a separately deployed ComfyUI instance.  ComfyUI is
+# An MCP server for a separately deployed ComfyUI instance. ComfyUI is
 # deliberately not bundled: comfy-mcp is a thin wrapper over comfy-cli, and
 # the GPU runtime is provided by m11s/comfyui.
 
@@ -25,7 +25,11 @@ RUN git clone --depth 1 --branch "${COMFY_CLI_REF}" https://github.com/Comfy-Org
 
 FROM python:3.13.13-slim-bookworm@sha256:355bfa66770995d7e9a0da4b3473b44d0cb451f6b56f5615ad9c39e3c4eca03f
 
+LABEL org.opencontainers.image.title="m11s/comfy-mcp" \
+      org.opencontainers.image.description="Thin comfy-mcp and comfy-cli image with optional native Streamable HTTP transport"
+
 COPY --from=builder /opt/venv /opt/venv
+COPY comfy-mcp/entrypoint.py comfy-mcp/healthcheck.py /opt/comfy-mcp-image/
 
 RUN groupadd --system --gid 10001 comfy && \
     useradd --system --uid 10001 --gid comfy --create-home --home-dir /workspace comfy && \
@@ -39,4 +43,9 @@ ENV HOME=/workspace \
 WORKDIR /workspace
 USER comfy
 
-ENTRYPOINT ["comfy-mcp"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["python", "/opt/comfy-mcp-image/healthcheck.py"]
+
+# No argument keeps the established stdio contract. Kubernetes supplies the
+# explicit Streamable HTTP command below, which is the only mode that binds a
+# network listener.
+ENTRYPOINT ["python", "/opt/comfy-mcp-image/entrypoint.py"]

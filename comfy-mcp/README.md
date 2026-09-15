@@ -1,7 +1,7 @@
 # m11s/comfy-mcp
 
-[Comfy MCP](https://github.com/Comfy-Org/comfy-mcp) packaged as a stdio Docker
-MCP server. It drives a separately deployed ComfyUI instance through the
+[Comfy MCP](https://github.com/Comfy-Org/comfy-mcp) packaged as a Docker MCP
+server. It drives a separately deployed ComfyUI instance through the
 [`comfy-cli`](https://github.com/Comfy-Org/comfy-cli) binary; this image does
 not contain ComfyUI, CUDA, models, or a browser UI.
 
@@ -11,6 +11,7 @@ not contain ComfyUI, CUDA, models, or a browser UI.
 | --- | --- |
 | `latest` | Current Comfy MCP image |
 | `0.1.0` | Pinned release using comfy-mcp `0.10.0` and comfy-cli `1.20.0` |
+| `0.2.0` | Adds opt-in native Streamable HTTP while retaining stdio by default |
 
 ## Docker MCP Toolkit
 
@@ -49,6 +50,25 @@ policy:
 ```text
 http://comfyui.comfyui.svc.cluster.local:8188
 ```
+
+## Kubernetes Streamable HTTP
+
+The image can directly serve the official MCP Python SDK Streamable HTTP
+transport; it includes no stdio-to-HTTP adapter, proxy, ComfyUI runtime, GPU
+library, or model data.
+
+```bash
+docker run --rm -p 8080:8080 \
+  -e COMFYUI_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
+  m11s/comfy-mcp:0.2.0 \
+  --transport streamable-http --host 0.0.0.0 --port 8080
+```
+
+The endpoint is `http://<host>:8080/mcp`. Equivalent environment variables are
+`COMFY_MCP_TRANSPORT=streamable-http`, `COMFY_MCP_HOST=0.0.0.0`, and
+`COMFY_MCP_PORT=8080`. A Kubernetes Service should expose port 8080 and route
+`/mcp` directly to this image. Its health check performs only MCP
+`initialize`; it never starts a generation.
 
 ## State and safety
 
