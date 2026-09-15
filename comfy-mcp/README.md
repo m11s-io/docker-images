@@ -39,13 +39,14 @@ Desktop's host:
 kubectl -n comfyui port-forward svc/comfyui 8188:8188
 ```
 
-`COMFY_LOCAL_URL` is the recommended target for a local port-forward. The
-container needs no published port: MCP traffic is carried over standard input
-and output by Docker MCP Toolkit.
+`COMFY_LOCAL_URL` is the recommended target for local inspection through a
+port-forward. The container needs no published port: MCP traffic is carried
+over standard input and output by Docker MCP Toolkit.
 
-For an agent running inside Kubernetes, set `COMFYUI_URL` to the private
-service address instead and allow that workload through ComfyUI's network
-policy:
+Set `COMFYUI_URL` as well when run and job tools must submit to that ComfyUI.
+For a colocated sidecar, both variables use `http://127.0.0.1:8188`; for a
+separate Kubernetes workload, use the private service address and allow that
+workload through ComfyUI's network policy:
 
 ```text
 http://comfyui.comfyui.svc.cluster.local:8188
@@ -60,6 +61,7 @@ library, or model data.
 ```bash
 docker run --rm -p 8080:8080 \
   -e COMFY_LOCAL_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
+  -e COMFYUI_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
   m11s/comfy-mcp:0.2.2 \
   --transport streamable-http --host 0.0.0.0 --port 8080
 ```
