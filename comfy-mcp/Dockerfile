@@ -29,7 +29,7 @@ LABEL org.opencontainers.image.title="m11s/comfy-mcp" \
       org.opencontainers.image.description="Thin comfy-mcp and comfy-cli image with optional native Streamable HTTP transport"
 
 COPY --from=builder /opt/venv /opt/venv
-COPY comfy-mcp/entrypoint.py comfy-mcp/healthcheck.py /opt/comfy-mcp-image/
+COPY entrypoint.py healthcheck.py /opt/comfy-mcp-image/
 
 RUN groupadd --system --gid 10001 comfy && \
     useradd --system --uid 10001 --gid comfy --create-home --home-dir /workspace comfy && \
