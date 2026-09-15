@@ -115,6 +115,7 @@ jobs:
             description: Comfy MCP stdio server with the pinned comfy-cli engine.
             tags: m11s/comfy-mcp:0.1.0
             latest: m11s/comfy-mcp:latest
+            platforms: linux/amd64,linux/arm64
           - context: caddy-cloudflare
             repository: m11s/caddy
             description: Caddy with the Cloudflare DNS-01 provider module.
@@ -147,6 +148,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: ${{ matrix.context }}
+          platforms: ${{ matrix.platforms || 'linux/amd64' }}
           push: ${{ github.event.inputs.skip_push != 'true' }}
           tags: |
             ${{ matrix.tags }}

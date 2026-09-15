@@ -14,15 +14,22 @@ not contain ComfyUI, CUDA, models, or a browser UI.
 
 ## Docker MCP Toolkit
 
-Create a profile entry from the included server definition, then configure the
-ComfyUI endpoint for that profile:
+Copy the included server definition into Docker MCP Toolkit's local catalog,
+then create and configure a profile:
 
 ```bash
+mkdir -p ~/.docker/mcp/catalogs
+cp comfy-mcp/server.yaml ~/.docker/mcp/catalogs/comfy-mcp.yaml
 docker mcp profile create --name comfyui \
-  --server file://comfy-mcp/server.yaml
+  --server file://comfy-mcp.yaml
 docker mcp profile config comfyui \
   --set comfy-mcp.comfy_local_url=http://host.docker.internal:8188
+docker mcp client connect --global --profile comfyui codex
 ```
+
+Docker Desktop's **MCP Toolkit → Profiles** view now shows the `comfyui`
+profile. The final command connects that profile to Codex; substitute another
+supported client when needed.
 
 For a local development cluster, first make ComfyUI available to Docker
 Desktop's host:
