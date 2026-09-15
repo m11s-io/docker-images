@@ -2,7 +2,7 @@
 # Comfy MCP variant kept in the ComfyUI image family so both images release
 # from the same ComfyUI workspace and version.
 
-FROM m11s/comfyui:0.5.4-gguf
+FROM m11s/comfyui:0.5.4-gguf@sha256:250cad9dbece1267a595091b7b25b3035df1e577bc2d6b55ba856ef29c290e78
 
 ARG COMFY_CLI_REF=v1.20.0
 ARG COMFY_MCP_REF=v0.10.0
