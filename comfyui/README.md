@@ -9,9 +9,9 @@ variant adds the pinned `ComfyUI-GGUF` loader.
 | Tag | Use |
 | --- | --- |
 | `latest` | Current generic ComfyUI image |
-| `0.5.3` | Pinned generic image release |
+| `0.5.4` | Pinned generic image release |
 | `latest-gguf` | Current image with the ComfyUI-GGUF node |
-| `0.5.3-gguf` | Pinned GGUF image release |
+| `0.5.4-gguf` | Pinned GGUF image release |
 
 ## Usage
 

@@ -9,9 +9,13 @@ ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 
 USER root
 
-# The pinned 0.5.2 base predates the standard comfyui home directory. Keep
-# this variant usable until Renovate advances its pinned parent to 0.5.3.
-RUN install -d -o comfyui -g comfyui -m 0755 /home/comfyui && \
+# The pinned 0.5.2 base predates the standard comfyui home directory and
+# Triton's GCC/Python-header build dependencies. Keep this variant usable
+# until Renovate advances its pinned parent to a current generic release.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc-12 python3.14-dev && \
+    rm -rf /var/lib/apt/lists/* && \
+    install -d -o comfyui -g comfyui -m 0755 /home/comfyui && \
     git init custom_nodes/ComfyUI-GGUF && \
     git -C custom_nodes/ComfyUI-GGUF remote add origin https://github.com/city96/ComfyUI-GGUF.git && \
     git -C custom_nodes/ComfyUI-GGUF fetch --depth 1 origin ${COMFYUI_GGUF_REF} && \
@@ -20,3 +24,5 @@ RUN install -d -o comfyui -g comfyui -m 0755 /home/comfyui && \
     chown -R comfyui:comfyui custom_nodes/ComfyUI-GGUF
 
 USER comfyui
+
+ENV CC=/usr/bin/gcc-12

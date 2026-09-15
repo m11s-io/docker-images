@@ -5,7 +5,7 @@
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.5.3 .
+#   docker build -t m11s/comfyui:0.5.4 .
 
 FROM nvidia/cuda:13.3.1-cudnn-runtime-ubuntu22.04@sha256:d613b00c36d11fc3acc8923ef5d7672d30f469c1a9049906fbd993dd2ba8155f
 
@@ -14,6 +14,7 @@ ARG COMFYUI_REF=v0.35.1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0;12.0+PTX"
+ENV CC=/usr/bin/gcc-12
 
 # Python 3.14 isn't in jammy's default repos; deadsnakes backports it.
 RUN apt-get update && \
@@ -22,7 +23,9 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         python3.14 \
+        python3.14-dev \
         python3.14-venv \
+        gcc-12 \
         git \
         libx11-6 \
         libxcb1 \
