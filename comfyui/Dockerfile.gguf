@@ -3,7 +3,7 @@
 # Optional ComfyUI-GGUF extension for m11s/comfyui. Keep the generic image
 # free of community nodes; this variant has the same ComfyUI/CUDA release.
 
-FROM m11s/comfyui:0.5.4@sha256:fc850312b5a710f4d93648df089ff622496b5869524466553e16ba4ebfb5836c
+FROM m11s/comfyui:0.5.4@sha256:fc0ca1deb68fa73cc55f902233740f768e4df4af654b5f8e9254fe6a705d2e9c
 
 ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 
