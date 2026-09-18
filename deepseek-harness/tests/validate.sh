@@ -6,7 +6,12 @@ compose_file="$repo_root/deepseek-harness/compose.yaml"
 
 test -f "$compose_file"
 docker compose -f "$compose_file" config >"${TMPDIR:-/tmp}/deepseek-harness-compose.yaml"
-! grep -A8 '^  chromium:' "${TMPDIR:-/tmp}/deepseek-harness-compose.yaml" | grep -q 'published:'
+awk '
+  /^  chromium:$/ { in_chromium = 1; next }
+  in_chromium && /^[^[:space:]]/ { in_chromium = 0 }
+  in_chromium && /^  [^[:space:]][^:]*:$/ { in_chromium = 0 }
+  in_chromium && /published:/ { exit 1 }
+' "${TMPDIR:-/tmp}/deepseek-harness-compose.yaml"
 grep -q 'user: "10001:10001"' "$compose_file"
 grep -q 'DSH_BROWSER_CDP_ENDPOINT' "$repo_root/deepseek-harness/entrypoint.sh"
 grep -q "mode: attach" "$repo_root/deepseek-harness/entrypoint.sh"
