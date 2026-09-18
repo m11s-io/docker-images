@@ -16,6 +16,8 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/redis-http-proxy](https://hub.docker.com/r/m11s/redis-http-proxy) | Bearer-token-authenticated HTTP proxy in front of a Redis instance | ![Version](https://img.shields.io/docker/v/m11s/redis-http-proxy?label=) |
 | [m11s/comfyui](https://hub.docker.com/r/m11s/comfyui) | Generic ComfyUI built from source on a CUDA runtime base; `0.5.2-gguf` adds the pinned ComfyUI-GGUF loader | ![Version](https://img.shields.io/docker/v/m11s/comfyui?label=) |
 | [m11s/comfy-mcp](https://hub.docker.com/r/m11s/comfy-mcp) | Comfy MCP server with stdio and native Streamable HTTP transports; uses the Comfy CLI engine against a separately deployed ComfyUI | ![Version](https://img.shields.io/docker/v/m11s/comfy-mcp?label=) |
+| [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | DeepSeek Harness web runtime; connects to a separately deployed browser provider when browser automation is needed | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness?label=) |
+| [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium browser exposing the Chrome DevTools Protocol for a colocated DeepSeek Harness runtime | ![Version](https://img.shields.io/docker/v/m11s/chromium-cdp?label=) |
 | [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM's official OpenAI-compatible server image with orjson for faster JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson?label=) |
 
 ## Quick Start
@@ -28,6 +30,8 @@ docker pull m11s/s3-upload-proxy:latest
 docker pull m11s/redis-http-proxy:latest
 docker pull m11s/comfyui:latest
 docker pull m11s/comfy-mcp:latest
+docker pull m11s/deepseek-harness:latest
+docker pull m11s/chromium-cdp:latest
 docker pull m11s/vllm-openai-orjson:latest-x86_64
 ```
 

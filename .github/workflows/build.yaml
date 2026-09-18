@@ -10,6 +10,8 @@ on:
       - "redis-http-proxy/**"
       - "comfyui/**"
       - "comfy-mcp/**"
+      - "deepseek-harness/**"
+      - "chromium-cdp/**"
       - ".github/workflows/build.yaml"
       - "caddy-cloudflare/**"
       - "vllm-openai-orjson/**"
@@ -28,6 +30,8 @@ on:
           - redis-http-proxy
           - comfyui
           - comfy-mcp
+          - deepseek-harness
+          - chromium-cdp
           - caddy-cloudflare
           - vllm-openai-orjson
       skip_push:
@@ -49,6 +53,8 @@ jobs:
       redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
       comfyui: ${{ steps.filter.outputs.comfyui }}
       comfy-mcp: ${{ steps.filter.outputs.comfy-mcp }}
+      deepseek-harness: ${{ steps.filter.outputs.deepseek-harness }}
+      chromium-cdp: ${{ steps.filter.outputs.chromium-cdp }}
       caddy-cloudflare: ${{ steps.filter.outputs.caddy-cloudflare }}
       vllm-openai-orjson: ${{ steps.filter.outputs.vllm-openai-orjson }}
     steps:
@@ -72,6 +78,12 @@ jobs:
               - 'comfyui/**'
             comfy-mcp:
               - 'comfy-mcp/**'
+              - '.github/workflows/build.yaml'
+            deepseek-harness:
+              - 'deepseek-harness/**'
+              - '.github/workflows/build.yaml'
+            chromium-cdp:
+              - 'chromium-cdp/**'
               - '.github/workflows/build.yaml'
             caddy-cloudflare:
               - 'caddy-cloudflare/**'
@@ -117,6 +129,18 @@ jobs:
             description: Comfy MCP server with stdio and native Streamable HTTP transports.
             tags: m11s/comfy-mcp:0.2.2
             latest: m11s/comfy-mcp:latest
+            platforms: linux/amd64,linux/arm64
+          - context: deepseek-harness
+            repository: m11s/deepseek-harness
+            description: DeepSeek Harness web runtime with an optional remote browser provider.
+            tags: m11s/deepseek-harness:0.1.6-alpha.1
+            latest: m11s/deepseek-harness:latest
+            platforms: linux/amd64,linux/arm64
+          - context: chromium-cdp
+            repository: m11s/chromium-cdp
+            description: Headless Chromium browser with a Chrome DevTools Protocol listener.
+            tags: m11s/chromium-cdp:bookworm-20260824
+            latest: m11s/chromium-cdp:latest
             platforms: linux/amd64,linux/arm64
           - context: caddy-cloudflare
             repository: m11s/caddy
