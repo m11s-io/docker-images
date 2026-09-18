@@ -8,13 +8,13 @@ Publish a DeepSeek Harness runtime image and a separate Chromium CDP image, with
 
 `m11s/deepseek-harness` runs the DeepSeek Harness Web profile and includes the Playwright MCP browser-use provider but no browser executable. `m11s/chromium-cdp` runs headless Chromium with Chrome DevTools Protocol enabled. The runtime attaches to the browser through the service-local CDP endpoint `http://chromium:9222`.
 
-The Compose example publishes the DSH Web UI only. Chromium's CDP port remains internal to the Compose network. A named volume persists DSH application state, and a bind mount exposes a user-selected workspace to the runtime.
+GitHub Actions builds and publishes the DSH image from pinned upstream source. The Compose example pulls that published image rather than building DSH locally. It publishes the DSH Web UI only; Chromium's CDP port remains internal to the Compose network. A named volume persists DSH application state, and a bind mount exposes a user-selected workspace to the runtime.
 
 ## Components
 
 - `deepseek-harness/Dockerfile`: a non-root Node runtime image that installs the pinned DSH packages and starts the Web profile from an entrypoint.
 - `deepseek-harness/entrypoint.sh`: initializes a profile patch which enables the Playwright MCP browser provider in attachment mode, using `DSH_BROWSER_CDP_ENDPOINT`.
-- `deepseek-harness/compose.yaml`: a runnable development deployment with a DSH UI service and the companion Chromium service.
+- `deepseek-harness/compose.yaml`: a runnable deployment that pulls the published DSH image and runs it with the companion Chromium service.
 - `chromium-cdp/Dockerfile`: a non-root Debian-based Chromium image that starts headless Chromium with CDP bound to the container network.
 - Per-image README files: describe configuration, mounts, persistence, and the fact that CDP must remain private.
 - Root README and build workflow: enumerate and publish both images on linux/amd64 and linux/arm64.
