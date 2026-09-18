@@ -3,7 +3,7 @@ services:
     image: m11s/deepseek-harness:0.1.6-alpha.1
     environment:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?set DEEPSEEK_API_KEY in the environment}
-      DSH_BROWSER_CDP_ENDPOINT: http://chromium:9222
+      DSH_BROWSER_CDP_ENDPOINT: ${DSH_BROWSER_CDP_ENDPOINT:-http://chromium:9222}
     ports:
       - "3080:3080"
     volumes:

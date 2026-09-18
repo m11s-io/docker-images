@@ -6,6 +6,10 @@ compose_file="$repo_root/deepseek-harness/compose.yaml"
 
 test -f "$compose_file"
 docker compose -f "$compose_file" config >"${TMPDIR:-/tmp}/deepseek-harness-compose.yaml"
+DSH_BROWSER_CDP_ENDPOINT=http://browser.internal:9222 \
+  docker compose -f "$compose_file" config >"${TMPDIR:-/tmp}/deepseek-harness-compose-custom-cdp.yaml"
+grep -q 'DSH_BROWSER_CDP_ENDPOINT: http://browser.internal:9222' \
+  "${TMPDIR:-/tmp}/deepseek-harness-compose-custom-cdp.yaml"
 awk '
   /^  dsh:$/ { in_dsh = 1; next }
   in_dsh && /^[^[:space:]]/ { in_dsh = 0 }
