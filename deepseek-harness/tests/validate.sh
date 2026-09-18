@@ -7,6 +7,13 @@ compose_file="$repo_root/deepseek-harness/compose.yaml"
 test -f "$compose_file"
 docker compose -f "$compose_file" config >"${TMPDIR:-/tmp}/deepseek-harness-compose.yaml"
 awk '
+  /^  dsh:$/ { in_dsh = 1; next }
+  in_dsh && /^[^[:space:]]/ { in_dsh = 0 }
+  in_dsh && /^  [^[:space:]][^:]*:$/ { in_dsh = 0 }
+  in_dsh && /^    build:/ { exit 1 }
+' "${TMPDIR:-/tmp}/deepseek-harness-compose.yaml"
+grep -q '^    image: m11s/deepseek-harness:0.1.6-alpha.1$' "$compose_file"
+awk '
   /^  chromium:$/ { in_chromium = 1; next }
   in_chromium && /^[^[:space:]]/ { in_chromium = 0 }
   in_chromium && /^  [^[:space:]][^:]*:$/ { in_chromium = 0 }

@@ -1,0 +1,26 @@
+services:
+  dsh:
+    image: m11s/deepseek-harness:0.1.6-alpha.1
+    environment:
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?set DEEPSEEK_API_KEY in the environment}
+      DSH_BROWSER_CDP_ENDPOINT: http://chromium:9222
+    ports:
+      - "3080:3080"
+    volumes:
+      - dsh-home:/home/dsh/.dsh
+      - ./workspace:/workspace
+    depends_on:
+      chromium:
+        condition: service_started
+    user: "10001:10001"
+
+  chromium:
+    build: ../chromium-cdp
+    image: m11s/chromium-cdp:local
+    shm_size: 1gb
+    security_opt:
+      - seccomp=unconfined
+    user: "10001:10001"
+
+volumes:
+  dsh-home:
