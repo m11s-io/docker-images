@@ -7,7 +7,7 @@
 #
 # Upstream reference: github.com/caddy-dns/cloudflare
 
-FROM caddy:2-builder-alpine@sha256:1a1689db91cfb390b2d856a1b3774e796852822cd723fa54c475b272f82bb4b7 AS builder
+FROM caddy:2-builder-alpine@sha256:aa705b1e8e4bce41a7a30de934c1e00f6821667c1d1206424465065c92cb7674 AS builder
 
 RUN xcaddy build \
     --with github.com/caddy-dns/cloudflare
