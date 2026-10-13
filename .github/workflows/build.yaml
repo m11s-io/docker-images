@@ -140,7 +140,7 @@ jobs:
           - context: chromium-cdp
             repository: m11s/chromium-cdp
             description: Headless Chromium browser with a Chrome DevTools Protocol listener.
-            tags: m11s/chromium-cdp:bookworm-20260824
+            tags: m11s/chromium-cdp:bookworm-20261005
             latest: m11s/chromium-cdp:latest
             platforms: linux/amd64,linux/arm64
           - context: caddy-cloudflare
