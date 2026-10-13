@@ -134,7 +134,7 @@ jobs:
           - context: deepseek-harness
             repository: m11s/deepseek-harness
             description: DeepSeek Harness web runtime with an optional remote browser provider.
-            tags: m11s/deepseek-harness:0.1.6-alpha.1
+            tags: m11s/deepseek-harness:0.2.0-rc.2
             latest: m11s/deepseek-harness:latest
             platforms: linux/amd64,linux/arm64
           - context: chromium-cdp

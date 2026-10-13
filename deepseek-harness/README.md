@@ -3,6 +3,12 @@
 DeepSeek Harness (DSH) web runtime, with an optional browser provider attached
 to a separate Chromium CDP container. The DSH image does not install Chromium.
 
+This image pins upstream `dsh-v0.2.0-rc.2` (a release candidate, not an alpha)
+at commit `639ed015397290b3745d163aafe02ffee4aa3f84`. It uses Node 24
+Bookworm and the upstream pnpm `11.7.0` pin. The build includes the native
+Landlock launcher and system addon; sandbox availability still depends on
+the host kernel.
+
 ## Run
 
 Set a DeepSeek API key, then start the deployment:
@@ -15,7 +21,7 @@ docker compose up
 Open <http://localhost:3080>. The `dsh-home` named volume persists DSH state
 at `/home/dsh/.dsh`; `./workspace` is mounted at `/workspace` for project
 files. Local Compose pulls the published
-`m11s/deepseek-harness:0.1.6-alpha.1` image; it never builds the DSH source
+`m11s/deepseek-harness:0.2.0-rc.2` image; it never builds the DSH source
 image locally. The companion Chromium image may still be built locally.
 
 The Compose example starts Chromium privately for browser features. It does

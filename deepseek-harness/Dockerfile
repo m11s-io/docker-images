@@ -1,11 +1,11 @@
-FROM node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0 AS build
+FROM node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0 AS build
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git python3 make g++ ca-certificates \
+    && apt-get install -y --no-install-recommends git python3 make g++ musl-tools ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git clone https://github.com/deepseek-ai/deepseek-harness.git /opt/deepseek-harness \
-    && git -C /opt/deepseek-harness checkout 0d1f50007f
+    && git -C /opt/deepseek-harness checkout 639ed015397290b3745d163aafe02ffee4aa3f84
 
 RUN corepack enable \
     && corepack prepare pnpm@11.7.0 --activate
@@ -13,9 +13,10 @@ RUN corepack enable \
 WORKDIR /opt/deepseek-harness
 
 RUN pnpm install --frozen-lockfile \
+    && pnpm --dir native/system run build:native \
     && pnpm run build
 
-FROM node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0
+FROM node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates \
@@ -27,7 +28,10 @@ RUN apt-get update \
 
 COPY --from=build --chown=dsh:dsh /opt/deepseek-harness /opt/deepseek-harness
 COPY --chown=dsh:dsh entrypoint.sh /usr/local/bin/dsh-entrypoint
-RUN chmod 0755 /usr/local/bin/dsh-entrypoint
+# The profile resolver exposes the CLI dependency closure, not root devDependencies.
+# These plugins are already installed and built from the pinned workspace.
+RUN node --input-type=module -e 'import fs from "node:fs"; const path = "/opt/deepseek-harness/apps/cli/package.json"; const pkg = JSON.parse(fs.readFileSync(path, "utf8")); for (const name of ["@deepseek-ai/dsh-browser-use", "@deepseek-ai/dsh-experimental-browser-use-playwright-mcp"]) pkg.dependencies[name] = "workspace:*"; fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");' \
+    && chmod 0755 /usr/local/bin/dsh-entrypoint
 
 ENV DSH_HOME=/home/dsh/.dsh
 
