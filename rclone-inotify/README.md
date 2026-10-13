@@ -8,7 +8,7 @@ image. Use it when an rclone job needs to react to Linux filesystem events.
 | Tag | Use |
 | --- | --- |
 | `latest-inotify` | Current rclone image with `inotify-tools` |
-| `1.74-inotify` | Pinned published rclone release |
+| `<upstream-version>-inotify` | Version from the Dockerfile’s rclone base image |
 
 ## Usage
 

@@ -2,18 +2,5 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices"
-  ],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "Generic across every image in this monorepo, not just one - a matrix entry's own tag isn't a package manager Renovate recognizes, so any context whose published tag is meant to track an upstream base image opts in the same way: a `# renovate: depName=...` comment (same convention as m11s/kubernetes/registry) directly above its matrix entry in build.yaml. Each Dockerfile's own FROM/ARG line is already tracked separately by Renovate's default dockerfile manager - this just keeps the matrix tag string in lockstep with it.",
-      "managerFilePatterns": [
-        "/^\\.github/workflows/build\\.yaml$/"
-      ],
-      "matchStrings": [
-        "#\\s*renovate:\\s*depName=(?<depName>\\S+)\\s*\\n\\s*- context: [\\w-]+\\s*\\n\\s*tags: m11s/[\\w-]+:(?<currentValue>\\S+)"
-      ],
-      "datasourceTemplate": "docker"
-    }
   ]
 }

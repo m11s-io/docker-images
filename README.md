@@ -39,6 +39,28 @@ docker pull m11s/vllm-openai-orjson:latest-x86_64
 
 Images are maintained in the private monorepo and published here via CI on push to `main`.
 
+Each image build publishes its version tag, its existing `latest` alias, and a
+`sha-<12-character Git commit>` tag. Rclone's commit tags end in `-inotify`;
+ComfyUI's GGUF variant uses `-gguf` so it has separate version and commit tags.
+Commit tags identify the source revision; rebuilds of the same revision can
+replace them, so use an image digest when you need immutable content.
+
+The build matrix in `.github/workflows/build.yaml` declares one version source:
+
+- `version`: our explicit image release version, independent of runtime updates.
+- `version_source: base-image` with `version_ref`: the tag from a named Dockerfile
+  `FROM` image (rclone), with an optional `tag_suffix`.
+- `version_source: base-arg` with `version_ref`: the tag from a Dockerfile image
+  argument (vLLM's `VLLM_BASE_IMAGE`).
+
+Renovate updates the Dockerfile pins; rclone and vLLM publish the corresponding
+upstream version automatically. Digest updates retain the version alias and
+publish a new commit tag. Invalid or ambiguous version sources fail before
+publishing. Changes to the shared tag resolver or workflow rebuild all images.
+
+Run the tag resolver checks with
+`python3 -m unittest discover -s scripts -p 'test_*.py'`.
+
 ## MCP catalog
 
 CI publishes [`m11s/mcp-catalog:latest`](https://hub.docker.com/r/m11s/mcp-catalog)
