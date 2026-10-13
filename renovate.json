@@ -2,5 +2,13 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices"
+  ],
+  "packageRules": [
+    {
+      "description": "Allow a longer release interval for the maintained Docker Hub description action",
+      "matchDatasources": ["github-actions"],
+      "matchPackageNames": ["peter-evans/dockerhub-description"],
+      "abandonmentThreshold": "2 years"
+    }
   ]
 }
