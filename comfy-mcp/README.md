@@ -11,7 +11,7 @@ not contain ComfyUI, CUDA, models, or a browser UI.
 | --- | --- |
 | `latest` | Current Comfy MCP image |
 | `0.1.0` | Pinned release using comfy-mcp `0.10.0` and comfy-cli `1.20.0` |
-| `0.2.2` | Current Streamable HTTP release, including the `git` runtime required by comfy-cli |
+| `0.2.3` | Python 3.14.8, comfy-cli 1.22.0, comfy-mcp 0.10.0; stdio and Streamable HTTP |
 
 ## Docker MCP Toolkit
 
@@ -62,7 +62,7 @@ library, or model data.
 docker run --rm -p 8080:8080 \
   -e COMFY_LOCAL_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
   -e COMFYUI_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
-  m11s/comfy-mcp:0.2.2 \
+  m11s/comfy-mcp:0.2.3 \
   --transport streamable-http --host 0.0.0.0 --port 8080
 ```
 
@@ -82,3 +82,7 @@ the ComfyUI deployment, not through this MCP container.
 Comfy MCP is licensed by Comfy Org under AGPL-3.0-or-later or a commercial
 license. Review the upstream licensing terms before deploying it as a hosted
 service.
+
+Both image platforms (`linux/amd64` and `linux/arm64`) run dependency checks and
+real MCP initialization, tool discovery, and `server_info` checks for stdio and
+Streamable HTTP during the build. These checks do not submit generation jobs.

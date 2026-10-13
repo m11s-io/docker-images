@@ -28,7 +28,7 @@ def main() -> None:
     if args.transport == "stdio":
         # Delegate to the upstream entry point unchanged so Desktop MCP clients
         # retain its startup, diagnostics, and stdin/stdout behavior.
-        server.main([])
+        server.main()
         return
     if not 1 <= args.port <= 65535:
         raise SystemExit("comfy-mcp: --port must be from 1 to 65535")

@@ -33,7 +33,7 @@ def main() -> None:
         },
         method="POST",
     )
-    with urlopen(request, timeout=3) as response:  # noqa: S310 - loopback health probe
+    with urlopen(request, timeout=3) as response:  # loopback health probe
         if response.status != 200:
             raise RuntimeError(f"unexpected MCP health response: {response.status}")
 
