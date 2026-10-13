@@ -228,7 +228,7 @@ jobs:
             trap 'docker logs "$container"; docker rm -f "$container"' EXIT
             ready=false
             for attempt in {1..60}; do
-              if docker exec "$container" python3.14 -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8188/system_stats")'; then
+              if docker exec "$container" python3.14 -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8188/system_stats", timeout=5)'; then
                 ready=true
                 break
               fi
@@ -240,7 +240,7 @@ jobs:
             if [[ "$image" == *-gguf ]]; then
               docker exec "$container" python3.14 -c '
           import json, urllib.request
-          nodes = json.load(urllib.request.urlopen("http://127.0.0.1:8188/object_info"))
+          nodes = json.load(urllib.request.urlopen("http://127.0.0.1:8188/object_info", timeout=5))
           assert "UnetLoaderGGUF" in nodes
           '
             fi

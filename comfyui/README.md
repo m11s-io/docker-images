@@ -44,5 +44,5 @@ docker build --build-arg COMFYUI_BASE=m11s/comfyui:0.5.5 \
 ```
 
 CI uses the generic build's exact digest for publishing and its locally loaded
-image for dry runs. The standalone Dockerfile fallback remains pinned to the
-previous published release until the new release digest is available.
+image for dry runs. Standalone builds default to the digest-pinned generic
+`0.5.5` release.
