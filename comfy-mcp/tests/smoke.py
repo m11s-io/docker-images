@@ -55,7 +55,9 @@ async def smoke(entrypoint):
         env.update(COMFY_MCP_TRANSPORT="streamable-http", COMFY_MCP_PORT=str(port))
         process = await asyncio.create_subprocess_exec(sys.executable, entrypoint, env=env)
         try:
-            for _ in range(100):
+            # QEMU imports can take tens of seconds on the arm64 build.
+            deadline = asyncio.get_running_loop().time() + 120
+            while asyncio.get_running_loop().time() < deadline:
                 if process.returncode is not None:
                     raise RuntimeError(f"HTTP server exited: {process.returncode}")
                 try:
@@ -87,4 +89,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--entrypoint", default="/opt/comfy-mcp-image/entrypoint.py")
     args = parser.parse_args()
-    asyncio.run(asyncio.wait_for(smoke(args.entrypoint), timeout=180))
+    asyncio.run(asyncio.wait_for(smoke(args.entrypoint), timeout=360))
