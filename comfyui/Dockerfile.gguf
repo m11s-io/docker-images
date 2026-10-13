@@ -3,20 +3,15 @@
 # Optional ComfyUI-GGUF extension for m11s/comfyui. Keep the generic image
 # free of community nodes; this variant has the same ComfyUI/CUDA release.
 
-FROM m11s/comfyui:0.5.4@sha256:fc0ca1deb68fa73cc55f902233740f768e4df4af654b5f8e9254fe6a705d2e9c
+# CI overrides this published fallback with the generic image from the same build.
+ARG COMFYUI_BASE=m11s/comfyui:0.5.4@sha256:fc0ca1deb68fa73cc55f902233740f768e4df4af654b5f8e9254fe6a705d2e9c
+FROM ${COMFYUI_BASE}
 
 ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 
 USER root
 
-# The pinned 0.5.2 base predates the standard comfyui home directory and
-# Triton's GCC/Python-header build dependencies. Keep this variant usable
-# until Renovate advances its pinned parent to a current generic release.
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc-12 python3.14-dev && \
-    rm -rf /var/lib/apt/lists/* && \
-    install -d -o comfyui -g comfyui -m 0755 /home/comfyui && \
-    git init custom_nodes/ComfyUI-GGUF && \
+RUN git init custom_nodes/ComfyUI-GGUF && \
     git -C custom_nodes/ComfyUI-GGUF remote add origin https://github.com/city96/ComfyUI-GGUF.git && \
     git -C custom_nodes/ComfyUI-GGUF fetch --depth 1 origin ${COMFYUI_GGUF_REF} && \
     git -C custom_nodes/ComfyUI-GGUF checkout --detach FETCH_HEAD && \

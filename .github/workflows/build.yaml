@@ -76,6 +76,7 @@ jobs:
               - 'redis-http-proxy/**'
             comfyui:
               - 'comfyui/**'
+              - '.github/workflows/build.yaml'
             comfy-mcp:
               - 'comfy-mcp/**'
               - '.github/workflows/build.yaml'
@@ -122,7 +123,7 @@ jobs:
           - context: comfyui
             repository: m11s/comfyui
             description: CUDA-enabled ComfyUI image, with an optional GGUF variant.
-            tags: m11s/comfyui:0.5.4
+            tags: m11s/comfyui:0.5.5
             latest: m11s/comfyui:latest
           - context: comfy-mcp
             repository: m11s/comfy-mcp
@@ -170,12 +171,14 @@ jobs:
         uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003  # v4.4.0
 
       - name: Build and push
+        id: generic
         if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: ${{ matrix.context }}
           platforms: ${{ matrix.platforms || 'linux/amd64' }}
           push: ${{ github.event.inputs.skip_push != 'true' }}
+          load: ${{ matrix.context == 'comfyui' && github.event.inputs.skip_push == 'true' }}
           tags: |
             ${{ matrix.tags }}
             ${{ matrix.latest }}
@@ -183,17 +186,68 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push ComfyUI-GGUF variant
-        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: comfyui
           file: comfyui/Dockerfile.gguf
+          platforms: linux/amd64
+          build-args: |
+            COMFYUI_BASE=m11s/comfyui@${{ steps.generic.outputs.digest }}
           push: ${{ github.event.inputs.skip_push != 'true' }}
           tags: |
-            m11s/comfyui:0.5.4-gguf
+            m11s/comfyui:0.5.5-gguf
             m11s/comfyui:latest-gguf
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build ComfyUI-GGUF variant without pushing
+        if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
+        env:
+          COMFYUI_BASE: ${{ matrix.tags }}
+        run: |
+          docker buildx build --builder default --platform linux/amd64 --load \
+            --build-arg "COMFYUI_BASE=$COMFYUI_BASE" \
+            -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.5.5-gguf comfyui
+
+      - name: Check ComfyUI image dependencies and CPU startup
+        if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
+        run: |
+          set -euo pipefail
+          for image in m11s/comfyui:0.5.5 m11s/comfyui:0.5.5-gguf; do
+            docker run --rm --entrypoint python3.14 "$image" -m pip check
+            docker run --rm --entrypoint python3.14 "$image" -c '
+          import torch, torchvision, comfy.audio, av
+          assert torch.__version__ == "2.14.1+cu130"
+          assert torchvision.__version__ == "0.29.1+cu130"
+          assert torch.version.cuda == "13.0"
+          assert comfy.audio.resample(torch.zeros(1, 480), 48000, 24000).shape == (1, 240)
+          print(torch.__version__, torchvision.__version__, torch.version.cuda)
+          '
+            container=$(docker run --detach "$image" --cpu)
+            trap 'docker logs "$container"; docker rm -f "$container"' EXIT
+            ready=false
+            for attempt in {1..60}; do
+              if docker exec "$container" python3.14 -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8188/system_stats")'; then
+                ready=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ready" != true ]; then
+              exit 1
+            fi
+            if [[ "$image" == *-gguf ]]; then
+              docker exec "$container" python3.14 -c '
+          import json, urllib.request
+          nodes = json.load(urllib.request.urlopen("http://127.0.0.1:8188/object_info"))
+          assert "UnetLoaderGGUF" in nodes
+          '
+            fi
+            docker logs "$container"
+            docker rm -f "$container"
+            trap - EXIT
+          done
 
       - name: Update Docker Hub repository overview
         if: ${{ github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}

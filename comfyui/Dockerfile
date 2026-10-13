@@ -1,15 +1,15 @@
 # syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 #
 # ComfyUI, built from upstream source (comfyanonymous/ComfyUI publishes no
-# official image) on a CUDA 13.3 runtime base. TORCH_CUDA_ARCH_LIST includes
+# official image) on a CUDA 13.4 runtime base. TORCH_CUDA_ARCH_LIST includes
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.5.4 .
+#   docker build -t m11s/comfyui:0.5.5 .
 
-FROM nvidia/cuda:13.3.1-cudnn-runtime-ubuntu22.04@sha256:d613b00c36d11fc3acc8923ef5d7672d30f469c1a9049906fbd993dd2ba8155f
+FROM nvidia/cuda:13.4.2-cudnn-runtime-ubuntu22.04@sha256:d5982da4024f00929ce8297a901f2c962b9fb06e3b9df2fdca35ecbdcd6754ee
 
-ARG COMFYUI_REF=v0.35.1
+ARG COMFYUI_REF=v0.39.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -31,24 +31,21 @@ RUN apt-get update && \
         libxcb1 \
         libxext6 && \
     rm -rf /var/lib/apt/lists/* && \
-    python3.14 -m ensurepip --upgrade
+    python3.14 -m venv /opt/venv
+
+# Keep application dependencies separate from Ubuntu's system Python packages.
+ENV PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
-# requirements.txt below pins torch unversioned, which would otherwise
-# resolve to a CPU-only wheel from the default PyPI index. Install CUDA
-# wheels explicitly first, then constrain pip so requirements.txt can't
-# silently replace them.
-#
-# TorchAudio 2.11 publishes cu130, but not cu132. Keep all three PyTorch
-# packages on cu130 so their native extensions use one CUDA ABI. The CUDA
-# 13.3 base remains supported by the host driver independently.
+# Install CUDA wheels explicitly and constrain upstream requirements to keep
+# the selected PyTorch versions. ComfyUI v0.39.0 no longer uses TorchAudio.
+# PyTorch wheels supply CUDA 13.0 libraries independently of the runtime base.
 RUN python3.14 -m pip install --no-cache-dir \
         --index-url https://download.pytorch.org/whl/cu130 \
-        torch==2.14.0+cu130 \
-        torchvision==0.29.0+cu130 \
-        torchaudio==2.11.0+cu130 && \
-    printf 'torch==2.14.0+cu130\ntorchvision==0.29.0+cu130\ntorchaudio==2.11.0+cu130\n' > /etc/pip-constraints.txt
+        torch==2.14.1+cu130 \
+        torchvision==0.29.1+cu130 && \
+    printf 'torch==2.14.1+cu130\ntorchvision==0.29.1+cu130\n' > /etc/pip-constraints.txt
 ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
 
 RUN git clone --branch ${COMFYUI_REF} --depth 1 \
