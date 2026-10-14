@@ -16,6 +16,8 @@ on:
       - "caddy-cloudflare/**"
       - "vllm-openai-orjson/**"
       - "scripts/image_tags.py"
+      - "scripts/native_image_matrix.py"
+      - "scripts/test_native_image_matrix.py"
   workflow_dispatch:
     inputs:
       image:
@@ -88,12 +90,15 @@ jobs:
               - 'scripts/image_tags.py'
               - 'comfyui/**'
             comfy-mcp:
+              - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
               - 'comfy-mcp/**'
             deepseek-harness:
+              - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
               - 'deepseek-harness/**'
             chromium-cdp:
+              - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
               - 'chromium-cdp/**'
             caddy-cloudflare:
@@ -139,18 +144,6 @@ jobs:
             description: CUDA-enabled ComfyUI image, with an optional GGUF variant.
             version: 0.5.6
             latest: latest
-          - context: comfy-mcp
-            repository: m11s/comfy-mcp
-            description: Comfy MCP server with stdio and native Streamable HTTP transports.
-            version: 0.2.3
-            latest: latest
-            platforms: linux/amd64,linux/arm64
-          - context: chromium-cdp
-            repository: m11s/chromium-cdp
-            description: Headless Chromium browser with a Chrome DevTools Protocol listener.
-            version: bookworm-20261005
-            latest: latest
-            platforms: linux/amd64,linux/arm64
           - context: caddy-cloudflare
             repository: m11s/caddy
             description: Caddy with the Cloudflare DNS-01 provider module.
@@ -220,7 +213,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: ${{ matrix.context }}
-          platforms: ${{ matrix.platforms || 'linux/amd64' }}
+          platforms: linux/amd64
           push: ${{ github.event.inputs.skip_push != 'true' }}
           load: ${{ matrix.context == 'comfyui' && github.event.inputs.skip_push == 'true' }}
           tags: ${{ steps.image-tags.outputs.tags }}
@@ -300,43 +293,59 @@ jobs:
           readme-filepath: ./${{ matrix.context }}/README.md
           enable-url-completion: true
 
-  deepseek-tags:
+  native-prepare:
     needs: [changes]
-    if: >-
-      ${{ !failure() && !cancelled() &&
-          ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'deepseek-harness')) ||
-           (github.event_name == 'push' && needs.changes.outputs.deepseek-harness == 'true')) }}
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      meta-tags: ${{ steps.tags.outputs.meta-tags }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has-images: ${{ steps.matrix.outputs.has-images }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - name: Resolve DeepSeek tags
-        id: tags
+      - name: Check image selection and tags
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Select native multi-platform builds
+        id: matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SELECTED_IMAGE: ${{ inputs.image || 'all' }}
+          CHANGED_IMAGES: |
+            {"deepseek-harness":"${{ needs.changes.outputs.deepseek-harness }}",
+             "chromium-cdp":"${{ needs.changes.outputs.chromium-cdp }}",
+             "comfy-mcp":"${{ needs.changes.outputs.comfy-mcp }}"}
+          NATIVE_IMAGES: |
+            [{"context":"deepseek-harness","repository":"m11s/deepseek-harness",
+              "version":"0.2.0-rc.2","latest":"latest",
+              "description":"DeepSeek Harness web runtime with an optional remote browser provider."},
+             {"context":"chromium-cdp","repository":"m11s/chromium-cdp",
+              "version":"bookworm-20261005","latest":"latest",
+              "description":"Headless Chromium browser with a Chrome DevTools Protocol listener."},
+             {"context":"comfy-mcp","repository":"m11s/comfy-mcp",
+              "version":"0.2.3","latest":"latest",
+              "description":"Comfy MCP server with stdio and native Streamable HTTP transports."}]
         run: |
-          tags=$(python3 scripts/image_tags.py --repository m11s/deepseek-harness \
-            --version 0.2.0-rc.2 --latest latest --sha "$GITHUB_SHA")
-          {
-            echo 'meta-tags<<IMAGE_TAGS'
-            while IFS= read -r tag; do
-              echo "type=raw,value=${tag#m11s/deepseek-harness:}"
-            done <<< "$tags"
-            echo 'IMAGE_TAGS'
-          } >> "$GITHUB_OUTPUT"
+          python3 scripts/native_image_matrix.py --images "$NATIVE_IMAGES" \
+            --event "$EVENT_NAME" --selected "$SELECTED_IMAGE" \
+            --changed "$CHANGED_IMAGES" --sha "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
-  deepseek-build:
-    needs: [deepseek-tags]
-    if: ${{ !failure() && !cancelled() && needs.deepseek-tags.result == 'success' }}
+  native-build:
+    needs: [native-prepare]
+    if: ${{ !failure() && !cancelled() && needs.native-prepare.outputs.has-images == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.native-prepare.outputs.matrix) }}
     uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a  # v1
     permissions:
       contents: read
       id-token: write
     with:
-      job-name-prefix: deepseek-harness
-      context: deepseek-harness
+      job-name-prefix: ${{ matrix.context }}
+      context: ${{ matrix.context }}
       output: image
       push: ${{ github.event.inputs.skip_push != 'true' }}
       platforms: linux/amd64,linux/arm64
@@ -345,20 +354,22 @@ jobs:
         default=ubuntu-24.04
         linux/arm64=ubuntu-24.04-arm
       cache: true
-      cache-scope: deepseek-harness
+      cache-scope: ${{ matrix.context }}
       cache-mode: min
       sign: 'false'
-      meta-images: m11s/deepseek-harness
-      meta-tags: ${{ needs.deepseek-tags.outputs.meta-tags }}
+      meta-images: ${{ matrix.repository }}
+      meta-tags: ${{ matrix.meta-tags }}
     secrets:
       registry-auths: |
         - registry: docker.io
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
-  deepseek-description:
-    needs: [deepseek-build]
-    if: ${{ !failure() && !cancelled() && needs.deepseek-build.result == 'success' && github.event.inputs.skip_push != 'true' }}
+  native-description:
+    needs: [native-prepare, native-build]
+    if: ${{ !failure() && !cancelled() && needs.native-build.result == 'success' && github.event.inputs.skip_push != 'true' }}
+    strategy:
+      matrix: ${{ fromJSON(needs.native-prepare.outputs.matrix) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -370,17 +381,18 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
-          repository: m11s/deepseek-harness
-          short-description: DeepSeek Harness web runtime with an optional remote browser provider.
-          readme-filepath: ./deepseek-harness/README.md
+          repository: ${{ matrix.repository }}
+          short-description: ${{ matrix.description }}
+          readme-filepath: ./${{ matrix.context }}/README.md
           enable-url-completion: true
 
   publish-mcp-catalog:
-    needs: [changes, build]
+    needs: [changes, build, native-build]
     if: >-
       ${{
         always() &&
         needs.build.result == 'success' &&
+        needs.native-build.result == 'success' &&
         github.event.inputs.skip_push != 'true' &&
         (
           (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'comfy-mcp')) ||

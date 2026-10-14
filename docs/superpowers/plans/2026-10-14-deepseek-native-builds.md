@@ -23,3 +23,10 @@
 - Runtime dependencies remain intact: pruning the full pnpm dependency graph needs a separate runtime-closure investigation.
 
 - Local validation: 6 tag-resolver tests pass; Compose and actionlint pass; pruned ARM64 runtime passed startup smoke in 1.8s. GitHub source build remains the end-to-end verification.
+
+## Scope extension requested by user
+
+- Apply native runners to all existing ARM64 images: DeepSeek Harness, Chromium CDP, and Comfy MCP. Keep AMD64-only images on x64.
+- A tested dynamic selection matrix feeds the same pinned reusable workflow; preserve manual single-image/all/dry-run selection and tags.
+- MCP catalog publication waits for native Comfy MCP completion.
+- Shared native selection code changes select all three native images; workflow-only changes still select none.

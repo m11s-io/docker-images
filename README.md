@@ -60,11 +60,12 @@ publishing. Changes to the shared tag resolver rebuild all images. A workflow-on
 change runs validation without rebuilding images; use **Run workflow** to select
 an image (or `all`) when a workflow change needs a build.
 
-DeepSeek uses Docker's pinned reusable GitHub Builder workflow to build AMD64
-and ARM64 on native runners and assemble the manifest. Its preparation job uses
-the same tag resolver and keeps the same version, latest, and commit tags. Other
-images remain in the generic matrix. Cache scopes are separate for each image,
-ComfyUI's GGUF variant, and DeepSeek's two platforms.
+DeepSeek Harness, Chromium CDP, and Comfy MCP use Docker's pinned reusable
+GitHub Builder workflow to build AMD64 and ARM64 on native runners and assemble
+the manifests. Their preparation job selects only changed images (or the manual
+selection), uses the same tag resolver, and keeps the same version, latest, and
+commit tags. AMD64-only images remain in the generic matrix. Cache scopes are
+separate for each image, ComfyUI's GGUF variant, and each native platform.
 
 Run the tag resolver checks with
 `python3 -m unittest discover -s scripts -p 'test_*.py'`.
