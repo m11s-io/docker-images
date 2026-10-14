@@ -9,6 +9,13 @@ Bookworm and the upstream pnpm `11.7.0` pin. The build includes the native
 Landlock launcher and system addon; sandbox availability still depends on
 the host kernel.
 
+GitHub builds AMD64 and ARM64 on separate native runners using Docker's
+pinned GitHub Builder workflow, then combines them into one image manifest.
+Each platform has an isolated cache of final-image layers. The Docker build
+checks non-root startup, browser plugin activation, authenticated HTML, and
+shutdown before publication. Git history and upstream development-only
+snapshots, docs, website, and benchmarks are omitted from the runtime.
+
 ## Run
 
 Set a DeepSeek API key, then start the deployment:

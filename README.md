@@ -45,7 +45,7 @@ ComfyUI's GGUF variant uses `-gguf` so it has separate version and commit tags.
 Commit tags identify the source revision; rebuilds of the same revision can
 replace them, so use an image digest when you need immutable content.
 
-The build matrix in `.github/workflows/build.yaml` declares one version source:
+Image jobs in `.github/workflows/build.yaml` declare one version source:
 
 - `version`: our explicit image release version, independent of runtime updates.
 - `version_source: base-image` with `version_ref`: the tag from a named Dockerfile
@@ -56,7 +56,15 @@ The build matrix in `.github/workflows/build.yaml` declares one version source:
 Renovate updates the Dockerfile pins; rclone and vLLM publish the corresponding
 upstream version automatically. Digest updates retain the version alias and
 publish a new commit tag. Invalid or ambiguous version sources fail before
-publishing. Changes to the shared tag resolver or workflow rebuild all images.
+publishing. Changes to the shared tag resolver rebuild all images. A workflow-only
+change runs validation without rebuilding images; use **Run workflow** to select
+an image (or `all`) when a workflow change needs a build.
+
+DeepSeek uses Docker's pinned reusable GitHub Builder workflow to build AMD64
+and ARM64 on native runners and assemble the manifest. Its preparation job uses
+the same tag resolver and keeps the same version, latest, and commit tags. Other
+images remain in the generic matrix. Cache scopes are separate for each image,
+ComfyUI's GGUF variant, and DeepSeek's two platforms.
 
 Run the tag resolver checks with
 `python3 -m unittest discover -s scripts -p 'test_*.py'`.

@@ -74,43 +74,33 @@ jobs:
           filters: |
             rclone-inotify:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'rclone-inotify/**'
             decap-cms:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'decap-cms/**'
             s3-upload-proxy:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 's3-upload-proxy/**'
             redis-http-proxy:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'redis-http-proxy/**'
             comfyui:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'comfyui/**'
             comfy-mcp:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'comfy-mcp/**'
             deepseek-harness:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'deepseek-harness/**'
             chromium-cdp:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'chromium-cdp/**'
             caddy-cloudflare:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'caddy-cloudflare/**'
             vllm-openai-orjson:
               - 'scripts/image_tags.py'
-              - '.github/workflows/build.yaml'
               - 'vllm-openai-orjson/**'
 
   build:
@@ -153,12 +143,6 @@ jobs:
             repository: m11s/comfy-mcp
             description: Comfy MCP server with stdio and native Streamable HTTP transports.
             version: 0.2.3
-            latest: latest
-            platforms: linux/amd64,linux/arm64
-          - context: deepseek-harness
-            repository: m11s/deepseek-harness
-            description: DeepSeek Harness web runtime with an optional remote browser provider.
-            version: 0.2.0-rc.2
             latest: latest
             platforms: linux/amd64,linux/arm64
           - context: chromium-cdp
@@ -240,8 +224,8 @@ jobs:
           push: ${{ github.event.inputs.skip_push != 'true' }}
           load: ${{ matrix.context == 'comfyui' && github.event.inputs.skip_push == 'true' }}
           tags: ${{ steps.image-tags.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.context }}
+          cache-to: type=gha,scope=${{ matrix.context }},mode=max
 
       - name: Build and push ComfyUI-GGUF variant
         if: ${{ github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
@@ -254,8 +238,8 @@ jobs:
             COMFYUI_BASE=m11s/comfyui@${{ steps.generic.outputs.digest }}
           push: ${{ github.event.inputs.skip_push != 'true' }}
           tags: ${{ steps.image-tags.outputs.gguf-tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=comfyui-gguf
+          cache-to: type=gha,scope=comfyui-gguf,mode=max
 
       - name: Build ComfyUI-GGUF variant without pushing
         if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
@@ -314,6 +298,81 @@ jobs:
           repository: ${{ matrix.repository }}
           short-description: ${{ matrix.description }}
           readme-filepath: ./${{ matrix.context }}/README.md
+          enable-url-completion: true
+
+  deepseek-tags:
+    needs: [changes]
+    if: >-
+      ${{ !failure() && !cancelled() &&
+          ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'deepseek-harness')) ||
+           (github.event_name == 'push' && needs.changes.outputs.deepseek-harness == 'true')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      meta-tags: ${{ steps.tags.outputs.meta-tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Resolve DeepSeek tags
+        id: tags
+        run: |
+          tags=$(python3 scripts/image_tags.py --repository m11s/deepseek-harness \
+            --version 0.2.0-rc.2 --latest latest --sha "$GITHUB_SHA")
+          {
+            echo 'meta-tags<<IMAGE_TAGS'
+            while IFS= read -r tag; do
+              echo "type=raw,value=${tag#m11s/deepseek-harness:}"
+            done <<< "$tags"
+            echo 'IMAGE_TAGS'
+          } >> "$GITHUB_OUTPUT"
+
+  deepseek-build:
+    needs: [deepseek-tags]
+    if: ${{ !failure() && !cancelled() && needs.deepseek-tags.result == 'success' }}
+    uses: docker/github-builder/.github/workflows/build.yml@58cb9f5b71b1836d6f690c1e95effdeb9b98cb8a  # v1
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      job-name-prefix: deepseek-harness
+      context: deepseek-harness
+      output: image
+      push: ${{ github.event.inputs.skip_push != 'true' }}
+      platforms: linux/amd64,linux/arm64
+      distribute: true
+      runner: |
+        default=ubuntu-24.04
+        linux/arm64=ubuntu-24.04-arm
+      cache: true
+      cache-scope: deepseek-harness
+      cache-mode: min
+      sign: 'false'
+      meta-images: m11s/deepseek-harness
+      meta-tags: ${{ needs.deepseek-tags.outputs.meta-tags }}
+    secrets:
+      registry-auths: |
+        - registry: docker.io
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+  deepseek-description:
+    needs: [deepseek-build]
+    if: ${{ !failure() && !cancelled() && needs.deepseek-build.result == 'success' && github.event.inputs.skip_push != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Update Docker Hub repository overview
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+          repository: m11s/deepseek-harness
+          short-description: DeepSeek Harness web runtime with an optional remote browser provider.
+          readme-filepath: ./deepseek-harness/README.md
           enable-url-completion: true
 
   publish-mcp-catalog:

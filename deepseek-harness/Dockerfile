@@ -4,8 +4,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git python3 make g++ musl-tools ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/deepseek-ai/deepseek-harness.git /opt/deepseek-harness \
-    && git -C /opt/deepseek-harness checkout 639ed015397290b3745d163aafe02ffee4aa3f84
+RUN git init /opt/deepseek-harness \
+    && git -C /opt/deepseek-harness remote add origin https://github.com/deepseek-ai/deepseek-harness.git \
+    && git -C /opt/deepseek-harness fetch --depth=1 origin 639ed015397290b3745d163aafe02ffee4aa3f84 \
+    && git -C /opt/deepseek-harness checkout --detach FETCH_HEAD
 
 RUN corepack enable \
     && corepack prepare pnpm@11.7.0 --activate
@@ -14,7 +16,8 @@ WORKDIR /opt/deepseek-harness
 
 RUN pnpm install --frozen-lockfile \
     && pnpm --dir native/system run build:native \
-    && pnpm run build
+    && pnpm run build \
+    && rm -rf .git .github .agents docs snapshots website benchmarks
 
 FROM node:24-bookworm@sha256:3d27e5c11e5786e309ec3e03f93ae536eb36e6e5eb3714d5eb3300a36157add0
 
@@ -39,3 +42,6 @@ USER dsh
 WORKDIR /workspace
 EXPOSE 3080
 ENTRYPOINT ["/usr/local/bin/dsh-entrypoint"]
+
+# Validate the assembled runtime before either platform can be published.
+RUN --mount=type=bind,source=tests/smoke.mjs,target=/tmp/dsh-smoke.mjs node /tmp/dsh-smoke.mjs
