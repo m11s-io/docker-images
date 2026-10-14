@@ -147,7 +147,7 @@ jobs:
           - context: comfyui
             repository: m11s/comfyui
             description: CUDA-enabled ComfyUI image, with an optional GGUF variant.
-            version: 0.5.5
+            version: 0.5.6
             latest: latest
           - context: comfy-mcp
             repository: m11s/comfy-mcp
@@ -260,17 +260,17 @@ jobs:
       - name: Build ComfyUI-GGUF variant without pushing
         if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
         env:
-          COMFYUI_BASE: ${{ matrix.tags }}
+          COMFYUI_BASE: ${{ matrix.repository }}:${{ matrix.version }}
         run: |
           docker buildx build --builder default --platform linux/amd64 --load \
             --build-arg "COMFYUI_BASE=$COMFYUI_BASE" \
-            -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.5.5-gguf comfyui
+            -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.5.6-gguf comfyui
 
       - name: Check ComfyUI image dependencies and CPU startup
-        if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
+        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         run: |
           set -euo pipefail
-          for image in m11s/comfyui:0.5.5 m11s/comfyui:0.5.5-gguf; do
+          for image in m11s/comfyui:0.5.6 m11s/comfyui:0.5.6-gguf; do
             docker run --rm --entrypoint python3.14 "$image" -m pip check
             docker run --rm --entrypoint python3.14 "$image" -c '
           import torch, torchvision, comfy.audio, av

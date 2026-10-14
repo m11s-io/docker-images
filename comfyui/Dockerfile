@@ -5,11 +5,11 @@
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.5.5 .
+#   docker build -t m11s/comfyui:0.5.6 .
 
 FROM nvidia/cuda:13.4.2-cudnn-runtime-ubuntu22.04@sha256:d5982da4024f00929ce8297a901f2c962b9fb06e3b9df2fdca35ecbdcd6754ee
 
-ARG COMFYUI_REF=v0.39.0
+ARG COMFYUI_REF=v0.40.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -39,7 +39,7 @@ ENV PATH="/opt/venv/bin:${PATH}"
 WORKDIR /app
 
 # Install CUDA wheels explicitly and constrain upstream requirements to keep
-# the selected PyTorch versions. ComfyUI v0.39.0 no longer uses TorchAudio.
+# the selected PyTorch versions. ComfyUI v0.40.0 no longer uses TorchAudio.
 # PyTorch wheels supply CUDA 13.0 libraries independently of the runtime base.
 RUN python3.14 -m pip install --no-cache-dir \
         --index-url https://download.pytorch.org/whl/cu130 \

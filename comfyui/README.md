@@ -2,7 +2,7 @@
 
 [ComfyUI](https://github.com/comfyanonymous/ComfyUI) built from source on an
 NVIDIA CUDA 13.4.2 runtime (Ubuntu 22.04), with Python 3.14.
-Release `0.5.5` uses ComfyUI v0.39.0, torch 2.14.1, and torchvision 0.29.1
+Release `0.5.6` uses ComfyUI v0.40.0, torch 2.14.1, and torchvision 0.29.1
 with CUDA 13.0 wheels. The default image contains no community nodes; the GGUF
 variant adds the pinned `ComfyUI-GGUF` loader.
 
@@ -11,9 +11,9 @@ variant adds the pinned `ComfyUI-GGUF` loader.
 | Tag | Use |
 | --- | --- |
 | `latest` | Current generic ComfyUI image |
-| `0.5.5` | Pinned generic image release |
+| `0.5.6` | Pinned generic image release |
 | `latest-gguf` | Current image with the ComfyUI-GGUF node |
-| `0.5.5-gguf` | Pinned GGUF image release |
+| `0.5.6-gguf` | Pinned GGUF image release |
 
 ## Usage
 
@@ -38,11 +38,11 @@ when your workflow requires the ComfyUI-GGUF custom node. Source and license:
 Build the generic image first, then pass it explicitly as the GGUF parent:
 
 ```bash
-docker build -t m11s/comfyui:0.5.5 comfyui
-docker build --build-arg COMFYUI_BASE=m11s/comfyui:0.5.5 \
-  -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.5.5-gguf comfyui
+docker build -t m11s/comfyui:0.5.6 comfyui
+docker build --build-arg COMFYUI_BASE=m11s/comfyui:0.5.6 \
+  -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.5.6-gguf comfyui
 ```
 
 CI uses the generic build's exact digest for publishing and its locally loaded
 image for dry runs. Standalone builds default to the digest-pinned generic
-`0.5.5` release.
+`0.5.5` release until the new generic digest is published.
