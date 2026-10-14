@@ -16,7 +16,7 @@ awk '
   in_dsh && /^  [^[:space:]][^:]*:$/ { in_dsh = 0 }
   in_dsh && /^    build:/ { exit 1 }
 ' "${TMPDIR:-/tmp}/deepseek-harness-compose.yaml"
-grep -q '^    image: m11s/deepseek-harness:0.2.0-rc.2$' "$compose_file"
+grep -Eq '^    image: m11s/deepseek-harness:0\.2\.0-rc\.2(@sha256:[[:xdigit:]]{64})?$' "$compose_file"
 awk '
   /^  chromium:$/ { in_chromium = 1; next }
   in_chromium && /^[^[:space:]]/ { in_chromium = 0 }
