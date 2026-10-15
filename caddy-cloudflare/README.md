@@ -20,3 +20,10 @@ app.internal.example.com {
 ```
 
 `CF_API_TOKEN` needs `Zone:Read` and `DNS:Edit` scoped to the target zone.
+
+## Versioning
+
+Publish tags follow `CADDY_BASE_IMAGE` in the Dockerfile, replacing `-alpine`
+with `-cloudflare`. The compiled binary explicitly uses that Caddy release. The Cloudflare
+plugin is pinned separately and tracked by Renovate. Plugin and base digest
+updates republish the version alias and produce a new source commit tag.

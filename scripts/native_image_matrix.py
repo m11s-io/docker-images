@@ -16,11 +16,20 @@ def build_matrix(images, event, selected, changed, sha):
                    else changed.get(context) == "true")
         if not enabled:
             continue
-        tags = subprocess.check_output([
+        args = [
             sys.executable, str(Path(__file__).with_name("image_tags.py")),
-            "--repository", image["repository"], "--version", image["version"],
+            "--repository", image["repository"],
             "--latest", image["latest"], "--sha", sha,
-        ], text=True).splitlines()
+            "--strip-prefix", image.get("strip_prefix", ""),
+            "--strip-suffix=" + image.get("strip_suffix", ""),
+            "--suffix=" + image.get("tag_suffix", ""),
+        ]
+        if image.get("version_source"):
+            args.extend(["--" + image["version_source"], image["version_ref"],
+                         "--dockerfile", str(Path(context) / "Dockerfile")])
+        else:
+            args.extend(["--version", image["version"]])
+        tags = subprocess.check_output(args, text=True).splitlines()
         prefix = image["repository"] + ":"
         include.append({**image, "meta-tags": "\n".join(
             "type=raw,value=" + tag[len(prefix):] for tag in tags

@@ -4,7 +4,10 @@ DeepSeek Harness (DSH) web runtime, with an optional browser provider attached
 to a separate Chromium CDP container. The DSH image does not install Chromium.
 
 This image pins upstream `dsh-v0.2.0-rc.2` (a release candidate, not an alpha)
-at commit `639ed015397290b3745d163aafe02ffee4aa3f84`. It uses Node 24
+at commit `639ed015397290b3745d163aafe02ffee4aa3f84`. Publish tags derive from
+`DSH_REF` in the Dockerfile with the `dsh-v` prefix removed. Renovate updates
+the release and `DSH_COMMIT` together; the build verifies that the release tag
+resolves to the pinned commit. It uses Node 24
 Bookworm and the upstream pnpm `11.7.0` pin. The build includes the native
 Landlock launcher and system addon; sandbox availability still depends on
 the host kernel.

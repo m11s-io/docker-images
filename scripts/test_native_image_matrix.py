@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+from pathlib import Path
 
 from native_image_matrix import build_matrix
 
@@ -36,6 +38,17 @@ class NativeImageMatrixTest(unittest.TestCase):
         row = self.matrix(event="workflow_dispatch", selected="deepseek-harness")[0]
         self.assertEqual(row["meta-tags"].splitlines(), [
             "type=raw,value=0.2.0-rc.2", "type=raw,value=latest", "type=raw,value=sha-494d7fbb6b32",
+        ])
+
+    def test_native_release_tags_follow_dockerfile_arg(self):
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, "Dockerfile").write_text("ARG DSH_REF=dsh-v0.2.1-rc.1\n")
+            images = [{"context": directory, "repository": "m11s/deepseek-harness",
+                       "version_source": "version-arg", "version_ref": "DSH_REF",
+                       "strip_prefix": "dsh-v", "latest": "latest"}]
+            row = build_matrix(images, "workflow_dispatch", "all", {}, SHA)["include"][0]
+        self.assertEqual(row["meta-tags"].splitlines(), [
+            "type=raw,value=0.2.1-rc.1", "type=raw,value=latest", "type=raw,value=sha-494d7fbb6b32",
         ])
 
 

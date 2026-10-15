@@ -10,6 +10,10 @@ It is the server-side counterpart to the [`@m11s-io/decap-cms-media-library-s3`]
 
 Built from the [`@m11s-io/s3-upload-proxy`](https://www.npmjs.com/package/@m11s-io/s3-upload-proxy) npm package.
 
+Publish tags follow `S3_UPLOAD_PROXY_VERSION` in the Dockerfile, the same version
+used by `npm install`. Renovate tracks this argument so package updates also
+update the image's version tag automatically.
+
 ## API
 
 ```

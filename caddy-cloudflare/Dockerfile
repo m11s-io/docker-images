@@ -7,11 +7,17 @@
 #
 # Upstream reference: github.com/caddy-dns/cloudflare
 
-FROM caddy:2-builder-alpine@sha256:d6161a2c82fd58b3205048958fb6246d0c5d892beee8a47e90944610c4efd100 AS builder
+ARG CADDY_BASE_IMAGE=caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+FROM caddy:2.11.7-builder-alpine@sha256:d6161a2c82fd58b3205048958fb6246d0c5d892beee8a47e90944610c4efd100 AS builder
 
-RUN xcaddy build \
-    --with github.com/caddy-dns/cloudflare
+ARG CADDY_BASE_IMAGE
+# renovate: datasource=github-tags depName=caddy-dns/cloudflare
+ARG CLOUDFLARE_VERSION=v0.2.4
+RUN CADDY_RELEASE="${CADDY_BASE_IMAGE#caddy:}" \
+    && CADDY_RELEASE="${CADDY_RELEASE%%-alpine*}" \
+    && xcaddy build "v${CADDY_RELEASE}" \
+    --with "github.com/caddy-dns/cloudflare@${CLOUDFLARE_VERSION}"
 
-FROM caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+FROM ${CADDY_BASE_IMAGE}
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy

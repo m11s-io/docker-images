@@ -1,4 +1,4 @@
-"""Resolve Docker publish tags from an image release or a Dockerfile base pin."""
+"""Resolve Docker publish tags from a release, Dockerfile argument, or base pin."""
 
 import argparse
 import pathlib
@@ -14,30 +14,44 @@ def main():
     source.add_argument("--version")
     source.add_argument("--base-image")
     source.add_argument("--base-arg")
+    source.add_argument("--version-arg")
     parser.add_argument("--dockerfile", type=pathlib.Path)
     parser.add_argument("--suffix", default="")
+    parser.add_argument("--strip-prefix", default="")
+    parser.add_argument("--strip-suffix", default="")
     args = parser.parse_args()
 
     version = args.version
     if version is None:
         if args.dockerfile is None:
-            parser.error("a Dockerfile is required for a base version source")
+            parser.error("a Dockerfile is required for a Dockerfile version source")
         try:
             content = args.dockerfile.read_text()
         except OSError as error:
             parser.error(str(error))
-        if args.base_arg:
-            pattern = rf"^\s*ARG\s+{re.escape(args.base_arg)}=(\S+)\s*(?:#.*)?$"
+        if args.base_arg or args.version_arg:
+            pattern = rf"^\s*ARG\s+{re.escape(args.base_arg or args.version_arg)}=(\S+)\s*(?:#.*)?$"
         else:
             pattern = rf"^\s*FROM\s+({re.escape(args.base_image)}(?=[:@\s])\S*)(?:\s+AS\s+\S+)?\s*$"
         references = re.findall(pattern, content, flags=re.MULTILINE | re.IGNORECASE)
         if len(references) != 1:
-            parser.error("expected exactly one matching Dockerfile base reference")
-        # A registry's port is not an image tag; inspect only the final path segment.
-        reference = references[0].split("@", 1)[0]
-        if ":" not in reference.rsplit("/", 1)[-1]:
-            parser.error("base reference must have an explicit image tag")
-        version = reference.rsplit(":", 1)[1]
+            parser.error("expected exactly one matching Dockerfile base reference or version argument")
+        if args.version_arg:
+            version = references[0]
+        else:
+            # A registry's port is not an image tag; inspect only the final path segment.
+            reference = references[0].split("@", 1)[0]
+            if ":" not in reference.rsplit("/", 1)[-1]:
+                parser.error("base reference must have an explicit image tag")
+            version = reference.rsplit(":", 1)[1]
+
+    if not version.startswith(args.strip_prefix):
+        parser.error("version does not start with the declared prefix")
+    version = version[len(args.strip_prefix):]
+    if args.strip_suffix:
+        if not version.endswith(args.strip_suffix):
+            parser.error("version does not end with the declared suffix")
+        version = version[:-len(args.strip_suffix)]
 
     if not re.fullmatch(r"[0-9a-f]{40}", args.sha):
         parser.error("sha must be a full Git commit SHA")

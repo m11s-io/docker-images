@@ -40,7 +40,8 @@ docker pull m11s/vllm-openai-orjson:latest-x86_64
 Images are maintained in the private monorepo and published here via CI on push to `main`.
 
 Each image build publishes its version tag, its existing `latest` alias, and a
-`sha-<12-character Git commit>` tag. Rclone's commit tags end in `-inotify`;
+`sha-<12-character Git commit>` tag. Rclone's commit tags end in `-inotify`,
+and Caddy's end in `-cloudflare`;
 ComfyUI's GGUF variant uses `-gguf` so it has separate version and commit tags.
 Commit tags identify the source revision; rebuilds of the same revision can
 replace them, so use an image digest when you need immutable content.
@@ -48,17 +49,30 @@ replace them, so use an image digest when you need immutable content.
 Image jobs in `.github/workflows/build.yaml` declare one version source:
 
 - `version`: our explicit image release version, independent of runtime updates.
+- `version_source: version-arg` with `version_ref`: an application release argument
+  in the Dockerfile (S3 Upload Proxy and DeepSeek Harness). DeepSeek strips
+  the `dsh-v` release prefix.
 - `version_source: base-image` with `version_ref`: the tag from a named Dockerfile
   `FROM` image (rclone), with an optional `tag_suffix`.
 - `version_source: base-arg` with `version_ref`: the tag from a Dockerfile image
-  argument (vLLM's `VLLM_BASE_IMAGE`).
+  argument (vLLM's `VLLM_BASE_IMAGE` or Caddy's `CADDY_BASE_IMAGE`). Caddy strips
+  `-alpine` and adds `-cloudflare` to its application version.
 
-Renovate updates the Dockerfile pins; rclone and vLLM publish the corresponding
-upstream version automatically. Digest updates retain the version alias and
+Renovate updates the Dockerfile pins and annotated application arguments; rclone,
+vLLM, Caddy, S3 Upload Proxy, and DeepSeek publish the corresponding upstream
+version automatically. DeepSeek release updates include the pinned source commit;
+the build rejects a release whose commit does not match. Caddy builds the explicit
+release with a pinned Cloudflare plugin. Digest updates retain the version alias and
 publish a new commit tag. Invalid or ambiguous version sources fail before
-publishing. Changes to the shared tag resolver rebuild all images. A workflow-only
-change runs validation without rebuilding images; use **Run workflow** to select
-an image (or `all`) when a workflow change needs a build.
+publishing. Changes to the shared tag resolver rebuild all images. Image folders
+are watched for changes, excluding Compose YAML files (`compose*.yaml`,
+`compose*.yml`, `docker-compose*.yaml`, and `docker-compose*.yml`), Markdown files,
+and `docs/` folders. These exclusions apply both to workflow triggers and image
+selection, so updating a deployment digest or renaming documentation does not
+rebuild an image. New build inputs in an image folder trigger builds automatically;
+keep build inputs outside the excluded paths. A workflow-only change runs
+validation without rebuilding images. Use **Run workflow** to select an image
+(or `all`) whenever an explicit rebuild is needed.
 
 DeepSeek Harness, Chromium CDP, and Comfy MCP use Docker's pinned reusable
 GitHub Builder workflow to build AMD64 and ARM64 on native runners and assemble

@@ -4,9 +4,12 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git python3 make g++ musl-tools ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+ARG DSH_REF=dsh-v0.2.0-rc.2
+ARG DSH_COMMIT=639ed015397290b3745d163aafe02ffee4aa3f84
 RUN git init /opt/deepseek-harness \
     && git -C /opt/deepseek-harness remote add origin https://github.com/deepseek-ai/deepseek-harness.git \
-    && git -C /opt/deepseek-harness fetch --depth=1 origin 639ed015397290b3745d163aafe02ffee4aa3f84 \
+    && git -C /opt/deepseek-harness fetch --depth=1 origin "refs/tags/${DSH_REF}" \
+    && test "$(git -C /opt/deepseek-harness rev-parse 'FETCH_HEAD^{commit}')" = "$DSH_COMMIT" \
     && git -C /opt/deepseek-harness checkout --detach FETCH_HEAD
 
 RUN corepack enable \

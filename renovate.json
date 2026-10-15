@@ -10,5 +10,31 @@
       "matchPackageNames": ["peter-evans/dockerhub-description"],
       "abandonmentThreshold": "2 years"
     }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track application and plugin versions declared in Dockerfile arguments",
+      "managerFilePatterns": [
+        "/^(caddy-cloudflare|s3-upload-proxy)\\/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+=(?<currentValue>\\S+)"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "Update the DeepSeek release and its source commit together",
+      "managerFilePatterns": [
+        "/^deepseek-harness\\/Dockerfile$/"
+      ],
+      "matchStrings": [
+        "ARG DSH_REF=(?<currentValue>dsh-v\\S+)\\s+ARG DSH_COMMIT=(?<currentDigest>[a-f0-9]{40})"
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "deepseek-ai/deepseek-harness",
+      "extractVersionTemplate": "^dsh-v(?<version>.+)$",
+      "versioningTemplate": "semver"
+    }
   ]
 }

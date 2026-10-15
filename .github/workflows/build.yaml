@@ -18,6 +18,13 @@ on:
       - "scripts/image_tags.py"
       - "scripts/native_image_matrix.py"
       - "scripts/test_native_image_matrix.py"
+      # Deployment examples and docs do not change the published images.
+      - "!**/compose*.yaml"
+      - "!**/compose*.yml"
+      - "!**/docker-compose*.yaml"
+      - "!**/docker-compose*.yml"
+      - "!**/*.md"
+      - "!**/docs/**"
   workflow_dispatch:
     inputs:
       image:
@@ -73,40 +80,102 @@ jobs:
         id: filter
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4.0.3
         with:
+          # Keep OR matching for shared scripts while honoring exclusions.
+          predicate-quantifier: some-with-excludes
           filters: |
             rclone-inotify:
               - 'scripts/image_tags.py'
               - 'rclone-inotify/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             decap-cms:
               - 'scripts/image_tags.py'
               - 'decap-cms/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             s3-upload-proxy:
               - 'scripts/image_tags.py'
               - 's3-upload-proxy/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             redis-http-proxy:
               - 'scripts/image_tags.py'
               - 'redis-http-proxy/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             comfyui:
               - 'scripts/image_tags.py'
               - 'comfyui/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             comfy-mcp:
               - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
               - 'comfy-mcp/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             deepseek-harness:
               - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
               - 'deepseek-harness/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             chromium-cdp:
               - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
               - 'chromium-cdp/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             caddy-cloudflare:
               - 'scripts/image_tags.py'
               - 'caddy-cloudflare/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
             vllm-openai-orjson:
               - 'scripts/image_tags.py'
               - 'vllm-openai-orjson/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
 
   build:
     needs: [changes]
@@ -132,7 +201,8 @@ jobs:
           - context: s3-upload-proxy
             repository: m11s/s3-upload-proxy
             description: Multipart upload proxy for S3-compatible object storage.
-            version: 0.1.3
+            version_source: version-arg
+            version_ref: S3_UPLOAD_PROXY_VERSION
             latest: latest
           - context: redis-http-proxy
             repository: m11s/redis-http-proxy
@@ -147,7 +217,10 @@ jobs:
           - context: caddy-cloudflare
             repository: m11s/caddy
             description: Caddy with the Cloudflare DNS-01 provider module.
-            version: 2.11.4-cloudflare
+            version_source: base-arg
+            version_ref: CADDY_BASE_IMAGE
+            strip_suffix: -alpine
+            tag_suffix: -cloudflare
             latest: latest-cloudflare
           - context: vllm-openai-orjson
             repository: m11s/vllm-openai-orjson
@@ -170,11 +243,13 @@ jobs:
           IMAGE_VERSION: ${{ matrix.version }}
           VERSION_SOURCE: ${{ matrix.version_source }}
           VERSION_REF: ${{ matrix.version_ref }}
+          STRIP_PREFIX: ${{ matrix.strip_prefix }}
+          STRIP_SUFFIX: ${{ matrix.strip_suffix }}
           TAG_SUFFIX: ${{ matrix.tag_suffix }}
           LATEST_TAG: ${{ matrix.latest }}
         run: |
           args=(--repository "$IMAGE_REPOSITORY" --latest "$LATEST_TAG" --sha "$GITHUB_SHA"
-                --suffix="$TAG_SUFFIX")
+                --suffix="$TAG_SUFFIX" --strip-prefix "$STRIP_PREFIX" --strip-suffix="$STRIP_SUFFIX")
           if [[ -n "$VERSION_SOURCE" ]]; then
             args+=("--$VERSION_SOURCE" "$VERSION_REF" --dockerfile "$IMAGE_CONTEXT/Dockerfile")
           else
@@ -320,7 +395,8 @@ jobs:
              "comfy-mcp":"${{ needs.changes.outputs.comfy-mcp }}"}
           NATIVE_IMAGES: |
             [{"context":"deepseek-harness","repository":"m11s/deepseek-harness",
-              "version":"0.2.0-rc.2","latest":"latest",
+              "version_source":"version-arg","version_ref":"DSH_REF",
+              "strip_prefix":"dsh-v","latest":"latest",
               "description":"DeepSeek Harness web runtime with an optional remote browser provider."},
              {"context":"chromium-cdp","repository":"m11s/chromium-cdp",
               "version":"bookworm-20261005","latest":"latest",
