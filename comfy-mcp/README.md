@@ -5,13 +5,18 @@ server. It drives a separately deployed ComfyUI instance through the
 [`comfy-cli`](https://github.com/Comfy-Org/comfy-cli) binary; this image does
 not contain ComfyUI, CUDA, models, or a browser UI.
 
+Publish tags derive from `COMFY_MCP_REF` in the Dockerfile, with the leading
+`v` removed. Comfy CLI and wrapper changes retain that MCP version and produce
+new digests and source commit tags. Earlier image release tags remain available.
+
 ## Tags
 
 | Tag | Use |
 | --- | --- |
 | `latest` | Current Comfy MCP image |
 | `0.1.0` | Pinned release using comfy-mcp `0.10.0` and comfy-cli `1.20.0` |
-| `0.2.3` | Python 3.14.8, comfy-cli 1.22.0, comfy-mcp 0.10.0; stdio and Streamable HTTP |
+| `0.10.0` | Upstream comfy-mcp 0.10.0 with comfy-cli 1.22.0; stdio and Streamable HTTP |
+| `0.2.3` | Legacy image release before tags followed upstream MCP versions |
 
 ## Docker MCP Toolkit
 
@@ -62,7 +67,7 @@ library, or model data.
 docker run --rm -p 8080:8080 \
   -e COMFY_LOCAL_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
   -e COMFYUI_URL=http://comfyui.comfyui.svc.cluster.local:8188 \
-  m11s/comfy-mcp:0.2.3 \
+  m11s/comfy-mcp:0.10.0 \
   --transport streamable-http --host 0.0.0.0 --port 8080
 ```
 

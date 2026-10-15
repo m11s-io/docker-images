@@ -50,8 +50,8 @@ Image jobs in `.github/workflows/build.yaml` declare one version source:
 
 - `version`: our explicit image release version, independent of runtime updates.
 - `version_source: version-arg` with `version_ref`: an application release argument
-  in the Dockerfile (S3 Upload Proxy and DeepSeek Harness). DeepSeek strips
-  the `dsh-v` release prefix.
+  in the Dockerfile (S3 Upload Proxy, DeepSeek Harness, ComfyUI, and Comfy MCP).
+  DeepSeek strips the `dsh-v` release prefix; the Comfy images strip `v`.
 - `version_source: base-image` with `version_ref`: the tag from a named Dockerfile
   `FROM` image (rclone), with an optional `tag_suffix`.
 - `version_source: base-arg` with `version_ref`: the tag from a Dockerfile image
@@ -59,7 +59,7 @@ Image jobs in `.github/workflows/build.yaml` declare one version source:
   `-alpine` and adds `-cloudflare` to its application version.
 
 Renovate updates the Dockerfile pins and annotated application arguments; rclone,
-vLLM, Caddy, S3 Upload Proxy, and DeepSeek publish the corresponding upstream
+vLLM, Caddy, S3 Upload Proxy, DeepSeek, ComfyUI, and Comfy MCP publish the upstream
 version automatically. DeepSeek release updates include the pinned source commit;
 the build rejects a release whose commit does not match. Caddy builds the explicit
 release with a pinned Cloudflare plugin. Digest updates retain the version alias and

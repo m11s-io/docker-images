@@ -212,7 +212,9 @@ jobs:
           - context: comfyui
             repository: m11s/comfyui
             description: CUDA-enabled ComfyUI image, with an optional GGUF variant.
-            version: 0.5.6
+            version_source: version-arg
+            version_ref: COMFYUI_REF
+            strip_prefix: v
             latest: latest
           - context: caddy-cloudflare
             repository: m11s/caddy
@@ -248,23 +250,24 @@ jobs:
           TAG_SUFFIX: ${{ matrix.tag_suffix }}
           LATEST_TAG: ${{ matrix.latest }}
         run: |
-          args=(--repository "$IMAGE_REPOSITORY" --latest "$LATEST_TAG" --sha "$GITHUB_SHA"
-                --suffix="$TAG_SUFFIX" --strip-prefix "$STRIP_PREFIX" --strip-suffix="$STRIP_SUFFIX")
+          args=(--repository "$IMAGE_REPOSITORY" --sha "$GITHUB_SHA"
+                --strip-prefix "$STRIP_PREFIX" --strip-suffix="$STRIP_SUFFIX")
           if [[ -n "$VERSION_SOURCE" ]]; then
             args+=("--$VERSION_SOURCE" "$VERSION_REF" --dockerfile "$IMAGE_CONTEXT/Dockerfile")
           else
             args+=(--version "$IMAGE_VERSION")
           fi
-          tags=$(python3 scripts/image_tags.py "${args[@]}")
+          tags=$(python3 scripts/image_tags.py "${args[@]}" --latest "$LATEST_TAG" --suffix="$TAG_SUFFIX")
           {
+            echo "image=${tags%%$'\n'*}"
             echo 'tags<<IMAGE_TAGS'
             echo "$tags"
             echo 'IMAGE_TAGS'
           } >> "$GITHUB_OUTPUT"
           if [[ "$IMAGE_CONTEXT" == comfyui ]]; then
-            gguf_tags=$(python3 scripts/image_tags.py --repository "$IMAGE_REPOSITORY" \
-              --version "$IMAGE_VERSION" --suffix=-gguf --latest latest-gguf --sha "$GITHUB_SHA")
+            gguf_tags=$(python3 scripts/image_tags.py "${args[@]}" --suffix=-gguf --latest latest-gguf)
             {
+              echo "gguf-image=${gguf_tags%%$'\n'*}"
               echo 'gguf-tags<<IMAGE_TAGS'
               echo "$gguf_tags"
               echo 'IMAGE_TAGS'
@@ -312,17 +315,21 @@ jobs:
       - name: Build ComfyUI-GGUF variant without pushing
         if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
         env:
-          COMFYUI_BASE: ${{ matrix.repository }}:${{ matrix.version }}
+          COMFYUI_BASE: ${{ steps.image-tags.outputs.image }}
+          GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
         run: |
           docker buildx build --builder default --platform linux/amd64 --load \
             --build-arg "COMFYUI_BASE=$COMFYUI_BASE" \
-            -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.5.6-gguf comfyui
+            -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
 
       - name: Check ComfyUI image dependencies and CPU startup
         if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        env:
+          COMFYUI_IMAGE: ${{ steps.image-tags.outputs.image }}
+          COMFYUI_GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
         run: |
           set -euo pipefail
-          for image in m11s/comfyui:0.5.6 m11s/comfyui:0.5.6-gguf; do
+          for image in "$COMFYUI_IMAGE" "$COMFYUI_GGUF_IMAGE"; do
             docker run --rm --entrypoint python3.14 "$image" -m pip check
             docker run --rm --entrypoint python3.14 "$image" -c '
           import torch, torchvision, comfy.audio, av
@@ -402,7 +409,8 @@ jobs:
               "version":"bookworm-20261005","latest":"latest",
               "description":"Headless Chromium browser with a Chrome DevTools Protocol listener."},
              {"context":"comfy-mcp","repository":"m11s/comfy-mcp",
-              "version":"0.2.3","latest":"latest",
+              "version_source":"version-arg","version_ref":"COMFY_MCP_REF",
+              "strip_prefix":"v","latest":"latest",
               "description":"Comfy MCP server with stdio and native Streamable HTTP transports."}]
         run: |
           python3 scripts/native_image_matrix.py --images "$NATIVE_IMAGES" \
@@ -505,7 +513,11 @@ jobs:
           DOCKER_MCP_IN_CONTAINER: "1"
         run: |
           install --directory "$HOME/.docker/mcp/catalogs"
-          install --mode 0644 comfy-mcp/server.yaml "$HOME/.docker/mcp/catalogs/comfy-mcp.yaml"
+          tags=$(python3 scripts/image_tags.py --repository m11s/comfy-mcp \
+            --version-arg COMFY_MCP_REF --strip-prefix v --dockerfile comfy-mcp/Dockerfile \
+            --latest latest --sha "$GITHUB_SHA")
+          image=${tags%%$'\n'*}
+          sed "s|^image: .*|image: $image|" comfy-mcp/server.yaml > "$HOME/.docker/mcp/catalogs/comfy-mcp.yaml"
           docker mcp catalog create m11s/mcp-catalog:0.1.0 \
             --title "m11s MCP Catalog" \
             --server file://comfy-mcp.yaml

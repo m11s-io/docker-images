@@ -5,10 +5,11 @@
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.5.6 .
+#   docker build -t m11s/comfyui:0.40.0 .
 
 FROM nvidia/cuda:13.4.2-cudnn-runtime-ubuntu22.04@sha256:d5982da4024f00929ce8297a901f2c962b9fb06e3b9df2fdca35ecbdcd6754ee
 
+# renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
 ARG COMFYUI_REF=v0.40.0
 
 ENV DEBIAN_FRONTEND=noninteractive

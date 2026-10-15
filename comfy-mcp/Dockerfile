@@ -7,6 +7,7 @@
 FROM python:3.15.0-slim-bookworm@sha256:122756f3fe72c4f5d3d71897888204ee85774bc79de952555b8a474e1d0a5d53 AS builder
 
 ARG COMFY_CLI_REF=v1.22.0
+# renovate: datasource=github-tags depName=Comfy-Org/comfy-mcp
 ARG COMFY_MCP_REF=v0.10.0
 
 RUN apt-get update && \
