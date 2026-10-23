@@ -25,6 +25,8 @@ on:
       - "!**/docker-compose*.yml"
       - "!**/*.md"
       - "!**/docs/**"
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       image:
@@ -52,16 +54,19 @@ on:
 
 jobs:
   changes:
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/') && endsWith(github.head_ref, '-digest')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     outputs:
       rclone-inotify: ${{ steps.filter.outputs.rclone-inotify }}
       decap-cms: ${{ steps.filter.outputs.decap-cms }}
       s3-upload-proxy: ${{ steps.filter.outputs.s3-upload-proxy }}
       redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
       comfyui: ${{ steps.filter.outputs.comfyui }}
+      comfyui-generic: ${{ steps.filter.outputs.comfyui-generic }}
+      comfyui-gguf: ${{ steps.filter.outputs.comfyui-gguf }}
       comfy-mcp: ${{ steps.filter.outputs.comfy-mcp }}
       deepseek-harness: ${{ steps.filter.outputs.deepseek-harness }}
       chromium-cdp: ${{ steps.filter.outputs.chromium-cdp }}
@@ -128,6 +133,19 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
+            comfyui-generic:
+              - 'scripts/image_tags.py'
+              - 'comfyui/**'
+              - '!comfyui/Dockerfile.gguf'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
+            comfyui-gguf:
+              - 'scripts/image_tags.py'
+              - 'comfyui/Dockerfile.gguf'
             comfy-mcp:
               - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
@@ -179,7 +197,7 @@ jobs:
 
   build:
     needs: [changes]
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'renovate/') && endsWith(github.head_ref, '-digest'))) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -233,7 +251,7 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true')) || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Resolve image tags
@@ -275,31 +293,31 @@ jobs:
           fi
 
       - name: Log in to Docker Hub
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
       - name: Set up Docker Buildx
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true')) || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
 
       - name: Build and push
         id: generic
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: ${{ matrix.context }}
           platforms: linux/amd64
-          push: ${{ github.event.inputs.skip_push != 'true' }}
-          load: ${{ matrix.context == 'comfyui' && github.event.inputs.skip_push == 'true' }}
+          push: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
+          load: ${{ matrix.context == 'comfyui' && (github.event_name == 'pull_request' || github.event.inputs.skip_push == 'true') }}
           tags: ${{ steps.image-tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.context }}
           cache-to: type=gha,scope=${{ matrix.context }},mode=max
 
       - name: Build and push ComfyUI-GGUF variant
-        if: ${{ github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: comfyui
@@ -322,14 +340,33 @@ jobs:
             --build-arg "COMFYUI_BASE=$COMFYUI_BASE" \
             -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
 
+      - name: Build ComfyUI-GGUF variant for pull request
+        if: ${{ github.event_name == 'pull_request' && matrix.context == 'comfyui' && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true') }}
+        env:
+          COMFYUI_IMAGE: ${{ steps.image-tags.outputs.image }}
+          GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
+          GENERIC_CHANGED: ${{ needs.changes.outputs.comfyui-generic }}
+        run: |
+          args=(--builder default --platform linux/amd64 --load)
+          if [[ "$GENERIC_CHANGED" == true ]]; then
+            args+=(--build-arg "COMFYUI_BASE=$COMFYUI_IMAGE")
+          fi
+          docker buildx build "${args[@]}" -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
+
       - name: Check ComfyUI image dependencies and CPU startup
-        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true')) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true')) }}
         env:
           COMFYUI_IMAGE: ${{ steps.image-tags.outputs.image }}
           COMFYUI_GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
+          GENERIC_CHANGED: ${{ needs.changes.outputs.comfyui-generic }}
         run: |
           set -euo pipefail
-          for image in "$COMFYUI_IMAGE" "$COMFYUI_GGUF_IMAGE"; do
+          images=("$COMFYUI_IMAGE" "$COMFYUI_GGUF_IMAGE")
+          if [[ "$GITHUB_EVENT_NAME" == pull_request && "$GENERIC_CHANGED" != true ]]; then
+            images=("$COMFYUI_GGUF_IMAGE")
+          fi
+          for image in "${images[@]}"; do
+            [[ -n "$image" ]] || continue
             docker run --rm --entrypoint python3.14 "$image" -m pip check
             docker run --rm --entrypoint python3.14 "$image" -c '
           import torch, torchvision, comfy.audio, av
@@ -377,7 +414,7 @@ jobs:
 
   native-prepare:
     needs: [changes]
-    if: ${{ !failure() && !cancelled() }}
+    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'renovate/') && endsWith(github.head_ref, '-digest'))) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -431,7 +468,7 @@ jobs:
       job-name-prefix: ${{ matrix.context }}
       context: ${{ matrix.context }}
       output: image
-      push: ${{ github.event.inputs.skip_push != 'true' }}
+      push: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
       platforms: linux/amd64,linux/arm64
       distribute: true
       runner: |
@@ -446,12 +483,12 @@ jobs:
     secrets:
       registry-auths: |
         - registry: docker.io
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASS }}
+          username: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USER || '' }}
+          password: ${{ github.event_name != 'pull_request' && secrets.DOCKER_PASS || '' }}
 
   native-description:
     needs: [native-prepare, native-build]
-    if: ${{ !failure() && !cancelled() && needs.native-build.result == 'success' && github.event.inputs.skip_push != 'true' }}
+    if: ${{ !failure() && !cancelled() && needs.native-build.result == 'success' && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
     strategy:
       matrix: ${{ fromJSON(needs.native-prepare.outputs.matrix) }}
     runs-on: ubuntu-latest
@@ -477,6 +514,7 @@ jobs:
         always() &&
         needs.build.result == 'success' &&
         needs.native-build.result == 'success' &&
+        github.event_name != 'pull_request' &&
         github.event.inputs.skip_push != 'true' &&
         (
           (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'comfy-mcp')) ||

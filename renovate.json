@@ -5,12 +5,28 @@
   ],
   "packageRules": [
     {
+      "description": "Auto-merge Docker digest updates after checks pass",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true,
+      "platformAutomerge": false
+    },
+    {
+      "description": "Group ComfyUI Dockerfile version updates",
+      "matchFileNames": ["comfyui/Dockerfile"],
+      "matchUpdateTypes": ["major", "minor", "patch"],
+      "groupName": "ComfyUI Dockerfile dependencies"
+    },
+    {
       "description": "Allow a longer release interval for the maintained Docker Hub description action",
       "matchDatasources": ["github-actions"],
       "matchPackageNames": ["peter-evans/dockerhub-description"],
       "abandonmentThreshold": "2 years"
     }
   ],
+  "digest": {
+    "branchTopic": "{{{depNameSanitized}}}-digest"
+  },
   "customManagers": [
     {
       "customType": "regex",

@@ -40,7 +40,7 @@ def build_matrix(images, event, selected, changed, sha):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--images", required=True)
-    parser.add_argument("--event", choices=["push", "workflow_dispatch"], required=True)
+    parser.add_argument("--event", choices=["push", "pull_request", "workflow_dispatch"], required=True)
     parser.add_argument("--selected", default="all")
     parser.add_argument("--changed", required=True)
     parser.add_argument("--sha", required=True)
