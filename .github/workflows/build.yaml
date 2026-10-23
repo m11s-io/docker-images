@@ -305,7 +305,7 @@ jobs:
 
       - name: Build and push
         id: generic
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name == 'push' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: ${{ matrix.context }}
@@ -316,15 +316,30 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.context }}
           cache-to: type=gha,scope=${{ matrix.context }},mode=max
 
+      - name: Resolve ComfyUI-GGUF parent build args
+        id: gguf-build-args
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'push' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true'))) }}
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GENERIC_CHANGED: ${{ needs.changes.outputs.comfyui-generic }}
+          GENERIC_DIGEST: ${{ steps.generic.outputs.digest }}
+        run: |
+          if [[ "$EVENT_NAME" == workflow_dispatch || "$GENERIC_CHANGED" == true ]]; then
+            {
+              echo 'args<<BUILD_ARGS'
+              echo "COMFYUI_BASE=m11s/comfyui@$GENERIC_DIGEST"
+              echo 'BUILD_ARGS'
+            } >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push ComfyUI-GGUF variant
-        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'push' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true'))) }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: comfyui
           file: comfyui/Dockerfile.gguf
           platforms: linux/amd64
-          build-args: |
-            COMFYUI_BASE=m11s/comfyui@${{ steps.generic.outputs.digest }}
+          build-args: ${{ steps.gguf-build-args.outputs.args }}
           push: ${{ github.event.inputs.skip_push != 'true' }}
           tags: ${{ steps.image-tags.outputs.gguf-tags }}
           cache-from: type=gha,scope=comfyui-gguf
@@ -354,7 +369,7 @@ jobs:
           docker buildx build "${args[@]}" -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
 
       - name: Check ComfyUI image dependencies and CPU startup
-        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true')) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || ((github.event_name == 'pull_request' || github.event_name == 'push') && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true'))) }}
         env:
           COMFYUI_IMAGE: ${{ steps.image-tags.outputs.image }}
           COMFYUI_GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
@@ -362,7 +377,7 @@ jobs:
         run: |
           set -euo pipefail
           images=("$COMFYUI_IMAGE" "$COMFYUI_GGUF_IMAGE")
-          if [[ "$GITHUB_EVENT_NAME" == pull_request && "$GENERIC_CHANGED" != true ]]; then
+          if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch && "$GENERIC_CHANGED" != true ]]; then
             images=("$COMFYUI_GGUF_IMAGE")
           fi
           for image in "${images[@]}"; do

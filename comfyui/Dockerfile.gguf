@@ -3,7 +3,7 @@
 # Optional ComfyUI-GGUF extension for m11s/comfyui. Keep the generic image
 # free of community nodes; this variant has the same ComfyUI/CUDA release.
 
-# CI overrides this default with the generic image from the same build.
+# CI overrides this default when it rebuilds the generic image.
 ARG COMFYUI_BASE=m11s/comfyui:0.40.0@sha256:7926852fe55ee179f3828441573fe52d63b3ed51b3ec8309580fbfb4f364920c
 FROM ${COMFYUI_BASE}
 

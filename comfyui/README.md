@@ -48,6 +48,6 @@ docker build --build-arg COMFYUI_BASE=m11s/comfyui:0.40.0 \
   -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.40.0-gguf comfyui
 ```
 
-CI uses the generic build's exact digest for publishing and its locally loaded
-image for dry runs. Standalone builds default to the digest-pinned generic
-`0.40.0` release.
+CI uses the generic build's exact digest when rebuilding the generic image.
+For GGUF-only digest updates, CI builds from this file's pinned parent image.
+Standalone builds also default to the digest-pinned generic `0.40.0` release.
