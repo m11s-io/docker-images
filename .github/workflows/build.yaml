@@ -417,7 +417,7 @@ jobs:
           done
 
       - name: Update Docker Hub repository overview
-        if: ${{ github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
         with:
           username: ${{ secrets.DOCKER_USER }}
