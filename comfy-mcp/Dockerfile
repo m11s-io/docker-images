@@ -4,7 +4,7 @@
 # deliberately not bundled: comfy-mcp is a thin wrapper over comfy-cli, and
 # the GPU runtime is provided by m11s/comfyui.
 
-FROM python:3.15.0-slim-bookworm@sha256:0e019bbdfb5d9874cb2389f1c2884b64aa2ac97c99960b5bc521cef978c0617d AS builder
+FROM python:3.15.1-slim-bookworm@sha256:575f8bc12ec26542e0678bc6b60e385218248019d433157ec327264a78c3a853 AS builder
 
 ARG COMFY_CLI_REF=v1.22.0
 # renovate: datasource=github-tags depName=Comfy-Org/comfy-mcp
@@ -24,7 +24,7 @@ RUN git clone --depth 1 --branch "${COMFY_CLI_REF}" https://github.com/Comfy-Org
     /opt/venv/bin/comfy --version && \
     /opt/venv/bin/comfy-mcp --version
 
-FROM python:3.15.0-slim-bookworm@sha256:0e019bbdfb5d9874cb2389f1c2884b64aa2ac97c99960b5bc521cef978c0617d
+FROM python:3.15.1-slim-bookworm@sha256:575f8bc12ec26542e0678bc6b60e385218248019d433157ec327264a78c3a853
 
 LABEL org.opencontainers.image.title="m11s/comfy-mcp" \
       org.opencontainers.image.description="Thin comfy-mcp and comfy-cli image with optional native Streamable HTTP transport"
