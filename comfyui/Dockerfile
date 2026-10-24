@@ -7,10 +7,10 @@
 # Build:
 #   docker build -t m11s/comfyui:0.40.0 .
 
-FROM nvidia/cuda:13.4.2-cudnn-runtime-ubuntu22.04@sha256:d5982da4024f00929ce8297a901f2c962b9fb06e3b9df2fdca35ecbdcd6754ee
+FROM nvidia/cuda:13.4.3-cudnn-runtime-ubuntu22.04@sha256:5b4f4ff403744604db148c4e562f998b97047a3a02ebfaab42be73932daf4848
 
 # renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
-ARG COMFYUI_REF=v0.40.0
+ARG COMFYUI_REF=v0.42.5
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
