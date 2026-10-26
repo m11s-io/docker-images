@@ -5,7 +5,6 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o redis-http-proxy .
 
-# renovate: datasource=docker depName=gcr.io/distroless/static-debian13
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99
 COPY --from=builder /app/redis-http-proxy /redis-http-proxy
 EXPOSE 80
