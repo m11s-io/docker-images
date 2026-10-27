@@ -80,7 +80,7 @@ jobs:
 
   changes:
     if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       pull-requests: read
@@ -243,7 +243,7 @@ jobs:
   build:
     needs: [changes]
     if: ${{ !failure() && !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     strategy:
@@ -450,7 +450,7 @@ jobs:
   native-prepare:
     needs: [changes]
     if: ${{ !failure() && !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -524,7 +524,7 @@ jobs:
   image-checks:
     needs: [changes, build, native-prepare, native-build, timestral-tests]
     if: ${{ always() && github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions: {}
     steps:
       - name: Require successful image validation
@@ -552,7 +552,7 @@ jobs:
     if: ${{ !failure() && !cancelled() && needs.native-build.result == 'success' && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
     strategy:
       matrix: ${{ fromJSON(needs.native-prepare.outputs.matrix) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
@@ -582,7 +582,7 @@ jobs:
           (github.event_name != 'workflow_dispatch' && needs.changes.outputs.comfy-mcp == 'true')
         )
       }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
