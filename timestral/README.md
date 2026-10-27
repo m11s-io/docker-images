@@ -103,11 +103,11 @@ CUDA uses the same service code. The CUDA image installs the pinned CUDA PyTorch
 export MODEL_REVISION=9874d252ab0aae16f7f7c999f98f98d6ad7d8365
 export MODEL_DEVICE=cuda
 uv sync --frozen --no-dev --no-install-package torch
-uv pip install --python .venv/bin/python --index-url https://download.pytorch.org/whl/cu126 torch==2.14.1+cu126
+uv pip install --python .venv/bin/python --index-url https://download.pytorch.org/whl/cu130 torch==2.14.1+cu130
 uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
-The host also needs a compatible NVIDIA driver and the container must receive a GPU. Setting `MODEL_DEVICE=cuda` does not allocate a GPU by itself.
+CUDA 13.0 supports the Blackwell GPUs used on `plt` and requires a compatible NVIDIA driver (Linux 580.65.06 or newer). The host also needs a compatible NVIDIA driver and the container must receive a GPU. Setting `MODEL_DEVICE=cuda` does not allocate a GPU by itself.
 ## Tests and benchmarks
 
 The API unit tests use an injected forecaster double and need no checkpoint:

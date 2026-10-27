@@ -307,7 +307,7 @@ jobs:
             dockerfile: timestral/Dockerfile.cuda
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral forecasting API with NVIDIA CUDA 12.6 PyTorch.
+            description: Timestral forecasting API with NVIDIA CUDA 13.0 PyTorch.
             version_source: version-arg
             version_ref: TIMESTRAL_VERSION
             tag_suffix: -cuda
