@@ -1,6 +1,7 @@
 **
 !pyproject.toml
 !uv.lock
+!check_version.py
 !app/
 !app/**
 **/__pycache__

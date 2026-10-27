@@ -94,6 +94,10 @@ variant-specific `sha-<12-character-commit>-cpu` / `-cuda` aliases. Select
 `all` builds both. Both variants run the same API with one Uvicorn worker on
 port 8000. The CPU image installs PyTorch from its CPU-only wheel index. The
 CUDA image uses PyTorch 2.14.1 cu126 and its packaged CUDA 12.6 libraries.
+The version tags follow upstream Timestral `1.0.0`, pinned to source commit
+`a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff`; each build verifies the installed
+distribution metadata against the image tag version. The internal API wrapper
+keeps its own package version.
 Use a compatible NVIDIA driver and the NVIDIA Container Toolkit to run it on a
 GPU host.
 

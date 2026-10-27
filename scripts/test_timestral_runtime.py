@@ -2,6 +2,9 @@
 
 import pathlib
 import re
+import subprocess
+import sys
+import tempfile
 import tomllib
 import unittest
 
@@ -29,6 +32,35 @@ class TimestralRuntimeTest(unittest.TestCase):
         self.assertNotIn("--no-install-package torch", cpu)
         cuda = (ROOT / "timestral/Dockerfile.cuda").read_text()
         self.assertRegex(cuda, rf"torch=={re.escape(release)}\+cu126(?:\s|$)")
+
+    def test_both_images_check_installed_upstream_version(self):
+        for variant in ("cpu", "cuda"):
+            with self.subTest(variant=variant):
+                dockerfile = (ROOT / f"timestral/Dockerfile.{variant}").read_text()
+                self.assertIn("ARG TIMESTRAL_VERSION=1.0.0", dockerfile)
+                self.assertIn("check_version.py", dockerfile)
+                self.assertIn("TIMESTRAL_VERSION", dockerfile)
+
+    def test_version_check_accepts_match_and_rejects_mismatch(self):
+        checker = ROOT / "timestral/check_version.py"
+        with tempfile.TemporaryDirectory() as directory:
+            dist_info = pathlib.Path(directory) / "timestral-1.0.0.dist-info"
+            dist_info.mkdir()
+            (dist_info / "METADATA").write_text(
+                "Metadata-Version: 2.1\nName: timestral\nVersion: 1.0.0\n\n"
+            )
+            env = {"PYTHONPATH": directory}
+            matched = subprocess.run(
+                [sys.executable, str(checker), "1.0.0"], capture_output=True,
+                text=True, env=env,
+            )
+            self.assertEqual(matched.returncode, 0, matched.stderr)
+            mismatch = subprocess.run(
+                [sys.executable, str(checker), "9.9.9"], capture_output=True,
+                text=True, env=env,
+            )
+            self.assertNotEqual(mismatch.returncode, 0)
+            self.assertIn("does not match image version", mismatch.stderr)
 
 
 if __name__ == "__main__":

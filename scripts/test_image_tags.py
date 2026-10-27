@@ -54,7 +54,7 @@ class ImageTagsTest(unittest.TestCase):
                                       dockerfile=dockerfile.read_text())
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(), [
-                    f"m11s/example:0.1.0-{variant}",
+                    f"m11s/example:1.0.0-{variant}",
                     f"m11s/example:latest-{variant}",
                     f"m11s/example:sha-494d7fbb6b32-{variant}",
                 ])
