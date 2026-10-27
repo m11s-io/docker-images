@@ -1,24 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices"
+    "github>m11s-io/.github:renovate-config"
   ],
   "packageRules": [
-    {
-      "description": "Wait seven days before proposing npm version updates",
-      "matchDatasources": ["npm"],
-      "minimumReleaseAge": "7 days",
-      "minimumReleaseAgeBehaviour": "timestamp-required",
-      "internalChecksFilter": "strict"
-    },
-    {
-      "description": "Wait seven days before proposing third-party Docker image updates; our maintained images are exempt",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["!/^m11s\\//"],
-      "minimumReleaseAge": "7 days",
-      "minimumReleaseAgeBehaviour": "timestamp-required",
-      "internalChecksFilter": "strict"
-    },
     {
       "description": "Auto-merge Docker digest updates after checks pass",
       "matchDatasources": ["docker"],
