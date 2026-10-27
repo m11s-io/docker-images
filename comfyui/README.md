@@ -1,24 +1,28 @@
 # m11s/comfyui
 
-[ComfyUI](https://github.com/comfyanonymous/ComfyUI) built from source on an
-NVIDIA CUDA 13.4.2 runtime (Ubuntu 22.04), with Python 3.14.
-Image `0.40.0` follows ComfyUI v0.40.0, with torch 2.14.1 and torchvision 0.29.1
-using CUDA 13.0 wheels. The default image contains no community nodes; the GGUF
-variant adds the pinned `ComfyUI-GGUF` loader.
+[ComfyUI](https://github.com/Comfy-Org/ComfyUI) built from source with an NVIDIA
+CUDA runtime and explicitly selected PyTorch wheels. The generic image contains
+no community nodes; the GGUF variant adds the pinned `ComfyUI-GGUF` loader.
 
-Publish tags derive from `COMFYUI_REF` in the Dockerfile, with the leading `v`
-removed. The GGUF variant adds `-gguf`. Dependency and packaging changes retain
-the upstream version and produce new digests and source commit tags. Existing
-`0.5.6` and `0.5.6-gguf` tags remain available as legacy releases.
+The [Dockerfile](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile) is the source of truth for the upstream release,
+base image, Python interpreter, PyTorch packages, and CUDA wheel index.
+[Dockerfile.gguf](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile.gguf) pins the generic parent and GGUF commit.
+PyTorch bundles its own CUDA libraries, independently of the container base.
+Audio dependencies follow the selected upstream requirements.
 
 ## Tags
 
+Tags derive from `COMFYUI_REF`, with the leading `v` removed. The GGUF variant
+adds `-gguf`. Dependency and packaging changes retain the upstream version and
+produce new digests and source commit tags. Pin a digest for reproducible
+release deployments.
+
 | Tag | Use |
 | --- | --- |
-| `latest` | Current generic ComfyUI image |
-| `0.40.0` | Pinned upstream ComfyUI release |
-| `latest-gguf` | Current image with the ComfyUI-GGUF node |
-| `0.40.0-gguf` | The same ComfyUI release with GGUF support |
+| `<upstream-version>` | Generic image for that upstream release |
+| `<upstream-version>-gguf` | The same release with GGUF support |
+| `latest` | Current generic image |
+| `latest-gguf` | Current GGUF image |
 
 ## Usage
 
@@ -35,19 +39,23 @@ docker run --rm --gpus all -p 8188:8188 \
 ```
 
 Open `http://localhost:8188` after startup. Use `m11s/comfyui:latest-gguf`
-when your workflow requires the ComfyUI-GGUF custom node. Source and license:
-[m11s-io/docker-images](https://github.com/m11s-io/docker-images).
+when your workflow requires the ComfyUI-GGUF custom node.
 
-## Building the GGUF variant
+## Building and validation
 
 Build the generic image first, then pass it explicitly as the GGUF parent:
 
 ```bash
-docker build -t m11s/comfyui:0.40.0 comfyui
-docker build --build-arg COMFYUI_BASE=m11s/comfyui:0.40.0 \
-  -f comfyui/Dockerfile.gguf -t m11s/comfyui:0.40.0-gguf comfyui
+docker build -t m11s/comfyui:local comfyui
+docker build --build-arg COMFYUI_BASE=m11s/comfyui:local \
+  -f comfyui/Dockerfile.gguf -t m11s/comfyui:local-gguf comfyui
 ```
 
-CI uses the generic build's exact digest when rebuilding the generic image.
-For GGUF-only digest updates, CI builds from this file's pinned parent image.
-Standalone builds also default to the digest-pinned generic `0.40.0` release.
+Both Dockerfiles run dependency, pinned-package, audio-resampling, and CPU
+startup checks before the build succeeds. The GGUF build also checks loader
+registration. Failed checks prevent that image from being exported or published.
+Validation runs in a disposable build stage, keeping startup state out of the
+published image. These checks do not perform GPU inference.
+
+CI uses the generic build's exact digest when rebuilding the GGUF variant.
+For GGUF-only changes, it uses the pinned parent in `Dockerfile.gguf`.

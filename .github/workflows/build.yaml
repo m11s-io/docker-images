@@ -20,6 +20,7 @@ on:
       - "scripts/native_image_matrix.py"
       - "scripts/test_native_image_matrix.py"
       - "scripts/test_timestral_runtime.py"
+      - "scripts/test_comfyui_validation.py"
       # Deployment examples and docs do not change the published images.
       - "!**/compose*.yaml"
       - "!**/compose*.yml"
@@ -434,54 +435,6 @@ jobs:
             args+=(--build-arg "COMFYUI_BASE=$COMFYUI_IMAGE")
           fi
           docker buildx build "${args[@]}" -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
-
-      - name: Check ComfyUI image dependencies and CPU startup
-        if: ${{ matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || ((github.event_name == 'pull_request' || github.event_name == 'push') && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true'))) }}
-        env:
-          COMFYUI_IMAGE: ${{ steps.image-tags.outputs.image }}
-          COMFYUI_GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
-          GENERIC_CHANGED: ${{ needs.changes.outputs.comfyui-generic }}
-        run: |
-          set -euo pipefail
-          images=("$COMFYUI_IMAGE" "$COMFYUI_GGUF_IMAGE")
-          if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch && "$GENERIC_CHANGED" != true ]]; then
-            images=("$COMFYUI_GGUF_IMAGE")
-          fi
-          for image in "${images[@]}"; do
-            [[ -n "$image" ]] || continue
-            docker run --rm --entrypoint python3.14 "$image" -m pip check
-            docker run --rm --entrypoint python3.14 "$image" -c '
-          import torch, torchvision, comfy.audio, av
-          assert torch.__version__ == "2.14.1+cu130"
-          assert torchvision.__version__ == "0.29.1+cu130"
-          assert torch.version.cuda == "13.0"
-          assert comfy.audio.resample(torch.zeros(1, 480), 48000, 24000).shape == (1, 240)
-          print(torch.__version__, torchvision.__version__, torch.version.cuda)
-          '
-            container=$(docker run --detach "$image" --cpu)
-            trap 'docker logs "$container"; docker rm -f "$container"' EXIT
-            ready=false
-            for attempt in {1..60}; do
-              if docker exec "$container" python3.14 -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8188/system_stats", timeout=5)'; then
-                ready=true
-                break
-              fi
-              sleep 2
-            done
-            if [ "$ready" != true ]; then
-              exit 1
-            fi
-            if [[ "$image" == *-gguf ]]; then
-              docker exec "$container" python3.14 -c '
-          import json, urllib.request
-          nodes = json.load(urllib.request.urlopen("http://127.0.0.1:8188/object_info", timeout=5))
-          assert "UnetLoaderGGUF" in nodes
-          '
-            fi
-            docker logs "$container"
-            docker rm -f "$container"
-            trap - EXIT
-          done
 
       - name: Update Docker Hub repository overview
         if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
