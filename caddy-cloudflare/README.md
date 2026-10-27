@@ -21,6 +21,22 @@ app.internal.example.com {
 
 `CF_API_TOKEN` needs `Zone:Read` and `DNS:Edit` scoped to the target zone.
 
+## Runtime user and mounted files
+
+The image runs as UID/GID `10001:10001` and inherits the official Caddy startup
+command: `caddy run --config /etc/caddy/Caddyfile --adapter caddyfile`.
+
+Mount a Caddyfile readable by UID `10001`. Persistent `/data/caddy` and
+`/config/caddy` storage must be writable by that user, including existing
+certificate keys and ACME account files when migrating from a root deployment.
+Check host ACLs as well as Unix modes; Synology ACLs can deny access even when
+numeric ownership appears correct. Keep private keys and environment files
+restricted rather than making them readable by everyone.
+
+Ports above 1024 need no privileged-port capability. Binding ports 80/443 depends
+on the host's port policy and allowed Linux capabilities; verify those settings
+for the target runtime, especially with host networking.
+
 ## Versioning
 
 Publish tags follow `CADDY_BASE_IMAGE` in the Dockerfile, replacing `-alpine`
