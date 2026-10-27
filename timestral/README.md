@@ -4,13 +4,18 @@ This service wraps the upstream [`TimestralForecaster.forecast`](https://github.
 
 ## Checkpoint and startup
 
-`MODEL_ID` defaults to `mistralai/Timestral-209M`. `MODEL_REVISION` is required and must be a full 40-character commit hash from the Hugging Face model repository. The known revisions used by this service are:
+`MODEL_ID` defaults to `mistralai/Timestral-209M`. `MODEL_REVISION` is required
+and must be a full 40-character commit hash from the selected Hugging Face
+model repository. Set both values to select a different compatible checkpoint;
+the same CPU or CUDA image can load each size. The upstream Timestral family
+includes 5M, 28M, 123M, and 209M checkpoints. Known immutable revisions are:
 
 | Checkpoint | Revision |
 | --- | --- |
-| `mistralai/Timestral-209M` | `9874d252ab0aae16f7f7c999f98f98d6ad7d8365` |
 | `mistralai/Timestral-5M` (smoke test) | `bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f` |
 | `mistralai/Timestral-28M` (benchmark) | `49b26409ac87b5935539a5d8ffe7f397b720db47` |
+| `mistralai/Timestral-123M` | `5a147287addda85f6acd8da3fb8858fe9af7e8f7` |
+| `mistralai/Timestral-209M` | `9874d252ab0aae16f7f7c999f98f98d6ad7d8365` |
 
 Model weights are downloaded to `HF_HOME` (default `/models/huggingface`). The cache must be writable. Set `HF_TOKEN` only when Hugging Face access requires it; it is treated as a secret and is never included in API errors. Startup fails if model loading fails or if `MODEL_DEVICE=cuda` but CUDA is unavailable. The service does not fall back to CPU.
 
