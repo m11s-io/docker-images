@@ -93,7 +93,7 @@ variant-specific `sha-<12-character-commit>-cpu` / `-cuda` aliases. Select
 `timestral-cpu` or `timestral-cuda` in the manual workflow to build one variant;
 `all` builds both. Both variants run the same API with one Uvicorn worker on
 port 8000. The CPU image installs PyTorch from its CPU-only wheel index. The
-CUDA image pairs PyTorch 2.13.0 cu126 with the pinned NVIDIA CUDA 12.6 runtime.
+CUDA image uses PyTorch 2.14.1 cu126 and its packaged CUDA 12.6 libraries.
 Use a compatible NVIDIA driver and the NVIDIA Container Toolkit to run it on a
 GPU host.
 
