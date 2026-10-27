@@ -19,6 +19,7 @@ on:
       - "scripts/image_tags.py"
       - "scripts/native_image_matrix.py"
       - "scripts/test_native_image_matrix.py"
+      - "scripts/test_timestral_runtime.py"
       # Deployment examples and docs do not change the published images.
       - "!**/compose*.yaml"
       - "!**/compose*.yml"
@@ -63,13 +64,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - name: Set up uv and Python 3.12
+      - name: Set up uv and Python 3.15
         uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
         with:
           version: 0.13.6
-          python-version: "3.12"
+          python-version: "3.15"
           enable-cache: true
           cache-dependency-glob: timestral/uv.lock
+      - name: Check Timestral runtime alignment
+        run: python3 -m unittest discover -s scripts -p 'test_timestral_runtime.py'
       - name: Run Timestral API unit tests
         working-directory: timestral
         run: uv run --frozen pytest tests/test_api.py -q

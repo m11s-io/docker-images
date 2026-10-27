@@ -80,7 +80,7 @@ Every limit must be a positive integer. Invalid configuration, missing revision,
 
 ## Running locally
 
-With Python 3.12 and `uv` installed:
+With Python 3.15 and `uv` installed on Linux:
 
 ```sh
 export MODEL_REVISION=9874d252ab0aae16f7f7c999f98f98d6ad7d8365
@@ -90,13 +90,15 @@ uv sync --frozen
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
+Python 3.15 PyTorch wheels are available for Linux through the official PyTorch indexes. On macOS, use the Linux container to run this service.
+
 CUDA uses the same service code. The CUDA image installs the pinned CUDA PyTorch wheel. For a local venv, install the matching wheel after syncing the locked app dependencies, then run Uvicorn with `--no-sync` so uv does not restore the CPU wheel:
 
 ```sh
 export MODEL_REVISION=9874d252ab0aae16f7f7c999f98f98d6ad7d8365
 export MODEL_DEVICE=cuda
 uv sync --frozen --no-dev --no-install-package torch
-uv pip install --python .venv/bin/python --index-url https://download.pytorch.org/whl/cu126 torch==2.13.0
+uv pip install --python .venv/bin/python --index-url https://download.pytorch.org/whl/cu126 torch==2.14.1+cu126
 uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 

@@ -17,7 +17,11 @@ _clients = []
 
 
 @pytest.fixture(autouse=True)
-def close_clients():
+def close_clients(monkeypatch):
+    # Docker supplies MODEL_DEVICE/HF_HOME; unit tests must control their own
+    # settings rather than inherit the image's deployment configuration.
+    for field in Settings.model_fields.values():
+        monkeypatch.delenv(field.alias, raising=False)
     yield
     while _clients:
         _clients.pop().__exit__(None, None, None)
