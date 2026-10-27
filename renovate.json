@@ -22,6 +22,12 @@
       "matchDatasources": ["github-actions"],
       "matchPackageNames": ["peter-evans/dockerhub-description"],
       "abandonmentThreshold": "2 years"
+    },
+    {
+      "description": "Keep Timestral on its tested Python 3.12 runtime until a separate migration is validated",
+      "matchPackageNames": ["python"],
+      "matchFileNames": ["timestral/**"],
+      "allowedVersions": "/^3\\.12\\./"
     }
   ],
   "digest": {
