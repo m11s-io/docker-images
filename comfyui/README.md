@@ -4,9 +4,9 @@
 CUDA runtime and explicitly selected PyTorch wheels. The generic image contains
 no community nodes; the GGUF variant adds the pinned `ComfyUI-GGUF` loader.
 
-The [Dockerfile](Dockerfile) is the source of truth for the upstream release,
+The [Dockerfile](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile) is the source of truth for the upstream release,
 base image, Python interpreter, PyTorch packages, and CUDA wheel index.
-[Dockerfile.gguf](Dockerfile.gguf) pins the generic parent and GGUF commit.
+[Dockerfile.gguf](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile.gguf) pins the generic parent and GGUF commit.
 PyTorch bundles its own CUDA libraries, independently of the container base.
 Audio dependencies follow the selected upstream requirements.
 
