@@ -4,8 +4,8 @@
 # free of community nodes; this variant has the same ComfyUI/CUDA release.
 
 # CI overrides this default when it rebuilds the generic image.
-ARG COMFYUI_BASE=m11s/comfyui:0.43.0@sha256:fc6faec99d248cec0eb19216f6ab8f678d56782ba4fc9595bce01a5b6efe0182
-FROM ${COMFYUI_BASE}
+ARG COMFYUI_BASE=m11s/comfyui:0.43.0@sha256:b2ec0af84a16ff7681942b052d171315a5b8725fa8feff21d07eeea2348b25e1
+FROM ${COMFYUI_BASE} AS runtime
 
 ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
 
@@ -21,3 +21,11 @@ RUN git init custom_nodes/ComfyUI-GGUF && \
 USER comfyui
 
 ENV CC=/usr/bin/gcc-12
+
+FROM runtime AS validation
+COPY verify_image.py /app/verify_image.py
+RUN python /app/verify_image.py --gguf && touch /tmp/comfyui-validated
+
+# Depend on validation without including its generated startup state.
+FROM runtime AS final
+COPY --from=validation /tmp/comfyui-validated /usr/local/share/comfyui/image-validated

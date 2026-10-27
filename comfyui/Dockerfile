@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1.28.0@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
 #
 # ComfyUI, built from upstream source (comfyanonymous/ComfyUI publishes no
-# official image) on a CUDA 13.4 runtime base. TORCH_CUDA_ARCH_LIST includes
+# official image) on an NVIDIA CUDA runtime base. TORCH_CUDA_ARCH_LIST includes
 # 12.0 (Blackwell / RTX 50-series) through older archs for portability.
 #
 # Build:
-#   docker build -t m11s/comfyui:0.40.0 .
+#   docker build -t m11s/comfyui:local comfyui
 
-FROM nvidia/cuda:13.4.3-cudnn-runtime-ubuntu22.04@sha256:5b4f4ff403744604db148c4e562f998b97047a3a02ebfaab42be73932daf4848
+FROM nvidia/cuda:13.4.3-cudnn-runtime-ubuntu22.04@sha256:5b4f4ff403744604db148c4e562f998b97047a3a02ebfaab42be73932daf4848 AS runtime
 
 # renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
 ARG COMFYUI_REF=v0.43.0
@@ -40,8 +40,8 @@ ENV PATH="/opt/venv/bin:${PATH}"
 WORKDIR /app
 
 # Install CUDA wheels explicitly and constrain upstream requirements to keep
-# the selected PyTorch versions. ComfyUI v0.40.0 no longer uses TorchAudio.
-# PyTorch wheels supply CUDA 13.0 libraries independently of the runtime base.
+# the selected PyTorch versions. Audio dependencies follow upstream requirements.
+# PyTorch wheels supply CUDA libraries independently of the runtime base.
 RUN python3.14 -m pip install --no-cache-dir \
         --index-url https://download.pytorch.org/whl/cu130 \
         torch==2.14.1+cu130 \
@@ -62,6 +62,15 @@ RUN groupadd --system --gid 10001 comfyui && \
 
 USER comfyui
 
+
 EXPOSE 8188
 
 ENTRYPOINT ["python3.14", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
+
+FROM runtime AS validation
+COPY verify_image.py /app/verify_image.py
+RUN python /app/verify_image.py && touch /tmp/comfyui-validated
+
+# Depend on validation without including its generated startup state.
+FROM runtime AS final
+COPY --from=validation /tmp/comfyui-validated /usr/local/share/comfyui/image-validated
