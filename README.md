@@ -19,7 +19,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | DeepSeek Harness web runtime; connects to a separately deployed browser provider when browser automation is needed | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness/latest?label=) |
 | [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium browser exposing the Chrome DevTools Protocol for a colocated DeepSeek Harness runtime | ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Fchromium-cdp%2Ftags%3Fname%3Dbookworm-%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=&color=blue) |
 | [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM's official OpenAI-compatible server image with orjson for faster JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson/latest-x86_64?label=) |
-| [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Timestral forecasting API with CPU-only or NVIDIA CUDA PyTorch | `latest-cpu` / `latest-cuda` |
+| [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Timestral forecasting API with CPU-only or NVIDIA CUDA PyTorch | ![CPU version](https://img.shields.io/docker/v/m11s/timestral/latest-cpu?label=CPU) ![CUDA version](https://img.shields.io/docker/v/m11s/timestral/latest-cuda?label=CUDA) |
 
 ## Quick Start
 
@@ -40,79 +40,22 @@ docker pull m11s/timestral:latest-cuda
 
 ## Publishing
 
-The `Lint Dockerfiles` workflow runs the upstream droast GitHub Action on pull
-requests, pushes to `main`, and manual runs. It recursively scans the repository,
-including Dockerfile variants, and reports findings as GitHub annotations.
-Error findings fail the lint check; warnings and notices remain informational.
-The action and its runtime image are pinned to droast `1.7.0` in
-`.github/workflows/lint.yaml`.
+Images are maintained in the private monorepo and published here via CI.
 
-Images are maintained in the private monorepo and published here via CI on push to `main`.
+See the [build workflow](.github/workflows/build.yaml) for image selection,
+version sources, tags, and build platforms, and the
+[lint workflow](.github/workflows/lint.yaml) for Dockerfile checks.
+Image-specific configuration and usage are documented in each image's directory.
 
-Each image build publishes its version tag, its existing `latest` alias, and a
-`sha-<12-character Git commit>` tag. Rclone's commit tags end in `-inotify`,
-and Caddy's end in `-cloudflare`;
-ComfyUI's GGUF variant uses `-gguf` so it has separate version and commit tags.
-Commit tags identify the source revision; rebuilds of the same revision can
-replace them, so use an image digest when you need immutable content.
-
-Image jobs in `.github/workflows/build.yaml` declare one version source:
-
-- `version`: our explicit image release version, independent of runtime updates.
-- `version_source: version-arg` with `version_ref`: an application release argument
-  in the Dockerfile (S3 Upload Proxy, DeepSeek Harness, ComfyUI, and Comfy MCP).
-  DeepSeek strips the `dsh-v` release prefix; the Comfy images strip `v`.
-- `version_source: base-image` with `version_ref`: the tag from a named Dockerfile
-  `FROM` image (rclone), with an optional `tag_suffix`.
-- `version_source: base-arg` with `version_ref`: the tag from a Dockerfile image
-  argument (vLLM's `VLLM_BASE_IMAGE` or Caddy's `CADDY_BASE_IMAGE`). Caddy strips
-  `-alpine` and adds `-cloudflare` to its application version.
-
-Renovate updates the Dockerfile pins and annotated application arguments; rclone,
-vLLM, Caddy, S3 Upload Proxy, DeepSeek, ComfyUI, and Comfy MCP publish the upstream
-version automatically. DeepSeek release updates include the pinned source commit;
-the build rejects a release whose commit does not match. Caddy builds the explicit
-release with a pinned Cloudflare plugin. Digest updates retain the version alias and
-publish a new commit tag. Invalid or ambiguous version sources fail before
-publishing. Changes to the shared tag resolver rebuild all images. Image folders
-are watched for changes, excluding Compose YAML files (`compose*.yaml`,
-`compose*.yml`, `docker-compose*.yaml`, and `docker-compose*.yml`), Markdown files,
-and `docs/` folders. These exclusions apply both to workflow triggers and image
-selection, so updating a deployment digest or renaming documentation does not
-rebuild an image. New build inputs in an image folder trigger builds automatically;
-keep build inputs outside the excluded paths. A workflow-only change runs
-validation without rebuilding images. Use **Run workflow** to select an image
-(or `all`) whenever an explicit rebuild is needed.
-
-DeepSeek Harness, Chromium CDP, and Comfy MCP use Docker's pinned reusable
-GitHub Builder workflow to build AMD64 and ARM64 on native runners and assemble
-the manifests. Their preparation job selects only changed images (or the manual
-selection), uses the same tag resolver, and keeps the same version, latest, and
-commit tags. AMD64-only images remain in the generic matrix. Cache scopes are
-separate for each image, ComfyUI's GGUF variant, and each native platform.
+To request a rebuild, use **Run workflow** in the build workflow and select an
+image or `all`.
 
 Run the tag resolver checks with
 `python3 -m unittest discover -s scripts -p 'test_*.py'`.
-
-Timestral publishes `m11s/timestral:<version>-cpu` and
-`m11s/timestral:<version>-cuda`, with `latest-cpu` / `latest-cuda` and
-variant-specific `sha-<12-character-commit>-cpu` / `-cuda` aliases. Select
-`timestral-cpu` or `timestral-cuda` in the manual workflow to build one variant;
-`all` builds both. Both variants run the same API with one Uvicorn worker on
-port 8000. The CPU image installs PyTorch from its CPU-only wheel index. The
-CUDA image uses PyTorch 2.14.1 cu126 and its packaged CUDA 12.6 libraries.
-The version tags identify the upstream Timestral inference package (`1.0.0`),
-pinned to source commit `a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff`; each build
-verifies the installed distribution metadata against the image tag version.
-They do not identify the checkpoint size. One image can load any compatible
-Timestral checkpoint by setting `MODEL_ID` and its matching `MODEL_REVISION`.
-The internal API wrapper keeps its own package version.
-Use a compatible NVIDIA driver and the NVIDIA Container Toolkit to run it on a
-GPU host.
 
 ## MCP catalog
 
 CI publishes [`m11s/mcp-catalog:latest`](https://hub.docker.com/r/m11s/mcp-catalog)
 from the version-controlled MCP server definitions. Docker Desktop users import
 that OCI reference in **MCP Toolkit → Catalog → Import catalog**, then add an
-approved server to a profile. The catalog currently contains `comfy-mcp`.
+approved server to a profile.
