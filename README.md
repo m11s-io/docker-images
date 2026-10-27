@@ -19,6 +19,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | DeepSeek Harness web runtime; connects to a separately deployed browser provider when browser automation is needed | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness/latest?label=) |
 | [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium browser exposing the Chrome DevTools Protocol for a colocated DeepSeek Harness runtime | ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Fchromium-cdp%2Ftags%3Fname%3Dbookworm-%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=&color=blue) |
 | [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM's official OpenAI-compatible server image with orjson for faster JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson/latest-x86_64?label=) |
+| [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Timestral forecasting API with CPU-only or NVIDIA CUDA PyTorch | `latest-cpu` / `latest-cuda` |
 
 ## Quick Start
 
@@ -33,6 +34,8 @@ docker pull m11s/comfy-mcp:latest
 docker pull m11s/deepseek-harness:latest
 docker pull m11s/chromium-cdp:latest
 docker pull m11s/vllm-openai-orjson:latest-x86_64
+docker pull m11s/timestral:latest-cpu
+docker pull m11s/timestral:latest-cuda
 ```
 
 ## Publishing
@@ -83,6 +86,16 @@ separate for each image, ComfyUI's GGUF variant, and each native platform.
 
 Run the tag resolver checks with
 `python3 -m unittest discover -s scripts -p 'test_*.py'`.
+
+Timestral publishes `m11s/timestral:<version>-cpu` and
+`m11s/timestral:<version>-cuda`, with `latest-cpu` / `latest-cuda` and
+variant-specific `sha-<12-character-commit>-cpu` / `-cuda` aliases. Select
+`timestral-cpu` or `timestral-cuda` in the manual workflow to build one variant;
+`all` builds both. Both variants run the same API with one Uvicorn worker on
+port 8000. The CPU image installs PyTorch from its CPU-only wheel index. The
+CUDA image pairs PyTorch 2.13.0 cu126 with the pinned NVIDIA CUDA 12.6 runtime.
+Use a compatible NVIDIA driver and the NVIDIA Container Toolkit to run it on a
+GPU host.
 
 ## MCP catalog
 

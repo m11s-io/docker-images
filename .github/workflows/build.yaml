@@ -15,6 +15,7 @@ on:
       - ".github/workflows/build.yaml"
       - "caddy-cloudflare/**"
       - "vllm-openai-orjson/**"
+      - "timestral/**"
       - "scripts/image_tags.py"
       - "scripts/native_image_matrix.py"
       - "scripts/test_native_image_matrix.py"
@@ -46,6 +47,8 @@ on:
           - chromium-cdp
           - caddy-cloudflare
           - vllm-openai-orjson
+          - timestral-cpu
+          - timestral-cuda
       skip_push:
         description: 'Dry-run: build without pushing to Docker Hub'
         required: false
@@ -53,6 +56,24 @@ on:
         default: false
 
 jobs:
+  timestral-tests:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Set up uv and Python 3.12
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
+        with:
+          version: 0.8.22
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: timestral/uv.lock
+      - name: Run Timestral API unit tests
+        working-directory: timestral
+        run: uv run --frozen pytest tests/test_api.py -q
+
   changes:
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/') && endsWith(github.head_ref, '-digest')) }}
     runs-on: ubuntu-latest
@@ -72,6 +93,8 @@ jobs:
       chromium-cdp: ${{ steps.filter.outputs.chromium-cdp }}
       caddy-cloudflare: ${{ steps.filter.outputs.caddy-cloudflare }}
       vllm-openai-orjson: ${{ steps.filter.outputs.vllm-openai-orjson }}
+      timestral-cpu: ${{ steps.filter.outputs.timestral-cpu }}
+      timestral-cuda: ${{ steps.filter.outputs.timestral-cuda }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -194,6 +217,24 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
+            timestral-cpu:
+              - 'scripts/image_tags.py'
+              - 'timestral/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
+            timestral-cuda:
+              - 'scripts/image_tags.py'
+              - 'timestral/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
 
   build:
     needs: [changes]
@@ -248,6 +289,26 @@ jobs:
             version_source: base-arg
             version_ref: VLLM_BASE_IMAGE
             latest: latest-x86_64
+          - context: timestral-cpu
+            build_context: timestral
+            dockerfile: timestral/Dockerfile.cpu
+            readme_file: timestral/README.md
+            repository: m11s/timestral
+            description: Timestral forecasting API with CPU-only PyTorch.
+            version_source: version-arg
+            version_ref: TIMESTRAL_VERSION
+            tag_suffix: -cpu
+            latest: latest-cpu
+          - context: timestral-cuda
+            build_context: timestral
+            dockerfile: timestral/Dockerfile.cuda
+            readme_file: timestral/README.md
+            repository: m11s/timestral
+            description: Timestral forecasting API with NVIDIA CUDA 12.6 PyTorch.
+            version_source: version-arg
+            version_ref: TIMESTRAL_VERSION
+            tag_suffix: -cuda
+            latest: latest-cuda
     steps:
       - name: Checkout
         id: checkout
@@ -259,6 +320,7 @@ jobs:
         if: ${{ steps.checkout.outcome == 'success' }}
         env:
           IMAGE_CONTEXT: ${{ matrix.context }}
+          IMAGE_DOCKERFILE: ${{ matrix.dockerfile }}
           IMAGE_REPOSITORY: ${{ matrix.repository }}
           IMAGE_VERSION: ${{ matrix.version }}
           VERSION_SOURCE: ${{ matrix.version_source }}
@@ -271,7 +333,8 @@ jobs:
           args=(--repository "$IMAGE_REPOSITORY" --sha "$GITHUB_SHA"
                 --strip-prefix "$STRIP_PREFIX" --strip-suffix="$STRIP_SUFFIX")
           if [[ -n "$VERSION_SOURCE" ]]; then
-            args+=("--$VERSION_SOURCE" "$VERSION_REF" --dockerfile "$IMAGE_CONTEXT/Dockerfile")
+            dockerfile=${IMAGE_DOCKERFILE:-$IMAGE_CONTEXT/Dockerfile}
+            args+=("--$VERSION_SOURCE" "$VERSION_REF" --dockerfile "$dockerfile")
           else
             args+=(--version "$IMAGE_VERSION")
           fi
@@ -308,7 +371,8 @@ jobs:
         if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name == 'push' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
-          context: ${{ matrix.context }}
+          context: ${{ matrix.build_context || matrix.context }}
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
           load: ${{ matrix.context == 'comfyui' && (github.event_name == 'pull_request' || github.event.inputs.skip_push == 'true') }}
@@ -424,7 +488,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASS }}
           repository: ${{ matrix.repository }}
           short-description: ${{ matrix.description }}
-          readme-filepath: ./${{ matrix.context }}/README.md
+          readme-filepath: ./${{ matrix.readme_file || format('{0}/README.md', matrix.context) }}
           enable-url-completion: true
 
   native-prepare:

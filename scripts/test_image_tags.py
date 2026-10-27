@@ -44,6 +44,34 @@ class ImageTagsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.splitlines()[0], "m11s/example:v0.31.0-x86_64")
 
+    def test_timestral_variants_resolve_pinned_version_and_distinct_commit_aliases(self):
+        for variant in ("cpu", "cuda"):
+            with self.subTest(variant=variant):
+                dockerfile = (pathlib.Path(__file__).parents[1] / "timestral" /
+                              f"Dockerfile.{variant}")
+                result = self.resolve("--version-arg", "TIMESTRAL_VERSION",
+                                      f"--suffix=-{variant}", f"--latest=latest-{variant}",
+                                      dockerfile=dockerfile.read_text())
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), [
+                    f"m11s/example:0.1.0-{variant}",
+                    f"m11s/example:latest-{variant}",
+                    f"m11s/example:sha-494d7fbb6b32-{variant}",
+                ])
+
+    def test_timestral_variants_are_manual_and_path_selected_in_existing_build_workflow(self):
+        workflow = (pathlib.Path(__file__).parents[1] / ".github" / "workflows" /
+                    "build.yaml").read_text()
+        self.assertIn("- timestral-cpu", workflow)
+        self.assertIn("- timestral-cuda", workflow)
+        self.assertIn('"timestral/**"', workflow)
+        self.assertIn("timestral/Dockerfile.cpu", workflow)
+        self.assertIn("timestral/Dockerfile.cuda", workflow)
+        self.assertIn("latest-cpu", workflow)
+        self.assertIn("latest-cuda", workflow)
+        self.assertIn("timestral-tests:", workflow)
+        self.assertIn("uv run --frozen pytest tests/test_api.py -q", workflow)
+
     def test_variant_tags_have_separate_commit_alias(self):
         result = self.resolve("--version", "0.5.5", "--suffix=-gguf")
         self.assertEqual(result.returncode, 0, result.stderr)
