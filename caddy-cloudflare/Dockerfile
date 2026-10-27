@@ -21,3 +21,5 @@ RUN CADDY_RELEASE="${CADDY_BASE_IMAGE#caddy:}" \
 FROM ${CADDY_BASE_IMAGE}
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+
+USER 10001:10001
