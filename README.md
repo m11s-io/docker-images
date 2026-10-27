@@ -43,8 +43,9 @@ docker pull m11s/timestral:latest-cuda
 The `Lint Dockerfiles` workflow runs the upstream droast GitHub Action on pull
 requests, pushes to `main`, and manual runs. It recursively scans the repository,
 including Dockerfile variants, and reports findings as GitHub annotations.
-Lint findings are advisory and do not block image publishing. The action and its
-runtime image are pinned to droast `1.7.0` in `.github/workflows/lint.yaml`.
+Error findings fail the lint check; warnings and notices remain informational.
+The action and its runtime image are pinned to droast `1.7.0` in
+`.github/workflows/lint.yaml`.
 
 Images are maintained in the private monorepo and published here via CI on push to `main`.
 

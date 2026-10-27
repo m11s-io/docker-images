@@ -2,5 +2,5 @@ ARG VLLM_BASE_IMAGE=vllm/vllm-openai:v0.32.0-x86_64@sha256:6ee133356d49ed24cee03
 
 FROM ${VLLM_BASE_IMAGE}
 
-RUN python3 -m pip install --no-cache-dir orjson \
+RUN python3 -m pip install --no-cache-dir orjson==3.13.0 \
     && python3 -c "import orjson; print(orjson.__version__)"

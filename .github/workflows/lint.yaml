@@ -23,5 +23,4 @@ jobs:
           files: .
           image-tag: "1.7.0"
           no-roast: "true"
-          # Report existing findings without blocking image builds.
-          no-fail: "true"
+          no-fail: "false"

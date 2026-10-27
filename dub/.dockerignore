@@ -10,3 +10,11 @@
 .env.*
 !.env.example
 README.md
+
+# Keep the prebuilt Next.js runtime, including its bundled node_modules.
+!apps/web/.next/
+apps/web/.next/*
+!apps/web/.next/standalone/
+!apps/web/.next/standalone/**
+!apps/web/.next/static/
+!apps/web/.next/static/**
