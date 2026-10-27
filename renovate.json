@@ -9,7 +9,9 @@
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["digest"],
       "automerge": true,
-      "platformAutomerge": false
+      "platformAutomerge": true,
+      "rebaseWhen": "behind-base-branch",
+      "ignoreTests": false
     },
     {
       "description": "Group ComfyUI Dockerfile version updates",
