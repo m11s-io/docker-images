@@ -23,8 +23,8 @@ USER comfyui
 ENV CC=/usr/bin/gcc-12
 
 FROM runtime AS validation
-COPY verify_image.py /tmp/verify_image.py
-RUN python /tmp/verify_image.py --gguf && touch /tmp/comfyui-validated
+COPY verify_image.py /app/verify_image.py
+RUN python /app/verify_image.py --gguf && touch /tmp/comfyui-validated
 
 # Depend on validation without including its generated startup state.
 FROM runtime AS final

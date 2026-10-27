@@ -68,8 +68,8 @@ EXPOSE 8188
 ENTRYPOINT ["python3.14", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
 
 FROM runtime AS validation
-COPY verify_image.py /tmp/verify_image.py
-RUN python /tmp/verify_image.py && touch /tmp/comfyui-validated
+COPY verify_image.py /app/verify_image.py
+RUN python /app/verify_image.py && touch /tmp/comfyui-validated
 
 # Depend on validation without including its generated startup state.
 FROM runtime AS final
