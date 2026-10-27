@@ -279,3 +279,36 @@ def test_unwritable_cache_fails_with_actionable_error(tmp_path):
     with pytest.raises(RuntimeError, match="HF_HOME is not writable"):
         with TestClient(app):
             pass
+
+
+def test_openapi_describes_forecast_contract():
+    client, _ = client_for()
+    schema = client.get("/openapi.json").json()
+    operation = schema["paths"]["/forecast"]["post"]
+    request = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert set(request["required"]) == {"context", "prediction_length"}
+    assert "observation_mask" in request["properties"]
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"].endswith("/ForecastResponse")
+
+
+def test_model_failure_logs_sanitized_diagnostic(caplog):
+    def fail(_):
+        raise OSError("download failed hf-secret https://example.org/model?token=private")
+    app = create_app(settings=make_settings(hf_token="hf-secret"), model_loader=fail)
+    with pytest.raises(RuntimeError), TestClient(app):
+        pass
+    assert "download failed" in caplog.text
+    assert "OSError" in caplog.text
+    assert "hf-secret" not in caplog.text
+    assert "token=private" not in caplog.text
+
+
+def test_inference_failure_logs_detail_but_returns_generic_error(caplog):
+    class BrokenForecaster(FakeForecaster):
+        def forecast(self, *args, **kwargs):
+            raise RuntimeError("tensor allocation failed")
+    client, _ = client_for(forecaster=BrokenForecaster())
+    response = client.post("/forecast", json=payload())
+    assert response.status_code == 500
+    assert response.json()["detail"] == "forecast inference failed"
+    assert "tensor allocation failed" in caplog.text

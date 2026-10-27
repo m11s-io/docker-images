@@ -9,8 +9,9 @@ from fastapi.testclient import TestClient
 from timestral import TimestralForecaster
 
 from app.config import Settings
-from app.main import MODEL_REVISION_5M, create_app
+from app.main import create_app
 
+MODEL_REVISION_5M = "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f"
 
 pytestmark = [pytest.mark.cpu, pytest.mark.skipif(
     os.getenv("TIMESTRAL_RUN_REAL_TESTS") != "1",

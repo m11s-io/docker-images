@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Callable
@@ -13,10 +15,9 @@ from fastapi.responses import JSONResponse
 from timestral import TimestralForecaster
 
 from app.config import Settings
-from app.schemas import ForecastRequest
+from app.schemas import ForecastRequest, ForecastResponse
 
-MODEL_REVISION_209M = "9874d252ab0aae16f7f7c999f98f98d6ad7d8365"
-MODEL_REVISION_5M = "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f"
+logger = logging.getLogger(__name__)
 
 
 class CUDAUnavailableError(RuntimeError):
@@ -34,6 +35,17 @@ def _load_forecaster(settings: Settings) -> TimestralForecaster:
     )
 
 
+def _log_failure(stage: str, exc: Exception, settings: Settings | None) -> None:
+    # Log the cause without raw tracebacks, which can expose credentials in URLs.
+    detail = str(exc)
+    token = settings.hf_token.get_secret_value() if settings and settings.hf_token else None
+    if token:
+        detail = detail.replace(token, "[redacted]")
+    detail = re.sub(r"https?://\S+|hf_[A-Za-z0-9_-]+|Bearer\s+\S+", "[redacted]", detail, flags=re.IGNORECASE)
+    detail = " ".join(detail.split())[:1000]
+    logger.error("Timestral %s failed (%s): %s", stage, type(exc).__name__, detail)
+
+
 def _as_numpy(value: Any) -> np.ndarray:
     if isinstance(value, torch.Tensor):
         return value.detach().cpu().numpy()
@@ -41,8 +53,7 @@ def _as_numpy(value: Any) -> np.ndarray:
 
 
 def _numeric_array(value: Any, *, categorical: bool = False) -> np.ndarray:
-    array = np.asarray(value, dtype=np.float64 if categorical else np.float32)
-    return np.where(array == None, np.nan, array)  # noqa: E711
+    return np.asarray(value, dtype=np.float64 if categorical else np.float32)
 
 
 def _serialize_forecast(result: Any, batch: int, variates: int, horizon: int) -> dict[str, Any]:
@@ -67,7 +78,6 @@ def create_app(
     settings: Settings | None = None,
     model_loader: Callable[[Settings], Any] | None = None,
 ) -> FastAPI:
-    settings = settings
     load_model = model_loader or _load_forecaster
     service_state: dict[str, Any] = {"ready": False, "forecaster": None, "busy": False}
 
@@ -91,6 +101,7 @@ def create_app(
             service_state["forecaster"] = await asyncio.to_thread(load_model, settings)
             service_state["ready"] = True
         except Exception as exc:
+            _log_failure("model initialization", exc, settings)
             service_state["forecaster"] = None
             if isinstance(exc, CUDAUnavailableError):
                 raise RuntimeError(str(exc)) from None
@@ -162,6 +173,7 @@ def create_app(
             inference.add_done_callback(release_slot)
             raise
         except Exception as exc:
+            _log_failure("inference", exc, settings)
             service_state["busy"] = False
             raise HTTPException(status_code=500, detail="forecast inference failed") from None
         service_state["busy"] = False
@@ -180,7 +192,14 @@ def create_app(
             raise HTTPException(status_code=503, detail="model is not ready")
         return {"status": "ready"}
 
-    @app.post("/forecast")
+    @app.post(
+        "/forecast",
+        response_model=ForecastResponse,
+        openapi_extra={"requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": ForecastRequest.model_json_schema()}},
+        }},
+    )
     async def forecast_endpoint(request: Request) -> JSONResponse:
         content_length = request.headers.get("content-length")
         if content_length:
