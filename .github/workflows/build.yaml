@@ -78,7 +78,7 @@ jobs:
         run: uv run --frozen pytest tests/test_api.py -q
 
   changes:
-    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/') && endsWith(github.head_ref, '-digest')) }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -241,7 +241,7 @@ jobs:
 
   build:
     needs: [changes]
-    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'renovate/') && endsWith(github.head_ref, '-digest'))) }}
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -496,7 +496,7 @@ jobs:
 
   native-prepare:
     needs: [changes]
-    if: ${{ !failure() && !cancelled() && (github.event_name != 'pull_request' || (startsWith(github.head_ref, 'renovate/') && endsWith(github.head_ref, '-digest'))) }}
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -567,6 +567,32 @@ jobs:
         - registry: docker.io
           username: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USER || '' }}
           password: ${{ github.event_name != 'pull_request' && secrets.DOCKER_PASS || '' }}
+
+  image-checks:
+    needs: [changes, build, native-prepare, native-build, timestral-tests]
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require successful image validation
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          NATIVE_PREPARE_RESULT: ${{ needs.native-prepare.result }}
+          NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
+          HAS_NATIVE_IMAGES: ${{ needs.native-prepare.outputs.has-images }}
+          TIMESTRAL_TESTS_RESULT: ${{ needs.timestral-tests.result }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          test "$BUILD_RESULT" = success
+          test "$NATIVE_PREPARE_RESULT" = success
+          test "$TIMESTRAL_TESTS_RESULT" = success
+          if [[ "$HAS_NATIVE_IMAGES" == true ]]; then
+            test "$NATIVE_BUILD_RESULT" = success
+          else
+            test "$HAS_NATIVE_IMAGES" = false
+            test "$NATIVE_BUILD_RESULT" = skipped
+          fi
 
   native-description:
     needs: [native-prepare, native-build]
