@@ -10,7 +10,7 @@
 FROM nvidia/cuda:13.4.3-cudnn-runtime-ubuntu22.04@sha256:5b4f4ff403744604db148c4e562f998b97047a3a02ebfaab42be73932daf4848
 
 # renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
-ARG COMFYUI_REF=v0.42.5
+ARG COMFYUI_REF=v0.43.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
