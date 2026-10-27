@@ -40,12 +40,17 @@ RUN apt-get update && \
     chown comfy:comfy /workspace
 
 ENV HOME=/workspace \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
     PATH=/opt/venv/bin:$PATH \
     COMFY_BIN=/opt/venv/bin/comfy \
     COMFY_PROJECT=/workspace
 
 WORKDIR /workspace
 USER comfy
+
+# Default port for the optional Streamable HTTP transport.
+EXPOSE 8080
 
 # Exercise the actual installed CLI/SDK and both transports on each platform.
 # The bind-mounted test and temporary configuration do not enter the image.
