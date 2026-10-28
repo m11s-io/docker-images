@@ -15,6 +15,15 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 
+def check_cuda_backend() -> None:
+    from comfy_kitchen.backends import cuda
+
+    # Importing Kitchen alone can silently disable a broken native extension.
+    # These flags describe library loading, not whether a GPU is attached.
+    if not cuda._EXT_AVAILABLE:
+        raise RuntimeError(f"Comfy Kitchen CUDA extension unavailable: {cuda._EXT_ERROR}")
+
+
 def check_dependencies() -> None:
     subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
     constraints = Path(os.environ["PIP_CONSTRAINT"])
@@ -31,6 +40,7 @@ def check_dependencies() -> None:
 
     if torch.version.cuda is None:
         raise RuntimeError("the image requires a CUDA-enabled PyTorch build")
+    check_cuda_backend()
     if comfy.audio.resample(torch.zeros(1, 480), 48000, 24000).shape != (1, 240):
         raise RuntimeError("audio resampling returned an unexpected shape")
     print(f"torch={torch.__version__}, torchvision={torchvision.__version__}, CUDA={torch.version.cuda}")

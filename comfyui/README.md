@@ -1,13 +1,16 @@
 # m11s/comfyui
 
-[ComfyUI](https://github.com/Comfy-Org/ComfyUI) built from source with an NVIDIA
-CUDA runtime and explicitly selected PyTorch wheels. The generic image contains
+[ComfyUI](https://github.com/Comfy-Org/ComfyUI) built from source on a Python
+base with explicitly selected CUDA-enabled PyTorch wheels. The generic image contains
 no community nodes; the GGUF variant adds the pinned `ComfyUI-GGUF` loader.
 
 The [Dockerfile](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile) is the source of truth for the upstream release,
 base image, Python interpreter, PyTorch packages, and CUDA wheel index.
 [Dockerfile.gguf](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile.gguf) pins the generic parent and GGUF commit.
-PyTorch bundles its own CUDA libraries, independently of the container base.
+PyTorch supplies the CUDA runtime libraries; the image has no separate system
+CUDA toolkit. The host NVIDIA container runtime supplies driver libraries.
+Comfy Kitchen and AIMDO must install from prebuilt wheels; missing wheels fail
+the build instead of compiling a different backend from source.
 Audio dependencies follow the selected upstream requirements.
 
 ## Tags
@@ -51,7 +54,8 @@ docker build --build-arg COMFYUI_BASE=m11s/comfyui:local \
   -f comfyui/Dockerfile.gguf -t m11s/comfyui:local-gguf comfyui
 ```
 
-Both Dockerfiles run dependency, pinned-package, audio-resampling, and CPU
+Both Dockerfiles run dependency, pinned-package, native CUDA extension loading,
+audio-resampling, and CPU
 startup checks before the build succeeds. The GGUF build also checks loader
 registration. Failed checks prevent that image from being exported or published.
 Validation runs in a disposable build stage, keeping startup state out of the
