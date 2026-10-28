@@ -30,8 +30,8 @@ class TimestralRuntimeTest(unittest.TestCase):
         cpu = (ROOT / "timestral/Dockerfile.cpu").read_text()
         self.assertIn("uv sync --frozen --no-dev", cpu)
         self.assertNotIn("--no-install-package torch", cpu)
-        cuda_requirements = (ROOT / "timestral/requirements-cu130.txt").read_text()
-        self.assertRegex(cuda_requirements, rf"torch=={re.escape(release)}\+cu130(?:\s|$)")
+        cuda_requirements = (ROOT / "timestral/requirements-cuda.txt").read_text()
+        self.assertRegex(cuda_requirements, rf"torch=={re.escape(release)}\+cu\d+(?:\s|$)")
 
     def test_both_images_check_installed_upstream_version(self):
         for variant in ("cpu", "cuda"):

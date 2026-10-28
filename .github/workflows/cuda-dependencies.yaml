@@ -2,12 +2,6 @@ name: CUDA dependency checks
 
 on:
   pull_request:
-    paths:
-      - "comfyui/**"
-      - "timestral/**"
-      - "scripts/**"
-      - "renovate.json"
-      - ".github/workflows/cuda-dependencies.yaml"
   workflow_dispatch:
 
 permissions:
@@ -31,15 +25,5 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Validate Renovate configuration
         run: renovate-config-validator --strict renovate.json
-      - name: Extract CUDA requirements and CPU project
-        env:
-          LOG_LEVEL: debug
-          RENOVATE_ENABLED_MANAGERS: '["pip_requirements", "pep621"]'
-          RENOVATE_INCLUDE_PATHS: '["comfyui/**", "timestral/**"]'
-        run: renovate --platform=local --dry-run=extract
-      - name: Check available updates against official PyTorch indexes
-        env:
-          LOG_LEVEL: debug
-          RENOVATE_ENABLED_MANAGERS: '["pip_requirements", "pep621"]'
-          RENOVATE_INCLUDE_PATHS: '["comfyui/**", "timestral/**"]'
-        run: renovate --platform=local --dry-run=lookup
+      - name: Verify CUDA update discovery, grouping and auto-merge policy
+        run: python3 scripts/check_cuda_renovate.py

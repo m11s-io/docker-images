@@ -13,10 +13,14 @@ Comfy Kitchen and AIMDO must install from prebuilt wheels; missing wheels fail
 the build instead of compiling a different backend from source.
 Audio dependencies follow the selected upstream requirements.
 
-`requirements-cu130.txt` selects Torch and TorchVision from the official CUDA
-13.0 index. It also supplies the pins used to constrain upstream installation.
+`requirements-cuda.txt` pins stable CUDA-enabled Torch and TorchVision wheels
+from the aggregate official PyTorch index. It also supplies the pins used to constrain upstream installation.
 Renovate groups these version updates with the ComfyUI release and base image;
-CUDA channel changes remain explicit. Image validation must pass before merging.
+newer CUDA variants are eligible automatically. Renovate auto merges these
+updates after required GitHub image, runtime, lint and dependency-policy checks pass.
+Nightly, prerelease, CPU and ROCm wheels are excluded from CUDA updates.
+The inherited release cooldown is disabled only for these PyTorch wheel pins
+because Renovate does not read upload timestamps from the HTML wheel index.
 These direct pins are not a complete transitive dependency lock.
 
 ## Tags

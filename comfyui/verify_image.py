@@ -6,6 +6,7 @@ from importlib.metadata import version
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import subprocess
 import sys
@@ -24,6 +25,13 @@ def check_cuda_backend() -> None:
         raise RuntimeError(f"Comfy Kitchen CUDA extension unavailable: {cuda._EXT_ERROR}")
 
 
+def check_cuda_variants(torch_version: str, torchvision_version: str) -> None:
+    torch_cuda = re.search(r"\+cu(\d+)$", torch_version)
+    vision_cuda = re.search(r"\+cu(\d+)$", torchvision_version)
+    if not torch_cuda or not vision_cuda or torch_cuda[1] != vision_cuda[1]:
+        raise RuntimeError("Torch and TorchVision must use the same CUDA variant")
+
+
 def check_dependencies() -> None:
     subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
     constraints = Path(os.environ["PIP_CONSTRAINT"])
@@ -40,6 +48,7 @@ def check_dependencies() -> None:
 
     if torch.version.cuda is None:
         raise RuntimeError("the image requires a CUDA-enabled PyTorch build")
+    check_cuda_variants(torch.__version__, torchvision.__version__)
     check_cuda_backend()
     if comfy.audio.resample(torch.zeros(1, 480), 48000, 24000).shape != (1, 240):
         raise RuntimeError("audio resampling returned an unexpected shape")

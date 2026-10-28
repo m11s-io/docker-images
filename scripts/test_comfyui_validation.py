@@ -29,6 +29,13 @@ HTTPServer(('127.0.0.1', args.port), Handler).serve_forever()
 
 
 class ComfyValidationTest(unittest.TestCase):
+    def test_rejects_mixed_cuda_variants(self):
+        with self.assertRaisesRegex(RuntimeError, "same CUDA variant"):
+            verify.check_cuda_variants("2.14.1+cu132", "0.29.1+cu130")
+
+    def test_accepts_matching_cuda_variants(self):
+        verify.check_cuda_variants("2.14.1+cu132", "0.29.1+cu132")
+
     def check_backend(self, source):
         # Exercise Python's actual package loader without a GPU or Torch install.
         with tempfile.TemporaryDirectory() as directory:

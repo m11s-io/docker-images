@@ -1,7 +1,7 @@
 **
 !pyproject.toml
 !uv.lock
-!requirements-cu130.txt
+!requirements-cuda.txt
 !check_version.py
 !app/
 !app/**

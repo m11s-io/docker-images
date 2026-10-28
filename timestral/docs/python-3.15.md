@@ -3,11 +3,14 @@
 The service targets Python 3.15.2 on Linux AMD64. Its API and upstream Timestral
 source revision are unchanged. NumPy advances from 2.2.6 to 2.5.4 so installation
 can use Python 3.15 wheels. Both images use PyTorch 2.14.1, selecting the CPU or
-CUDA 13.0 distribution explicitly.
+latest compatible stable CUDA distribution explicitly.
 
 CPU installation uses the committed `uv.lock` directly. The CUDA image replaces
-the CPU distribution using `requirements-cu130.txt` from the official PyTorch index.
-That wheel supplies its CUDA userspace dependencies. Both images use the same
+the CPU distribution using `requirements-cuda.txt` from the official PyTorch index.
+That wheel supplies its CUDA userspace dependencies. Renovate discovers stable
+CUDA variants from the aggregate index and groups CPU/CUDA Torch updates.
+Passing required GitHub checks permit automatic merging; unavailable or
+incompatible wheels fail the build and prevent merging. Both images use the same
 Debian Python base, avoiding a copy of CPython from Debian into Ubuntu. NVIDIA
 drivers and GPU access still come from the host/container runtime.
 

@@ -31,7 +31,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     python -m venv /opt/venv
 
-# Keep application dependencies separate from Ubuntu's system Python packages.
+# Keep application dependencies separate from the base image's Python packages.
 ENV PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
@@ -39,9 +39,9 @@ WORKDIR /app
 # Install CUDA wheels explicitly and constrain upstream requirements to keep
 # the selected PyTorch versions. Audio dependencies follow upstream requirements.
 # PyTorch wheels supply CUDA libraries independently of the runtime base.
-COPY requirements-cu130.txt /opt/requirements-cu130.txt
-RUN python -m pip install --no-cache-dir -r /opt/requirements-cu130.txt && \
-    sed '/^--/d; /^#/d; /^[[:space:]]*$/d' /opt/requirements-cu130.txt > /etc/pip-constraints.txt
+COPY requirements-cuda.txt /opt/requirements-cuda.txt
+RUN python -m pip install --no-cache-dir -r /opt/requirements-cuda.txt && \
+    sed '/^--/d; /^#/d; /^[[:space:]]*$/d' /opt/requirements-cuda.txt > /etc/pip-constraints.txt
 ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
 
 RUN git clone --branch ${COMFYUI_REF} --depth 1 \

@@ -17,6 +17,8 @@ RUN apt-get update \
 COPY pyproject.toml uv.lock ./
 COPY check_version.py ./
 RUN uv sync --frozen --no-dev \
+    && uv pip check --python /opt/venv/bin/python \
+    && /opt/venv/bin/python -c "import torch; assert torch.version.cuda is None; print(torch.__version__, torch.version.cuda)" \
     && /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" \
     && rm -rf /tmp/uv-cache
 
