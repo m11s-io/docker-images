@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("verify_image", Path(__file__).resolve().parents[1] / "comfyui/verify_image.py")
 verify = importlib.util.module_from_spec(spec)
@@ -29,6 +30,33 @@ HTTPServer(('127.0.0.1', args.port), Handler).serve_forever()
 
 
 class ComfyValidationTest(unittest.TestCase):
+    def test_rocm_accepts_matching_packages_without_cuda(self):
+        verify.check_torch_backend("rocm", "2.14.0+rocm10.1.0", "0.29.0a0+rocm10.1.0", None, "7.16.0")
+
+    def test_backend_rejects_cpu_and_wrong_gpu_packages(self):
+        for backend, torch, vision, cuda, hip in (
+            ("rocm", "2.14.1+cu132", "0.29.1+cu132", "13.2", None),
+            ("cuda", "2.14.0+rocm10.1.0", "0.29.0a0+rocm10.1.0", None, "7.16.0"),
+            ("rocm", "2.14.0+cpu", "0.29.0+cpu", None, None),
+            ("rocm", "2.14.0+rocm10.1.0", "0.29.0a0+rocm10.0.0", None, "7.16.0"),
+            ("other", "2.14.0", "0.29.0", None, None),
+        ):
+            with self.subTest(backend=backend, torch=torch, vision=vision):
+                with self.assertRaises(RuntimeError):
+                    verify.check_torch_backend(backend, torch, vision, cuda, hip)
+
+    def test_cuda_contract_still_accepts_matching_cuda(self):
+        verify.check_torch_backend("cuda", "2.14.1+cu132", "0.29.1+cu132", "13.2", None)
+
+    def test_constraints_detect_replaced_rocm_package(self):
+        with tempfile.TemporaryDirectory() as directory:
+            constraints = Path(directory, "constraints.txt")
+            constraints.write_text("torch==2.14.0+rocm10.1.0\n")
+            # Only the external installed-package inventory is substituted.
+            with patch.object(verify, "version", return_value="2.14.1+cu132"):
+                with self.assertRaisesRegex(RuntimeError, "expected.*rocm10.1.0.*installed.*cu132"):
+                    verify.check_pinned_packages(constraints)
+
     def test_rejects_mixed_cuda_variants(self):
         with self.assertRaisesRegex(RuntimeError, "same CUDA variant"):
             verify.check_cuda_variants("2.14.1+cu132", "0.29.1+cu130")

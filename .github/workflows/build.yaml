@@ -44,6 +44,7 @@ on:
           - s3-upload-proxy
           - redis-http-proxy
           - comfyui
+          - comfyui-rocm
           - comfy-mcp
           - deepseek-harness
           - chromium-cdp
@@ -89,6 +90,7 @@ jobs:
       decap-cms: ${{ steps.filter.outputs.decap-cms }}
       s3-upload-proxy: ${{ steps.filter.outputs.s3-upload-proxy }}
       redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
+      comfyui-rocm: ${{ steps.filter.outputs.comfyui-rocm }}
       comfyui: ${{ steps.filter.outputs.comfyui }}
       comfyui-generic: ${{ steps.filter.outputs.comfyui-generic }}
       comfyui-gguf: ${{ steps.filter.outputs.comfyui-gguf }}
@@ -160,10 +162,18 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
+            comfyui-rocm:
+              - '.github/workflows/build.yaml'
+              - 'comfyui/Dockerfile.rocm'
+              - 'comfyui/requirements-rocm.txt'
+              - 'comfyui/verify_image.py'
+              - 'scripts/test_comfyui_validation.py'
             comfyui-generic:
               - 'scripts/image_tags.py'
               - 'comfyui/**'
               - '!comfyui/Dockerfile.gguf'
+              - '!comfyui/Dockerfile.rocm'
+              - '!comfyui/requirements-rocm.txt'
               - '!**/compose*.yaml'
               - '!**/compose*.yml'
               - '!**/docker-compose*.yaml'
@@ -531,8 +541,44 @@ jobs:
           username: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USER || '' }}
           password: ${{ github.event_name != 'pull_request' && secrets.DOCKER_PASS || '' }}
 
+  comfyui-rocm:
+    needs: [changes]
+    if: ${{ !failure() && !cancelled() && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'comfyui-rocm')) || needs.changes.outputs.comfyui-rocm == 'true') }}
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Free space for AMD's multi-architecture base
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Resolve ROCm candidate tags
+        id: tags
+        run: |
+          tags=$(python3 scripts/image_tags.py --repository m11s/comfyui --sha "$GITHUB_SHA" \
+            --dockerfile comfyui/Dockerfile.rocm --version-arg COMFYUI_REF --strip-prefix v --suffix=-rocm --latest latest-rocm)
+          {
+            echo 'tags<<IMAGE_TAGS'
+            echo "$tags"
+            echo 'IMAGE_TAGS'
+          } >> "$GITHUB_OUTPUT"
+      - name: Validate ROCm image without publishing
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: comfyui
+          file: comfyui/Dockerfile.rocm
+          platforms: linux/amd64
+          push: false
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=comfyui-rocm
+          cache-to: type=gha,scope=comfyui-rocm,mode=min
+
   image-checks:
-    needs: [changes, build, native-prepare, native-build, timestral-tests]
+    needs: [changes, build, native-prepare, native-build, timestral-tests, comfyui-rocm]
     if: ${{ always() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-26.04
     permissions: {}
@@ -540,12 +586,17 @@ jobs:
       - name: Require successful image validation
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
+          ROCM_REQUIRED: ${{ needs.changes.outputs.comfyui-rocm }}
+          ROCM_RESULT: ${{ needs.comfyui-rocm.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           NATIVE_PREPARE_RESULT: ${{ needs.native-prepare.result }}
           NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
           HAS_NATIVE_IMAGES: ${{ needs.native-prepare.outputs.has-images }}
           TIMESTRAL_TESTS_RESULT: ${{ needs.timestral-tests.result }}
         run: |
+          if [[ "$ROCM_REQUIRED" == true ]]; then
+            test "$ROCM_RESULT" = success
+          fi
           test "$CHANGES_RESULT" = success
           test "$BUILD_RESULT" = success
           test "$NATIVE_PREPARE_RESULT" = success

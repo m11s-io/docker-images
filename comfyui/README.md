@@ -91,3 +91,33 @@ Before promoting a candidate image on an NVIDIA node:
 
 GitHub's CPU runners validate packaging and startup; these release checks require
 an actual NVIDIA GPU.
+
+## AMD ROCm candidate
+
+`Dockerfile.rocm` targets Radeon AI PRO R9700 (`gfx1201`, 32 GiB per GPU)
+with ROCm 10.1.0, PyTorch 2.14.0 and Python 3.14 on Ubuntu 26.04. The base
+is AMD's digest-pinned PyTorch image. `requirements-rocm.txt` records its exact
+Torch/TorchVision/ROCm identities, including AMD's matching TorchVision
+`0.29.0a0` build. These pins and the inherited ROCm library pins constrain
+ComfyUI dependency installation. The container uses UID/GID 10001.
+
+Sources: [AMD release notes](https://rocm.docs.amd.com/en/latest/about/release-notes.html)
+and [PyTorch installation](https://rocm.docs.amd.com/projects/ai-ecosystem/en/latest/frameworks/pytorch/install.html).
+ROCm 10.1 is the current documented stack; PyTorch 2.15 is newer than the
+2.14.0 pairing validated in AMD's 10.1 matrix.
+
+GitHub Actions builds this candidate without publishing. `comfyui-rocm` is
+available in manual workflow selection. Intended release tags are
+`<upstream-version>-rocm`; none are advertised as hardware-accepted yet.
+ROCm GGUF publication and deployment are separate follow-up work.
+
+The shared validator checks the selected GPU backend, exact installed pins,
+`pip check`, audio resampling and CPU HTTP startup. For ROCm it reports Kitchen
+HIP extension loading; CPU CI cannot prove native GPU dispatch or inference.
+CUDA retains its mandatory native Kitchen extension check. Validation state
+stays in a disposable stage. Existing CUDA tags keep their meaning.
+
+The intended Talos AMD node is an established host baseline. Container device
+allocation and inference still require testing with the built candidate. Use
+`amd.com/gpu`, AMD node selection, separate storage and the existing non-root
+security policy; no privileged mode or relaxed seccomp settings are added.

@@ -1,0 +1,74 @@
+# syntax=docker/dockerfile:1.28.0@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
+#
+# ComfyUI on AMD's validated ROCm 10.1 / PyTorch 2.14 / Python 3.14 image.
+# The host supplies amdgpu; the image retains AMD's packaged userspace stack.
+#
+# Build:
+#   docker build -f comfyui/Dockerfile.rocm -t m11s/comfyui:local-rocm comfyui
+
+FROM rocm/pytorch:rocm10.1.0_ubuntu26.04_py3.14_pytorch_release_2.14.0@sha256:68295d40dcdcb53d9b50828f30017faad8cf5ad9a8c7923c5a815b414b45e3e6 AS runtime
+
+# renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
+ARG COMFYUI_REF=v0.43.0
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV CC=/usr/bin/gcc
+ENV COMFYUI_BACKEND=rocm
+
+# Retain AMD's installed packages through a venv; constrain all later installs.
+# Keep a C compiler for runtime-generated launchers.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        python3-venv \
+        gcc \
+        libc6-dev \
+        git \
+        libx11-6 \
+        libxcb1 \
+        libxext6 && \
+    rm -rf /var/lib/apt/lists/* && \
+    python3 -m venv --system-site-packages /opt/venv
+
+# Keep application dependencies separate from the base image's Python packages.
+ENV PATH="/opt/venv/bin:${PATH}"
+
+WORKDIR /app
+
+# Exact AMD build identities, including the matching vendor TorchVision build.
+# Inherited packages satisfy these pins; a stale base fails before app installs.
+COPY requirements-rocm.txt /opt/requirements-rocm.txt
+RUN python -m pip install --no-cache-dir \
+        --index-url https://stable.repo.amd.com/rocm/whl-next/ \
+        -r /opt/requirements-rocm.txt && \
+    cp /opt/requirements-rocm.txt /etc/pip-constraints.txt && \
+    python -m pip freeze | grep -Ei '^rocm[-_].*==' >> /etc/pip-constraints.txt
+ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
+
+RUN git clone --branch ${COMFYUI_REF} --depth 1 \
+        https://github.com/comfyanonymous/ComfyUI.git .
+
+RUN python -m pip install --no-cache-dir \
+        --only-binary=comfy-kitchen,comfy-aimdo -r requirements.txt
+
+RUN groupadd --system --gid 10001 comfyui && \
+    useradd --system --uid 10001 --gid comfyui \
+        --create-home --home-dir /home/comfyui comfyui && \
+    mkdir -p /app/models /app/output /app/input /app/user && \
+    chown -R comfyui:comfyui /app
+
+USER comfyui
+
+
+EXPOSE 8188
+
+ENTRYPOINT ["python", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
+
+FROM runtime AS validation
+COPY verify_image.py /app/verify_image.py
+RUN python /app/verify_image.py && touch /tmp/comfyui-validated
+
+# Depend on validation without including its generated startup state.
+FROM runtime AS final
+COPY --from=validation /tmp/comfyui-validated /usr/local/share/comfyui/image-validated
