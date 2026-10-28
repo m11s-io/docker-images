@@ -14,8 +14,8 @@ RUN git init /opt/deepseek-harness \
     && test "$(git -C /opt/deepseek-harness rev-parse 'FETCH_HEAD^{commit}')" = "$DSH_COMMIT" \
     && git -C /opt/deepseek-harness checkout --detach FETCH_HEAD
 
-RUN corepack enable \
-    && corepack prepare pnpm@11.7.0 --activate
+# Node 25+ no longer bundles Corepack; install the pinned package manager directly.
+RUN npm install --global pnpm@11.7.0
 
 WORKDIR /opt/deepseek-harness
 
