@@ -1,8 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "github>m11s-io/.github:renovate-config"
-  ],
+  "extends": ["github>m11s-io/.github:renovate-config"],
   "packageRules": [
     {
       "description": "Auto-merge Docker digest updates after checks pass",
@@ -14,10 +12,55 @@
       "ignoreTests": false
     },
     {
-      "description": "Group ComfyUI Dockerfile version updates",
-      "matchFileNames": ["comfyui/Dockerfile"],
-      "matchUpdateTypes": ["major", "minor", "patch"],
-      "groupName": "ComfyUI Dockerfile dependencies"
+      "description": "Group ComfyUI application, base image, and PyTorch version updates",
+      "matchFileNames": ["comfyui/Dockerfile", "comfyui/requirements-cuda.txt"],
+      "groupName": "ComfyUI Dockerfile dependencies",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "ignoreTests": false,
+      "rebaseWhen": "behind-base-branch",
+      "separateMajorMinor": false,
+      "separateMinorPatch": false
+    },
+    {
+      "description": "Keep ComfyUI on its validated Python 3.14 runtime",
+      "matchPackageNames": ["python"],
+      "matchFileNames": ["comfyui/**"],
+      "allowedVersions": "/^3\\.14\\./"
+    },
+    {
+      "description": "Discover stable CUDA variants from the aggregate official PyTorch index",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["torch", "torchvision"],
+      "matchFileNames": ["comfyui/requirements-cuda.txt", "timestral/requirements-cuda.txt"],
+      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+\\+cu\\d+$/",
+      "minimumReleaseAge": "0 days",
+      "ignoreUnstable": true,
+      "registryUrls": ["https://download.pytorch.org/whl"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+cu(?<build>\\d+)$"
+    },
+    {
+      "description": "Update and auto-merge Timestral CPU and CUDA PyTorch releases together after checks pass",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["torch"],
+      "matchFileNames": ["timestral/**"],
+      "groupName": "Timestral PyTorch",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "ignoreTests": false,
+      "rebaseWhen": "behind-base-branch",
+      "separateMajorMinor": false,
+      "separateMinorPatch": false
+    },
+    {
+      "description": "Keep Timestral's default PyTorch distribution CPU-only",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["torch"],
+      "matchFileNames": ["timestral/pyproject.toml"],
+      "allowedVersions": "/\\+cpu$/",
+      "minimumReleaseAge": "0 days"
     },
     {
       "description": "Allow a longer release interval for the maintained Docker Hub description action",
@@ -30,6 +73,12 @@
       "matchPackageNames": ["python"],
       "matchFileNames": ["timestral/**"],
       "allowedVersions": "/^3\\.15\\./"
+    },
+    {
+      "description": "CUDA pins use the numeric CUDA-aware manager instead of PEP 440 local-version ranges",
+      "matchManagers": ["pip_requirements"],
+      "matchFileNames": ["comfyui/requirements-cuda.txt", "timestral/requirements-cuda.txt"],
+      "enabled": false
     }
   ],
   "digest": {
@@ -39,26 +88,27 @@
     {
       "customType": "regex",
       "description": "Track application and plugin versions declared in Dockerfile arguments",
-      "managerFilePatterns": [
-        "/^(caddy-cloudflare|s3-upload-proxy|comfyui|comfy-mcp)\\/Dockerfile$/"
-      ],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+=(?<currentValue>\\S+)"
-      ]
+      "managerFilePatterns": ["/^(caddy-cloudflare|s3-upload-proxy|comfyui|comfy-mcp)\\/Dockerfile$/"],
+      "matchStrings": ["# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+=(?<currentValue>\\S+)"]
     },
     {
       "customType": "regex",
       "description": "Update the DeepSeek release and its source commit together",
-      "managerFilePatterns": [
-        "/^deepseek-harness\\/Dockerfile$/"
-      ],
-      "matchStrings": [
-        "ARG DSH_REF=(?<currentValue>dsh-v\\S+)\\s+ARG DSH_COMMIT=(?<currentDigest>[a-f0-9]{40})"
-      ],
+      "managerFilePatterns": ["/^deepseek-harness\\/Dockerfile$/"],
+      "matchStrings": ["ARG DSH_REF=(?<currentValue>dsh-v\\S+)\\s+ARG DSH_COMMIT=(?<currentDigest>[a-f0-9]{40})"],
       "datasourceTemplate": "github-tags",
       "depNameTemplate": "deepseek-ai/deepseek-harness",
       "extractVersionTemplate": "^dsh-v(?<version>.+)$",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Track exact CUDA wheel pins and compare the CUDA suffix as a numeric build",
+      "managerFilePatterns": ["/^(comfyui|timestral)\\/requirements-cuda\\.txt$/"],
+      "matchStrings": ["(?<depName>torch(?:vision)?)==(?<currentValue>\\d+\\.\\d+\\.\\d+\\+cu\\d+)"],
+      "datasourceTemplate": "pypi",
+      "registryUrlTemplate": "https://download.pytorch.org/whl",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+cu(?<build>\\d+)$"
     }
   ]
 }

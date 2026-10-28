@@ -1,14 +1,32 @@
 # m11s/comfyui
 
-[ComfyUI](https://github.com/Comfy-Org/ComfyUI) built from source with an NVIDIA
-CUDA runtime and explicitly selected PyTorch wheels. The generic image contains
+[ComfyUI](https://github.com/Comfy-Org/ComfyUI) built from source on a Python
+base with explicitly selected CUDA-enabled PyTorch wheels. The generic image contains
 no community nodes; the GGUF variant adds the pinned `ComfyUI-GGUF` loader.
 
 The [Dockerfile](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile) is the source of truth for the upstream release,
 base image, Python interpreter, PyTorch packages, and CUDA wheel index.
 [Dockerfile.gguf](https://github.com/m11s-io/docker-images/blob/main/comfyui/Dockerfile.gguf) pins the generic parent and GGUF commit.
-PyTorch bundles its own CUDA libraries, independently of the container base.
+PyTorch supplies the CUDA runtime libraries; the image has no separate system
+CUDA toolkit. The host NVIDIA container runtime supplies driver libraries.
+Comfy Kitchen and AIMDO must install from prebuilt wheels; missing wheels fail
+the build instead of compiling a different backend from source.
 Audio dependencies follow the selected upstream requirements.
+
+`requirements-cuda.txt` pins stable CUDA-enabled Torch and TorchVision wheels
+from the official PyTorch indexes. Renovate discovers newer CUDA variants through
+the aggregate index; installation derives the complete channel index from the
+Torch pin. The same file constrains upstream installation.
+Renovate groups these version updates with the ComfyUI release and base image;
+newer CUDA variants are eligible automatically. Renovate auto merges these
+updates after required GitHub image, runtime, lint and dependency-policy checks pass.
+Nightly, prerelease, CPU and ROCm wheels are excluded from CUDA updates.
+The inherited release cooldown is disabled only for these PyTorch wheel pins
+because Renovate does not read upload timestamps from the HTML wheel index.
+A scoped Renovate manager compares the CUDA suffix numerically, including
+CUDA-only changes within the same Torch release. Python local-version range
+handling can otherwise treat different GPU variants as the same pin.
+These direct pins are not a complete transitive dependency lock.
 
 ## Tags
 
@@ -51,7 +69,8 @@ docker build --build-arg COMFYUI_BASE=m11s/comfyui:local \
   -f comfyui/Dockerfile.gguf -t m11s/comfyui:local-gguf comfyui
 ```
 
-Both Dockerfiles run dependency, pinned-package, audio-resampling, and CPU
+Both Dockerfiles run dependency, pinned-package, native CUDA extension loading,
+audio-resampling, and CPU
 startup checks before the build succeeds. The GGUF build also checks loader
 registration. Failed checks prevent that image from being exported or published.
 Validation runs in a disposable build stage, keeping startup state out of the
@@ -59,3 +78,16 @@ published image. These checks do not perform GPU inference.
 
 CI uses the generic build's exact digest when rebuilding the GGUF variant.
 For GGUF-only changes, it uses the pinned parent in `Dockerfile.gguf`.
+
+## GPU release checks
+
+Before promoting a candidate image on an NVIDIA node:
+
+- Compare `nvidia-smi` driver support with the candidate's `torch.version.cuda`.
+- Run a CUDA tensor operation and synchronize it; check that Kitchen's native
+  CUDA backend is available.
+- Run representative quantized ComfyUI and GGUF workflows on the target GPU.
+- Review startup/backend logs and output correctness before production promotion.
+
+GitHub's CPU runners validate packaging and startup; these release checks require
+an actual NVIDIA GPU.

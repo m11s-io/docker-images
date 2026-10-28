@@ -6,6 +6,7 @@ from importlib.metadata import version
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import subprocess
 import sys
@@ -13,6 +14,22 @@ import tempfile
 import time
 from urllib.error import URLError
 from urllib.request import urlopen
+
+
+def check_cuda_backend() -> None:
+    from comfy_kitchen.backends import cuda
+
+    # Importing Kitchen alone can silently disable a broken native extension.
+    # These flags describe library loading, not whether a GPU is attached.
+    if not cuda._EXT_AVAILABLE:
+        raise RuntimeError(f"Comfy Kitchen CUDA extension unavailable: {cuda._EXT_ERROR}")
+
+
+def check_cuda_variants(torch_version: str, torchvision_version: str) -> None:
+    torch_cuda = re.search(r"\+cu(\d+)$", torch_version)
+    vision_cuda = re.search(r"\+cu(\d+)$", torchvision_version)
+    if not torch_cuda or not vision_cuda or torch_cuda[1] != vision_cuda[1]:
+        raise RuntimeError("Torch and TorchVision must use the same CUDA variant")
 
 
 def check_dependencies() -> None:
@@ -31,6 +48,8 @@ def check_dependencies() -> None:
 
     if torch.version.cuda is None:
         raise RuntimeError("the image requires a CUDA-enabled PyTorch build")
+    check_cuda_variants(torch.__version__, torchvision.__version__)
+    check_cuda_backend()
     if comfy.audio.resample(torch.zeros(1, 480), 48000, 24000).shape != (1, 240):
         raise RuntimeError("audio resampling returned an unexpected shape")
     print(f"torch={torch.__version__}, torchvision={torchvision.__version__}, CUDA={torch.version.cuda}")

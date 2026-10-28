@@ -15,10 +15,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && python -m pip install --no-cache-dir uv==0.13.6
 COPY pyproject.toml uv.lock ./
-COPY check_version.py ./
 RUN uv sync --frozen --no-dev \
-    && /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" \
+    && uv pip check --python /opt/venv/bin/python \
     && rm -rf /tmp/uv-cache
+COPY check_version.py ./
+RUN /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" cpu
 
 FROM ${PYTHON_BASE} AS runtime
 ARG TIMESTRAL_VERSION

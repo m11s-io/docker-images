@@ -15,18 +15,22 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && python -m pip install --no-cache-dir uv==0.13.6
 COPY pyproject.toml uv.lock ./
-COPY check_version.py ./
+COPY requirements-cuda.txt ./
 RUN uv sync --frozen --no-dev --no-install-package torch \
+    && CUDA_CHANNEL=$(sed -n 's/^torch==[^+]*+\(cu[0-9]*\)$/\1/p' requirements-cuda.txt) \
+    && test -n "$CUDA_CHANNEL" \
     && uv pip install --python /opt/venv/bin/python \
-         --index-url https://download.pytorch.org/whl/cu130 torch==2.14.1+cu130 \
-    && /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" \
+         --index-url "https://download.pytorch.org/whl/$CUDA_CHANNEL" -r requirements-cuda.txt \
+    && uv pip check --python /opt/venv/bin/python \
     && rm -rf /tmp/uv-cache
+COPY check_version.py ./
+RUN /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" cuda
 
 # The CUDA PyTorch wheel installs its CUDA userspace libraries. Keep CPython
 # and its shared libraries on the same Debian base as the build stage.
 FROM ${PYTHON_BASE} AS runtime
 ARG TIMESTRAL_VERSION
-LABEL org.opencontainers.image.title="Timestral API (CUDA 13.0)" \
+LABEL org.opencontainers.image.title="Timestral API (CUDA)" \
       org.opencontainers.image.version=${TIMESTRAL_VERSION} \
       org.opencontainers.image.source="https://github.com/m11s-io/docker-images"
 ENV PATH=/opt/venv/bin:/usr/local/bin:${PATH} \
