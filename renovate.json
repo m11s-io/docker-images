@@ -14,10 +14,39 @@
       "ignoreTests": false
     },
     {
-      "description": "Group ComfyUI Dockerfile version updates",
-      "matchFileNames": ["comfyui/Dockerfile"],
+      "description": "Group ComfyUI application, base image, and PyTorch version updates",
+      "matchFileNames": ["comfyui/Dockerfile", "comfyui/requirements-cu130.txt"],
       "matchUpdateTypes": ["major", "minor", "patch"],
       "groupName": "ComfyUI Dockerfile dependencies"
+    },
+    {
+      "description": "Keep ComfyUI on its validated Python 3.14 runtime",
+      "matchPackageNames": ["python"],
+      "matchFileNames": ["comfyui/**"],
+      "allowedVersions": "/^3\\.14\\./"
+    },
+    {
+      "description": "Keep CUDA wheels on the explicitly selected cu130 channel",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["torch", "torchvision"],
+      "matchFileNames": ["comfyui/requirements-cu130.txt", "timestral/requirements-cu130.txt"],
+      "allowedVersions": "/\\+cu130$/",
+      "automerge": false
+    },
+    {
+      "description": "Review Timestral CPU and CUDA PyTorch releases together",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["torch"],
+      "matchFileNames": ["timestral/**"],
+      "groupName": "Timestral PyTorch",
+      "automerge": false
+    },
+    {
+      "description": "Keep Timestral's default PyTorch distribution CPU-only",
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["torch"],
+      "matchFileNames": ["timestral/pyproject.toml"],
+      "allowedVersions": "/\\+cpu$/"
     },
     {
       "description": "Allow a longer release interval for the maintained Docker Hub description action",

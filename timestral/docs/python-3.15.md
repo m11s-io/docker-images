@@ -3,10 +3,10 @@
 The service targets Python 3.15.2 on Linux AMD64. Its API and upstream Timestral
 source revision are unchanged. NumPy advances from 2.2.6 to 2.5.4 so installation
 can use Python 3.15 wheels. Both images use PyTorch 2.14.1, selecting the CPU or
-CUDA 12.6 distribution explicitly.
+CUDA 13.0 distribution explicitly.
 
 CPU installation uses the committed `uv.lock` directly. The CUDA image replaces
-the CPU distribution with `torch==2.14.1+cu126` from the official PyTorch index.
+the CPU distribution using `requirements-cu130.txt` from the official PyTorch index.
 That wheel supplies its CUDA userspace dependencies. Both images use the same
 Debian Python base, avoiding a copy of CPython from Debian into Ubuntu. NVIDIA
 drivers and GPU access still come from the host/container runtime.

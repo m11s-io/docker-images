@@ -39,11 +39,9 @@ WORKDIR /app
 # Install CUDA wheels explicitly and constrain upstream requirements to keep
 # the selected PyTorch versions. Audio dependencies follow upstream requirements.
 # PyTorch wheels supply CUDA libraries independently of the runtime base.
-RUN python -m pip install --no-cache-dir \
-        --index-url https://download.pytorch.org/whl/cu130 \
-        torch==2.14.1+cu130 \
-        torchvision==0.29.1+cu130 && \
-    printf 'torch==2.14.1+cu130\ntorchvision==0.29.1+cu130\n' > /etc/pip-constraints.txt
+COPY requirements-cu130.txt /opt/requirements-cu130.txt
+RUN python -m pip install --no-cache-dir -r /opt/requirements-cu130.txt && \
+    sed '/^--/d; /^#/d; /^[[:space:]]*$/d' /opt/requirements-cu130.txt > /etc/pip-constraints.txt
 ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
 
 RUN git clone --branch ${COMFYUI_REF} --depth 1 \

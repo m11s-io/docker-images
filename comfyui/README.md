@@ -13,6 +13,12 @@ Comfy Kitchen and AIMDO must install from prebuilt wheels; missing wheels fail
 the build instead of compiling a different backend from source.
 Audio dependencies follow the selected upstream requirements.
 
+`requirements-cu130.txt` selects Torch and TorchVision from the official CUDA
+13.0 index. It also supplies the pins used to constrain upstream installation.
+Renovate groups these version updates with the ComfyUI release and base image;
+CUDA channel changes remain explicit. Image validation must pass before merging.
+These direct pins are not a complete transitive dependency lock.
+
 ## Tags
 
 Tags derive from `COMFYUI_REF`, with the leading `v` removed. The GGUF variant
