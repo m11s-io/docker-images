@@ -41,6 +41,23 @@ class TimestralRuntimeTest(unittest.TestCase):
                 self.assertIn("check_version.py", dockerfile)
                 self.assertIn("TIMESTRAL_VERSION", dockerfile)
 
+    def test_rocm_keeps_amd_torch_and_uses_matching_api_dependencies(self):
+        dockerfile = (ROOT / "timestral/Dockerfile.rocm").read_text()
+        self.assertIn("--require-hashes --no-deps -r requirements-rocm.txt", dockerfile)
+        self.assertIn("assert torch.version.hip", dockerfile)
+        self.assertIn("MODEL_DEVICE=cuda", dockerfile)
+        self.assertIn("tests/test_api.py", dockerfile)
+        self.assertIn("COPY --from=validation", dockerfile)
+        requirements = (ROOT / "timestral/requirements-rocm.in").read_text().splitlines()
+        project = tomllib.loads((ROOT / "timestral/pyproject.toml").read_text())
+        for dependency in project["project"]["dependencies"]:
+            if dependency.startswith(("fastapi==", "pydantic-settings==", "uvicorn[standard]==")):
+                self.assertIn(dependency, requirements)
+        lock = (ROOT / "timestral/requirements-rocm.txt").read_text()
+        self.assertNotRegex(lock, r"(?m)^(torch|triton|nvidia-[a-z-]+)==")
+        upstream = next(d for d in project["project"]["dependencies"] if d.startswith("timestral @"))
+        self.assertIn(upstream, dockerfile)
+
     def test_version_check_accepts_match_and_rejects_mismatch(self):
         checker = ROOT / "timestral/check_version.py"
         with tempfile.TemporaryDirectory() as directory:

@@ -6,3 +6,6 @@
 !app/**
 **/__pycache__
 **/*.pyc
+!requirements-rocm.txt
+!tests/
+!tests/test_api.py

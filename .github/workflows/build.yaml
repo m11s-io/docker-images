@@ -51,6 +51,7 @@ on:
           - vllm-openai-orjson
           - timestral-cpu
           - timestral-cuda
+          - timestral-rocm
       skip_push:
         description: 'Dry-run: build without pushing to Docker Hub'
         required: false
@@ -99,6 +100,7 @@ jobs:
       vllm-openai-orjson: ${{ steps.filter.outputs.vllm-openai-orjson }}
       timestral-cpu: ${{ steps.filter.outputs.timestral-cpu }}
       timestral-cuda: ${{ steps.filter.outputs.timestral-cuda }}
+      timestral-rocm: ${{ steps.filter.outputs.timestral-rocm }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -239,6 +241,15 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
+            timestral-rocm:
+              - 'scripts/image_tags.py'
+              - 'timestral/**'
+              - '!**/compose*.yaml'
+              - '!**/compose*.yml'
+              - '!**/docker-compose*.yaml'
+              - '!**/docker-compose*.yml'
+              - '!**/*.md'
+              - '!**/docs/**'
 
   build:
     needs: [changes]
@@ -313,6 +324,16 @@ jobs:
             version_ref: TIMESTRAL_VERSION
             tag_suffix: -cuda
             latest: latest-cuda
+          - context: timestral-rocm
+            build_context: timestral
+            dockerfile: timestral/Dockerfile.rocm
+            readme_file: timestral/README.md
+            repository: m11s/timestral
+            description: Timestral forecasting API with AMD ROCm PyTorch.
+            version_source: version-arg
+            version_ref: TIMESTRAL_VERSION
+            tag_suffix: -rocm
+            latest: latest-rocm
     steps:
       - name: Checkout
         id: checkout
