@@ -6,7 +6,7 @@ can use Python 3.15 wheels. Both images use PyTorch 2.14.1, selecting the CPU or
 latest compatible stable CUDA distribution explicitly.
 
 CPU installation uses the committed `uv.lock` directly. The CUDA image replaces
-the CPU distribution using `requirements-cuda.txt` from the official PyTorch index.
+the CPU distribution using `requirements-cuda.txt` from the official PyTorch channel index derived from the Torch pin.
 That wheel supplies its CUDA userspace dependencies. Renovate discovers stable
 CUDA variants from the aggregate index and groups CPU/CUDA Torch updates.
 Passing required GitHub checks permit automatic merging; unavailable or

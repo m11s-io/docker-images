@@ -103,7 +103,9 @@ CUDA uses the same service code. The CUDA image installs the pinned CUDA PyTorch
 export MODEL_REVISION=9874d252ab0aae16f7f7c999f98f98d6ad7d8365
 export MODEL_DEVICE=cuda
 uv sync --frozen --no-dev --no-install-package torch
-uv pip install --python .venv/bin/python -r requirements-cuda.txt
+CUDA_CHANNEL=$(sed -n 's/^torch==[^+]*+\(cu[0-9]*\)$/\1/p' requirements-cuda.txt)
+uv pip install --python .venv/bin/python \
+  --index-url "https://download.pytorch.org/whl/$CUDA_CHANNEL" -r requirements-cuda.txt
 uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 

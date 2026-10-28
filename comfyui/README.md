@@ -14,7 +14,9 @@ the build instead of compiling a different backend from source.
 Audio dependencies follow the selected upstream requirements.
 
 `requirements-cuda.txt` pins stable CUDA-enabled Torch and TorchVision wheels
-from the aggregate official PyTorch index. It also supplies the pins used to constrain upstream installation.
+from the official PyTorch indexes. Renovate discovers newer CUDA variants through
+the aggregate index; installation derives the complete channel index from the
+Torch pin. The same file constrains upstream installation.
 Renovate groups these version updates with the ComfyUI release and base image;
 newer CUDA variants are eligible automatically. Renovate auto merges these
 updates after required GitHub image, runtime, lint and dependency-policy checks pass.

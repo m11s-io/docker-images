@@ -32,9 +32,11 @@ def check_lookup(same_release: bool) -> None:
                 # Keep the public release but move back one published CUDA
                 # variant: a channel-only update must also produce a PR.
                 source = re.sub(r"\+cu\d+", "+cu130", source)
-            if not same_release:
-                source = source.replace("2.14.1+", "2.14.0+")
-                source = source.replace("0.29.1+", "0.29.0+")
+            if name != "renovate.json":
+                torch_release = "2.14.1" if same_release else "2.14.0"
+                vision_release = "0.29.1" if same_release else "0.29.0"
+                source = re.sub(r"(torch==)[^+\s\"]+", rf"\g<1>{torch_release}", source)
+                source = re.sub(r"(torchvision==)[^+\s\"]+", rf"\g<1>{vision_release}", source)
             target.write_text(source)
         subprocess.run(["git", "init", "-q"], cwd=fixture, check=True)
         subprocess.run(["git", "add", "."], cwd=fixture, check=True)
@@ -78,7 +80,7 @@ def check_lookup(same_release: bool) -> None:
                         if filename in CUDA_FILES:
                             assert re.fullmatch(r"\d+\.\d+\.\d+\+cu\d+", version), version
                             assert int(version.rsplit("cu", 1)[1]) > 130, version
-                            assert dep["registryUrls"] == ["https://download.pytorch.org/whl"], dep
+                            assert dep["registryUrl"].rstrip("/") == "https://download.pytorch.org/whl", dep
                         else:
                             assert version.endswith("+cpu"), version
                     seen.add((filename, dep["depName"]))

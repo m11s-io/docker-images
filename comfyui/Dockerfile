@@ -40,8 +40,11 @@ WORKDIR /app
 # the selected PyTorch versions. Audio dependencies follow upstream requirements.
 # PyTorch wheels supply CUDA libraries independently of the runtime base.
 COPY requirements-cuda.txt /opt/requirements-cuda.txt
-RUN python -m pip install --no-cache-dir -r /opt/requirements-cuda.txt && \
-    sed '/^--/d; /^#/d; /^[[:space:]]*$/d' /opt/requirements-cuda.txt > /etc/pip-constraints.txt
+RUN CUDA_CHANNEL=$(sed -n 's/^torch==[^+]*+\(cu[0-9]*\)$/\1/p' /opt/requirements-cuda.txt) && \
+    test -n "$CUDA_CHANNEL" && \
+    python -m pip install --no-cache-dir \
+        --index-url "https://download.pytorch.org/whl/$CUDA_CHANNEL" -r /opt/requirements-cuda.txt && \
+    cp /opt/requirements-cuda.txt /etc/pip-constraints.txt
 ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
 
 RUN git clone --branch ${COMFYUI_REF} --depth 1 \
