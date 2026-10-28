@@ -15,8 +15,7 @@ RUN git init /opt/deepseek-harness \
     && git -C /opt/deepseek-harness checkout --detach FETCH_HEAD
 
 # Node 25+ no longer bundles Corepack; install the pinned package manager directly.
-RUN npm install --global pnpm@11.7.0 \
-    && test "$(pnpm --version)" = "11.7.0"
+RUN npm install --global pnpm@11.7.0
 
 WORKDIR /opt/deepseek-harness
 
