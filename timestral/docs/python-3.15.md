@@ -37,8 +37,8 @@ The test suite reports an existing Starlette/AnyIO deprecation warning. These
 checks establish functional compatibility, not performance on target nodes.
 Actual NVIDIA GPU execution is not validated by a CPU-only Docker host.
 The CUDA dependency resolver found compatible Python 3.15 wheels, but the local
-image build was stopped during prolonged multi-gigabyte downloads. The complete
-CUDA image build and NVIDIA execution remain release checks. CUDA transitive
+image build was stopped during prolonged multi-gigabyte downloads. GitHub Actions builds the complete CUDA image on dependency updates; NVIDIA
+execution remains a release check. CUDA transitive
 artifacts are resolved separately from the CPU `uv.lock`, as in the previous
 image; they are not covered by the CPU lock's hashes.
 

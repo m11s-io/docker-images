@@ -78,3 +78,16 @@ published image. These checks do not perform GPU inference.
 
 CI uses the generic build's exact digest when rebuilding the GGUF variant.
 For GGUF-only changes, it uses the pinned parent in `Dockerfile.gguf`.
+
+## GPU release checks
+
+Before promoting a candidate image on an NVIDIA node:
+
+- Compare `nvidia-smi` driver support with the candidate's `torch.version.cuda`.
+- Run a CUDA tensor operation and synchronize it; check that Kitchen's native
+  CUDA backend is available.
+- Run representative quantized ComfyUI and GGUF workflows on the target GPU.
+- Review startup/backend logs and output correctness before production promotion.
+
+GitHub's CPU runners validate packaging and startup; these release checks require
+an actual NVIDIA GPU.

@@ -345,6 +345,7 @@ jobs:
           tags=$(python3 scripts/image_tags.py "${args[@]}" --latest "$LATEST_TAG" --suffix="$TAG_SUFFIX")
           {
             echo "image=${tags%%$'\n'*}"
+            echo "local-image=${tags##*$'\n'}"
             echo 'tags<<IMAGE_TAGS'
             echo "$tags"
             echo 'IMAGE_TAGS'
@@ -416,7 +417,7 @@ jobs:
       - name: Build ComfyUI-GGUF variant without pushing
         if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
         env:
-          COMFYUI_BASE: ${{ steps.image-tags.outputs.image }}
+          COMFYUI_BASE: ${{ steps.image-tags.outputs.local-image }}
           GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
         run: |
           docker buildx build --builder default --platform linux/amd64 --load \
@@ -426,15 +427,23 @@ jobs:
       - name: Build ComfyUI-GGUF variant for pull request
         if: ${{ github.event_name == 'pull_request' && matrix.context == 'comfyui' && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true') }}
         env:
-          COMFYUI_IMAGE: ${{ steps.image-tags.outputs.image }}
+          COMFYUI_IMAGE: ${{ steps.image-tags.outputs.local-image }}
           GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
           GENERIC_CHANGED: ${{ needs.changes.outputs.comfyui-generic }}
         run: |
           args=(--builder default --platform linux/amd64 --load)
           if [[ "$GENERIC_CHANGED" == true ]]; then
+            # A unique, unpublished tag prevents resolution to an older Docker Hub image.
+            docker image inspect "$COMFYUI_IMAGE" --format '{{.Id}}'
             args+=(--build-arg "COMFYUI_BASE=$COMFYUI_IMAGE")
           fi
           docker buildx build "${args[@]}" -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
+          # Validate the exported child against this checkout's pins, even if its
+          # inherited constraints accidentally came from a stale generic parent.
+          docker run --rm --entrypoint python \
+            -e PIP_CONSTRAINT=/tmp/expected-cuda.txt \
+            -v "$GITHUB_WORKSPACE/comfyui/requirements-cuda.txt:/tmp/expected-cuda.txt:ro" \
+            "$GGUF_IMAGE" /app/verify_image.py --gguf
 
       - name: Update Docker Hub repository overview
         if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
