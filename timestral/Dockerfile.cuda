@@ -16,16 +16,15 @@ RUN apt-get update \
     && python -m pip install --no-cache-dir uv==0.13.6
 COPY pyproject.toml uv.lock ./
 COPY requirements-cuda.txt ./
-COPY check_version.py ./
 RUN uv sync --frozen --no-dev --no-install-package torch \
     && CUDA_CHANNEL=$(sed -n 's/^torch==[^+]*+\(cu[0-9]*\)$/\1/p' requirements-cuda.txt) \
     && test -n "$CUDA_CHANNEL" \
     && uv pip install --python /opt/venv/bin/python \
          --index-url "https://download.pytorch.org/whl/$CUDA_CHANNEL" -r requirements-cuda.txt \
     && uv pip check --python /opt/venv/bin/python \
-    && /opt/venv/bin/python -c "import torch; assert torch.version.cuda is not None; print(torch.__version__, torch.version.cuda)" \
-    && /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" \
     && rm -rf /tmp/uv-cache
+COPY check_version.py ./
+RUN /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" cuda
 
 # The CUDA PyTorch wheel installs its CUDA userspace libraries. Keep CPython
 # and its shared libraries on the same Debian base as the build stage.

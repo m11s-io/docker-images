@@ -1,7 +1,28 @@
-"""Fail an image build when its installed upstream Timestral version differs."""
+"""Validate installed upstream Timestral and pinned Torch versions during builds."""
 
 import importlib.metadata
 import sys
+from pathlib import Path
+import tomllib
+
+
+def check_torch(variant: str) -> None:
+    import torch
+
+    if variant == "cpu":
+        project = tomllib.loads(Path("pyproject.toml").read_text())
+        requirements = project["project"]["dependencies"]
+    elif variant == "cuda":
+        requirements = Path("requirements-cuda.txt").read_text().splitlines()
+    else:
+        raise ValueError(f"Unknown Torch variant: {variant}")
+    expected = next(line.split("==", 1)[1] for line in requirements if line.startswith("torch=="))
+    actual = importlib.metadata.version("torch")
+    if actual != expected:
+        raise RuntimeError(f"expected Torch {expected}, installed {actual}")
+    if (torch.version.cuda is not None) != (variant == "cuda"):
+        raise RuntimeError(f"Torch CUDA runtime does not match {variant} image")
+    print(f"Verified Torch {actual}, CUDA={torch.version.cuda}")
 
 
 def main() -> int:
@@ -19,6 +40,8 @@ def main() -> int:
         )
         return 1
 
+    if len(sys.argv) > 2:
+        check_torch(sys.argv[2])
     print(f"Verified Timestral package version {actual}")
     return 0
 

@@ -38,6 +38,24 @@ def check_lookup(same_release: bool) -> None:
                 source = re.sub(r"(torch==)[^+\s\"]+", rf"\g<1>{torch_release}", source)
                 source = re.sub(r"(torchvision==)[^+\s\"]+", rf"\g<1>{vision_release}", source)
             target.write_text(source)
+        if same_release:
+            # Narrow only this fixture to one published public release, so it
+            # continues proving CUDA-only updates after newer Torch releases.
+            # The other fixture exercises the unmodified production filters.
+            config_file = fixture / "renovate.json"
+            config = json.loads(config_file.read_text())
+            for package, release in (("torch", "2.14.1"), ("torchvision", "0.29.1")):
+                config["packageRules"].append({
+                    "matchPackageNames": [package],
+                    "matchFileNames": list(CUDA_FILES),
+                    "allowedVersions": rf"/^{re.escape(release)}\+cu\d+$/",
+                })
+            config["packageRules"].append({
+                "matchPackageNames": ["torch"],
+                "matchFileNames": ["timestral/pyproject.toml"],
+                "allowedVersions": "/^2\\.14\\.1\\+cpu$/",
+            })
+            config_file.write_text(json.dumps(config))
         subprocess.run(["git", "init", "-q"], cwd=fixture, check=True)
         subprocess.run(["git", "add", "."], cwd=fixture, check=True)
         subprocess.run(
@@ -80,6 +98,9 @@ def check_lookup(same_release: bool) -> None:
                         if filename in CUDA_FILES:
                             assert re.fullmatch(r"\d+\.\d+\.\d+\+cu\d+", version), version
                             assert int(version.rsplit("cu", 1)[1]) > 130, version
+                            if same_release:
+                                release = "2.14.1" if dep["depName"] == "torch" else "0.29.1"
+                                assert version.split("+", 1)[0] == release, version
                             assert dep["registryUrl"].rstrip("/") == "https://download.pytorch.org/whl", dep
                         else:
                             assert version.endswith("+cpu"), version
@@ -94,8 +115,8 @@ def check_lookup(same_release: bool) -> None:
         branch_names = {}
         for upgrades in branches:
             for upgrade in upgrades:
-                filename = upgrade["packageFile"]
-                if filename not in GROUPS or upgrade["depName"] not in ("torch", "torchvision"):
+                filename = upgrade.get("packageFile")
+                if filename not in GROUPS or upgrade.get("depName") not in ("torch", "torchvision"):
                     continue
                 assert upgrade["groupName"] == GROUPS[filename], upgrade
                 assert upgrade["automerge"] is True, upgrade
