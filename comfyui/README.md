@@ -23,6 +23,9 @@ updates after required GitHub image, runtime, lint and dependency-policy checks 
 Nightly, prerelease, CPU and ROCm wheels are excluded from CUDA updates.
 The inherited release cooldown is disabled only for these PyTorch wheel pins
 because Renovate does not read upload timestamps from the HTML wheel index.
+A scoped Renovate manager compares the CUDA suffix numerically, including
+CUDA-only changes within the same Torch release. Python local-version range
+handling can otherwise treat different GPU variants as the same pin.
 These direct pins are not a complete transitive dependency lock.
 
 ## Tags

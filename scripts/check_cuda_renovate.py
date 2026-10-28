@@ -69,7 +69,7 @@ def check_lookup(same_release: bool) -> None:
             cwd=fixture, text=True, capture_output=True,
             env={**os.environ, "LOG_LEVEL": "warn", "LOG_FILE": str(log),
                  "LOG_FILE_LEVEL": "trace", "LOG_FILE_FORMAT": "json",
-                 "RENOVATE_ENABLED_MANAGERS": '["pip_requirements","pep621"]',
+                 "RENOVATE_ENABLED_MANAGERS": '["custom.regex","pep621"]',
                  "RENOVATE_INCLUDE_PATHS": '["comfyui/**","timestral/**"]'},
             timeout=240,
         )
