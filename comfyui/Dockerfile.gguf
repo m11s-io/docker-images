@@ -4,7 +4,7 @@
 # free of community nodes; this variant has the same ComfyUI/CUDA release.
 
 # CI overrides this default when it rebuilds the generic image.
-ARG COMFYUI_BASE=m11s/comfyui:0.43.0@sha256:b2ec0af84a16ff7681942b052d171315a5b8725fa8feff21d07eeea2348b25e1
+ARG COMFYUI_BASE=m11s/comfyui:0.43.0@sha256:7b9b2af16f4e7916678b929d2de0a3492eddcd95376b07bcbfc759a2f3162910
 FROM ${COMFYUI_BASE} AS runtime
 
 ARG COMFYUI_GGUF_REF=6ea2651e7df66d7585f6ffee804b20e92fb38b8a
