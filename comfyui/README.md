@@ -31,16 +31,16 @@ These direct pins are not a complete transitive dependency lock.
 ## Tags
 
 Tags derive from `COMFYUI_REF`, with the leading `v` removed. The GGUF variant
-adds `-gguf`. Dependency and packaging changes retain the upstream version and
+adds `-cuda-gguf`; the generic CUDA image adds `-cuda`. Dependency and packaging changes retain the upstream version and
 produce new digests and source commit tags. Pin a digest for reproducible
 release deployments.
 
 | Tag | Use |
 | --- | --- |
-| `<upstream-version>` | Generic image for that upstream release |
-| `<upstream-version>-gguf` | The same release with GGUF support |
-| `latest` | Current generic image |
-| `latest-gguf` | Current GGUF image |
+| `<upstream-version>-cuda` | Generic CUDA image for that upstream release |
+| `<upstream-version>-cuda-gguf` | CUDA release with GGUF support |
+| `latest-cuda` | Current generic CUDA image |
+| `latest-cuda-gguf` | Current CUDA GGUF image |
 
 ## Usage
 
@@ -53,10 +53,10 @@ docker run --rm --gpus all -p 8188:8188 \
   -v "$PWD/input:/app/input" \
   -v "$PWD/output:/app/output" \
   -v "$PWD/user:/app/user" \
-  m11s/comfyui:latest
+  m11s/comfyui:latest-cuda
 ```
 
-Open `http://localhost:8188` after startup. Use `m11s/comfyui:latest-gguf`
+Open `http://localhost:8188` after startup. Use `m11s/comfyui:latest-cuda-gguf`
 when your workflow requires the ComfyUI-GGUF custom node.
 
 ## Building and validation
@@ -115,7 +115,7 @@ The shared validator checks the selected GPU backend, exact installed pins,
 `pip check`, audio resampling and CPU HTTP startup. For ROCm it reports Kitchen
 HIP extension loading; CPU CI cannot prove native GPU dispatch or inference.
 CUDA retains its mandatory native Kitchen extension check. Validation state
-stays in a disposable stage. Existing CUDA tags keep their meaning.
+stays in a disposable stage. Only explicit backend tags are assigned to new builds; unsuffixed and `-gguf` legacy aliases are not updated.
 
 The intended Talos AMD node is an established host baseline. Container device
 allocation and inference still require testing with the built candidate. Use

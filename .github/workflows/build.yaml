@@ -288,7 +288,8 @@ jobs:
             version_source: version-arg
             version_ref: COMFYUI_REF
             strip_prefix: v
-            latest: latest
+            tag_suffix: -cuda
+            latest: latest-cuda
           - context: caddy-cloudflare
             repository: m11s/caddy
             description: Caddy with the Cloudflare DNS-01 provider module.
@@ -361,7 +362,7 @@ jobs:
             echo 'IMAGE_TAGS'
           } >> "$GITHUB_OUTPUT"
           if [[ "$IMAGE_CONTEXT" == comfyui ]]; then
-            gguf_tags=$(python3 scripts/image_tags.py "${args[@]}" --suffix=-gguf --latest latest-gguf)
+            gguf_tags=$(python3 scripts/image_tags.py "${args[@]}" --suffix=-cuda-gguf --latest latest-cuda-gguf)
             {
               echo "gguf-image=${gguf_tags%%$'\n'*}"
               echo 'gguf-tags<<IMAGE_TAGS'

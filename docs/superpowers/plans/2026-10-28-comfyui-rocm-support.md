@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Preserve the existing CUDA image tags and NVIDIA deployment.
+- Assign only explicit backend tags to new builds: `-cuda`, `-cuda-gguf`, `-rocm`, and `-rocm-gguf`, with corresponding backend-specific latest and commit tags. Do not assign legacy unsuffixed or `-gguf` aliases. Preserve the existing NVIDIA deployment until a separately reviewed image-reference update.
 - Preserve `modelDownload.enabled: true` and `modelDownload.prune: true` in the existing deployment. The user explicitly corrected an attempted change to these settings.
 - Build images in GitHub Actions; do not start substantial local image builds.
 - Use stable, officially supported ROCm/PyTorch combinations for the exact AMD GPU. Do not assume that the newest ROCm release has matching PyTorch wheels.
@@ -56,7 +56,7 @@ Workspace root: `/Users/al/Work/repo/m11s`.
 
 ## Task 2: Generic ROCm Image and Backend-Aware Validation
 
-**Interface:** Existing CUDA tags retain their meaning; new `m11s/comfyui:<ComfyUI-version>-rocm` denotes the generic ROCm image.
+**Interface:** CUDA generic builds use `-cuda`; new `m11s/comfyui:<ComfyUI-version>-rocm` denotes the generic ROCm image.
 
 - [ ] Add `comfyui/Dockerfile.rocm` with the compatibility tuple from Task 1, the same pinned ComfyUI release, existing directory layout, UID/GID 10001, persistent paths, listener, and entrypoint behavior. Use `python` from the selected virtual environment rather than coupling shared layers to Python 3.14.
 - [ ] Install ROCm torch/torchvision explicitly, then constrain them throughout upstream requirements installation. Remove CUDA-specific base, architecture settings, and compiler assumptions from the ROCm variant.
@@ -70,7 +70,7 @@ Workspace root: `/Users/al/Work/repo/m11s`.
 
 **Interface:** Publish `m11s/comfyui:<ComfyUI-version>-rocm-gguf` only after its dependency paths are established; derive it from the exact generic ROCm image built in the same workflow.
 
-- [ ] Make the GGUF layer backend-neutral where possible. Its current hardcoded `python3.14`, compiler settings, and default CUDA base must not leak into the ROCm build. Keep existing CUDA GGUF tags compatible.
+- [ ] Make the GGUF layer backend-neutral where possible. Its current hardcoded `python3.14`, compiler settings, and default CUDA base must not leak into the ROCm build. Use `-cuda-gguf` for CUDA GGUF tags.
 - [ ] Use the same pinned ComfyUI-GGUF source release for both backends unless a documented compatibility issue requires otherwise. Inspect whether its dependencies install CUDA-only binaries or invoke CUDA-only APIs.
 - [ ] Make the GGUF image run backend-specific dependency validation and verify `UnetLoaderGGUF` registration. Add regression coverage for base-image selection and backend identity.
 - [ ] Extend Task 2's CI route to build GGUF from that run's generic ROCm image. For PR and manual `skip_push` builds, load the generic image under a run-specific local tag and use the existing Docker-builder/local-image pattern to pass it as `COMFYUI_BASE`; do not require a registry digest for an unpublished image. Test that neither build publishes and that GGUF cannot resolve to the CUDA default. Record the generic image ID and resulting GGUF image ID.
@@ -80,7 +80,7 @@ Workspace root: `/Users/al/Work/repo/m11s`.
 
 ## Task 4: GitHub Builds, Publishing, and Renovate
 
-- [ ] Complete release routing, change filters, and runtime-contract helpers around the generic and GGUF CI routes introduced in Tasks 2 and 3. Preserve existing CUDA generic/GGUF behavior and tag semantics.
+- [ ] Complete release routing, change filters, and runtime-contract helpers around the generic and GGUF CI routes introduced in Tasks 2 and 3. Preserve CUDA generic/GGUF behavior and use only the explicit backend tag scheme.
 - [ ] PR builds validate without publishing using Task 3's local-image handoff. Candidate publication uses Task 3's authorized candidate route; supported release tags require the relevant AMD acceptance evidence from Task 6. Publication uses the repository's existing authorized release flow. For published builds, pass the just-built generic ROCm digest into its GGUF build; never accidentally inherit the CUDA generic image. Validate the resulting release digest on hardware if it differs from the accepted candidate.
 - [ ] Use distinct build-cache scopes for backend/variant combinations. Ensure manual image selection can request ROCm builds and generic changes rebuild dependent GGUF variants.
 - [ ] Extend Renovate rules to track the ROCm base/digest, wheel index, and compatible package pins using existing manager conventions. Group coupled updates and apply existing approved automerge rules only when required checks cover the new variants. Do not independently advance an index beyond published matching wheels.
