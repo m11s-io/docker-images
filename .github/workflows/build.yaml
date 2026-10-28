@@ -443,7 +443,8 @@ jobs:
           docker run --rm --entrypoint python \
             -e PIP_CONSTRAINT=/tmp/expected-cuda.txt \
             -v "$GITHUB_WORKSPACE/comfyui/requirements-cuda.txt:/tmp/expected-cuda.txt:ro" \
-            "$GGUF_IMAGE" /app/verify_image.py --gguf
+            -v "$GITHUB_WORKSPACE/comfyui/verify_image.py:/tmp/verify_image.py:ro" \
+            "$GGUF_IMAGE" /tmp/verify_image.py --gguf
 
       - name: Update Docker Hub repository overview
         if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
