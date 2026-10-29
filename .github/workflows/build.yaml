@@ -43,7 +43,8 @@ on:
           - rclone-inotify
           - s3-upload-proxy
           - redis-http-proxy
-          - comfyui
+          - comfyui-cuda
+          - comfyui-rocm
           - comfy-mcp
           - deepseek-harness
           - chromium-cdp
@@ -60,6 +61,8 @@ on:
 
 jobs:
   timestral-tests:
+    needs: [changes]
+    if: ${{ !failure() && !cancelled() && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || startsWith(inputs.image, 'timestral-'))) || needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true' || needs.changes.outputs.timestral-rocm == 'true') }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -73,8 +76,6 @@ jobs:
           python-version: "3.15"
           enable-cache: true
           cache-dependency-glob: timestral/uv.lock
-      - name: Check Timestral runtime alignment
-        run: python3 -m unittest discover -s scripts -p 'test_timestral_runtime.py'
       - name: Run Timestral API unit tests
         working-directory: timestral
         run: uv run --frozen pytest tests/test_api.py -q
@@ -90,7 +91,8 @@ jobs:
       decap-cms: ${{ steps.filter.outputs.decap-cms }}
       s3-upload-proxy: ${{ steps.filter.outputs.s3-upload-proxy }}
       redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
-      comfyui: ${{ steps.filter.outputs.comfyui }}
+      comfyui-rocm: ${{ steps.filter.outputs.comfyui-rocm }}
+      comfyui-cuda: ${{ steps.filter.outputs.comfyui-cuda }}
       comfyui-generic: ${{ steps.filter.outputs.comfyui-generic }}
       comfyui-gguf: ${{ steps.filter.outputs.comfyui-gguf }}
       comfy-mcp: ${{ steps.filter.outputs.comfy-mcp }}
@@ -153,7 +155,7 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
-            comfyui:
+            comfyui-cuda:
               - 'scripts/image_tags.py'
               - 'comfyui/**'
               - '!**/compose*.yaml'
@@ -162,10 +164,18 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
+            comfyui-rocm:
+              - '.github/workflows/build.yaml'
+              - 'comfyui/Dockerfile.rocm'
+              - 'comfyui/requirements-rocm.txt'
+              - 'comfyui/verify_image.py'
+              - 'scripts/test_comfyui_validation.py'
             comfyui-generic:
               - 'scripts/image_tags.py'
               - 'comfyui/**'
               - '!comfyui/Dockerfile.gguf'
+              - '!comfyui/Dockerfile.rocm'
+              - '!comfyui/requirements-rocm.txt'
               - '!**/compose*.yaml'
               - '!**/compose*.yml'
               - '!**/docker-compose*.yaml'
@@ -224,6 +234,7 @@ jobs:
               - '!**/*.md'
               - '!**/docs/**'
             timestral-cpu:
+              - 'scripts/test_timestral_runtime.py'
               - 'scripts/image_tags.py'
               - 'timestral/**'
               - '!**/compose*.yaml'
@@ -233,6 +244,7 @@ jobs:
               - '!**/*.md'
               - '!**/docs/**'
             timestral-cuda:
+              - 'scripts/test_timestral_runtime.py'
               - 'scripts/image_tags.py'
               - 'timestral/**'
               - '!**/compose*.yaml'
@@ -283,13 +295,30 @@ jobs:
             description: Bearer-token-authenticated HTTP proxy for Redis.
             version: 0.1.0
             latest: latest
-          - context: comfyui
+          - context: comfyui-cuda
+            build_context: comfyui
+            dockerfile: comfyui/Dockerfile
+            readme_file: comfyui/README.md
             repository: m11s/comfyui
             description: CUDA-enabled ComfyUI image, with an optional GGUF variant.
             version_source: version-arg
             version_ref: COMFYUI_REF
             strip_prefix: v
-            latest: latest
+            tag_suffix: -cuda
+            latest: latest-cuda
+          - context: comfyui-rocm
+            build_context: comfyui
+            dockerfile: comfyui/Dockerfile.rocm
+            readme_file: comfyui/README.md
+            repository: m11s/comfyui
+            description: AMD ROCm ComfyUI candidate; hardware acceptance pending.
+            version_source: version-arg
+            version_ref: COMFYUI_REF
+            strip_prefix: v
+            tag_suffix: -rocm
+            latest: latest-rocm
+            validation_only: true
+            cache_mode: min
           - context: caddy-cloudflare
             repository: m11s/caddy
             description: Caddy with the Cloudflare DNS-01 provider module.
@@ -319,7 +348,7 @@ jobs:
             dockerfile: timestral/Dockerfile.cuda
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral forecasting API with NVIDIA CUDA 13.0 PyTorch.
+            description: Timestral forecasting API with NVIDIA CUDA-enabled PyTorch.
             version_source: version-arg
             version_ref: TIMESTRAL_VERSION
             tag_suffix: -cuda
@@ -337,7 +366,7 @@ jobs:
     steps:
       - name: Checkout
         id: checkout
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true')) || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui-cuda' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true')) || (matrix.context != 'comfyui-cuda' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Resolve image tags
@@ -366,12 +395,13 @@ jobs:
           tags=$(python3 scripts/image_tags.py "${args[@]}" --latest "$LATEST_TAG" --suffix="$TAG_SUFFIX")
           {
             echo "image=${tags%%$'\n'*}"
+            echo "local-image=${tags##*$'\n'}"
             echo 'tags<<IMAGE_TAGS'
             echo "$tags"
             echo 'IMAGE_TAGS'
           } >> "$GITHUB_OUTPUT"
-          if [[ "$IMAGE_CONTEXT" == comfyui ]]; then
-            gguf_tags=$(python3 scripts/image_tags.py "${args[@]}" --suffix=-gguf --latest latest-gguf)
+          if [[ "$IMAGE_CONTEXT" == comfyui-cuda ]]; then
+            gguf_tags=$(python3 scripts/image_tags.py "${args[@]}" --suffix=-cuda-gguf --latest latest-cuda-gguf)
             {
               echo "gguf-image=${gguf_tags%%$'\n'*}"
               echo 'gguf-tags<<IMAGE_TAGS'
@@ -381,33 +411,39 @@ jobs:
           fi
 
       - name: Log in to Docker Hub
-        if: ${{ github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ !matrix.validation_only && github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
+      - name: Free space for AMD's multi-architecture base
+        if: ${{ steps.checkout.outcome == 'success' && (matrix.context == 'comfyui-rocm' || matrix.context == 'timestral-rocm') }}
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
       - name: Set up Docker Buildx
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true')) || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui-cuda' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true')) || (matrix.context != 'comfyui-cuda' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && needs.changes.outputs[matrix.context] == 'true') }}
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
 
       - name: Build and push
         id: generic
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name == 'push' && ((matrix.context == 'comfyui' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui' && needs.changes.outputs[matrix.context] == 'true'))) }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'pull_request' && ((matrix.context == 'comfyui-cuda' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui-cuda' && needs.changes.outputs[matrix.context] == 'true'))) || (github.event_name == 'push' && ((matrix.context == 'comfyui-cuda' && needs.changes.outputs.comfyui-generic == 'true') || (matrix.context != 'comfyui-cuda' && needs.changes.outputs[matrix.context] == 'true'))) }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: ${{ matrix.build_context || matrix.context }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
-          load: ${{ matrix.context == 'comfyui' && (github.event_name == 'pull_request' || github.event.inputs.skip_push == 'true') }}
+          push: ${{ !matrix.validation_only && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
+          load: ${{ matrix.context == 'comfyui-cuda' && (github.event_name == 'pull_request' || github.event.inputs.skip_push == 'true') }}
           tags: ${{ steps.image-tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.context }}
-          cache-to: type=gha,scope=${{ matrix.context }},mode=max
+          cache-to: type=gha,scope=${{ matrix.context }},mode=${{ matrix.cache_mode || 'max' }}
 
       - name: Resolve ComfyUI-GGUF parent build args
         id: gguf-build-args
-        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'push' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true'))) }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui-cuda' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'push' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true'))) }}
         env:
           EVENT_NAME: ${{ github.event_name }}
           GENERIC_CHANGED: ${{ needs.changes.outputs.comfyui-generic }}
@@ -422,7 +458,7 @@ jobs:
           fi
 
       - name: Build and push ComfyUI-GGUF variant
-        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'push' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true'))) }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && matrix.context == 'comfyui-cuda' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name == 'push' && (needs.changes.outputs.comfyui-generic == 'true' || needs.changes.outputs.comfyui-gguf == 'true'))) }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: comfyui
@@ -435,9 +471,9 @@ jobs:
           cache-to: type=gha,scope=comfyui-gguf,mode=max
 
       - name: Build ComfyUI-GGUF variant without pushing
-        if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
+        if: ${{ github.event.inputs.skip_push == 'true' && matrix.context == 'comfyui-cuda' && github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context) }}
         env:
-          COMFYUI_BASE: ${{ steps.image-tags.outputs.image }}
+          COMFYUI_BASE: ${{ steps.image-tags.outputs.local-image }}
           GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
         run: |
           docker buildx build --builder default --platform linux/amd64 --load \
@@ -445,20 +481,29 @@ jobs:
             -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
 
       - name: Build ComfyUI-GGUF variant for pull request
-        if: ${{ github.event_name == 'pull_request' && matrix.context == 'comfyui' && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true') }}
+        if: ${{ github.event_name == 'pull_request' && matrix.context == 'comfyui-cuda' && (needs.changes.outputs.comfyui-gguf == 'true' || needs.changes.outputs.comfyui-generic == 'true') }}
         env:
-          COMFYUI_IMAGE: ${{ steps.image-tags.outputs.image }}
+          COMFYUI_IMAGE: ${{ steps.image-tags.outputs.local-image }}
           GGUF_IMAGE: ${{ steps.image-tags.outputs.gguf-image }}
           GENERIC_CHANGED: ${{ needs.changes.outputs.comfyui-generic }}
         run: |
           args=(--builder default --platform linux/amd64 --load)
           if [[ "$GENERIC_CHANGED" == true ]]; then
+            # A unique, unpublished tag prevents resolution to an older Docker Hub image.
+            docker image inspect "$COMFYUI_IMAGE" --format '{{.Id}}'
             args+=(--build-arg "COMFYUI_BASE=$COMFYUI_IMAGE")
           fi
           docker buildx build "${args[@]}" -f comfyui/Dockerfile.gguf -t "$GGUF_IMAGE" comfyui
+          # Validate the exported child against this checkout's pins, even if its
+          # inherited constraints accidentally came from a stale generic parent.
+          docker run --rm --entrypoint python \
+            -e PIP_CONSTRAINT=/tmp/expected-cuda.txt \
+            -v "$GITHUB_WORKSPACE/comfyui/requirements-cuda.txt:/tmp/expected-cuda.txt:ro" \
+            -v "$GITHUB_WORKSPACE/comfyui/verify_image.py:/app/verify_image.py:ro" \
+            "$GGUF_IMAGE" /app/verify_image.py --gguf
 
       - name: Update Docker Hub repository overview
-        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ !matrix.validation_only && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
         with:
           username: ${{ secrets.DOCKER_USER }}
@@ -555,12 +600,17 @@ jobs:
           NATIVE_PREPARE_RESULT: ${{ needs.native-prepare.result }}
           NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
           HAS_NATIVE_IMAGES: ${{ needs.native-prepare.outputs.has-images }}
+          TIMESTRAL_REQUIRED: ${{ needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true' || needs.changes.outputs.timestral-rocm == 'true' }}
           TIMESTRAL_TESTS_RESULT: ${{ needs.timestral-tests.result }}
         run: |
           test "$CHANGES_RESULT" = success
           test "$BUILD_RESULT" = success
           test "$NATIVE_PREPARE_RESULT" = success
-          test "$TIMESTRAL_TESTS_RESULT" = success
+          if [[ "$TIMESTRAL_REQUIRED" == true ]]; then
+            test "$TIMESTRAL_TESTS_RESULT" = success
+          else
+            test "$TIMESTRAL_TESTS_RESULT" = skipped
+          fi
           if [[ "$HAS_NATIVE_IMAGES" == true ]]; then
             test "$NATIVE_BUILD_RESULT" = success
           else

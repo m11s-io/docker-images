@@ -1,6 +1,6 @@
 services:
   dsh:
-    image: m11s/deepseek-harness:0.2.0-rc.2@sha256:0ea40cc9f22cfc0afbf7c035ce468b5cf955092c2a4aa742b3d904a96cd0b9b0
+    image: m11s/deepseek-harness:0.2.0-rc.2@sha256:7e85857f410b8700b42acdb1f47c5ddef47de35d99e90017ae65da9255601bce
     environment:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?set DEEPSEEK_API_KEY in the environment}
       DSH_BROWSER_CDP_ENDPOINT: ${DSH_BROWSER_CDP_ENDPOINT:-http://chromium:9222}

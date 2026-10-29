@@ -3,11 +3,14 @@
 The service targets Python 3.15.2 on Linux AMD64. Its API and upstream Timestral
 source revision are unchanged. NumPy advances from 2.2.6 to 2.5.4 so installation
 can use Python 3.15 wheels. Both images use PyTorch 2.14.1, selecting the CPU or
-CUDA 12.6 distribution explicitly.
+latest compatible stable CUDA distribution explicitly.
 
 CPU installation uses the committed `uv.lock` directly. The CUDA image replaces
-the CPU distribution with `torch==2.14.1+cu126` from the official PyTorch index.
-That wheel supplies its CUDA userspace dependencies. Both images use the same
+the CPU distribution using `requirements-cuda.txt` from the official PyTorch channel index derived from the Torch pin.
+That wheel supplies its CUDA userspace dependencies. Renovate discovers stable
+CUDA variants from the aggregate index and groups CPU/CUDA Torch updates.
+Passing required GitHub checks permit automatic merging; unavailable or
+incompatible wheels fail the build and prevent merging. Both images use the same
 Debian Python base, avoiding a copy of CPython from Debian into Ubuntu. NVIDIA
 drivers and GPU access still come from the host/container runtime.
 
@@ -34,8 +37,8 @@ The test suite reports an existing Starlette/AnyIO deprecation warning. These
 checks establish functional compatibility, not performance on target nodes.
 Actual NVIDIA GPU execution is not validated by a CPU-only Docker host.
 The CUDA dependency resolver found compatible Python 3.15 wheels, but the local
-image build was stopped during prolonged multi-gigabyte downloads. The complete
-CUDA image build and NVIDIA execution remain release checks. CUDA transitive
+image build was stopped during prolonged multi-gigabyte downloads. GitHub Actions builds the complete CUDA image on dependency updates; NVIDIA
+execution remains a release check. CUDA transitive
 artifacts are resolved separately from the CPU `uv.lock`, as in the previous
 image; they are not covered by the CPU lock's hashes.
 

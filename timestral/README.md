@@ -103,11 +103,13 @@ CUDA uses the same service code. The CUDA image installs the pinned CUDA PyTorch
 export MODEL_REVISION=9874d252ab0aae16f7f7c999f98f98d6ad7d8365
 export MODEL_DEVICE=cuda
 uv sync --frozen --no-dev --no-install-package torch
-uv pip install --python .venv/bin/python --index-url https://download.pytorch.org/whl/cu130 torch==2.14.1+cu130
+CUDA_CHANNEL=$(sed -n 's/^torch==[^+]*+\(cu[0-9]*\)$/\1/p' requirements-cuda.txt)
+uv pip install --python .venv/bin/python \
+  --index-url "https://download.pytorch.org/whl/$CUDA_CHANNEL" -r requirements-cuda.txt
 uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
-CUDA 13.0 supports the Blackwell GPUs used on `plt` and requires a compatible NVIDIA driver (Linux 580.65.06 or newer). The host also needs a compatible NVIDIA driver and the container must receive a GPU. Setting `MODEL_DEVICE=cuda` does not allocate a GPU by itself.
+The CUDA runtime version follows the pinned PyTorch wheel in `requirements-cuda.txt`. Renovate updates stable CUDA variants and the matching CPU Torch release together, then auto merges after required GitHub checks pass. The host driver must support the selected runtime, and the container must receive a GPU. Setting `MODEL_DEVICE=cuda` does not allocate a GPU by itself.
 ## Tests and benchmarks
 
 The API unit tests use an injected forecaster double and need no checkpoint:
@@ -132,7 +134,7 @@ Timestral inference is synchronous and compute-bound. This service intentionally
 
 ## AMD ROCm image
 
-The `-rocm` and `latest-rocm` tags use AMD's validated PyTorch base image with its bundled Python. This variant runs the same API code and checkpoints as CPU and NVIDIA. It preserves the base image's PyTorch/ROCm installation and installs a separate hash-locked API dependency set compatible with that Python. See `Dockerfile.rocm` for the exact runtime versions.
+The `-rocm` and `latest-rocm` tags use AMD's ROCm 10.1.0 / PyTorch 2.14.0 / Python 3.14 image on Ubuntu 26.04, pinned by digest. This variant runs the same API code and checkpoints as CPU and NVIDIA. It preserves the base image's PyTorch/ROCm installation and installs a separate hash-locked API dependency set compatible with that Python. See `Dockerfile.rocm` for the exact runtime versions.
 
 Use `MODEL_DEVICE=cuda` on AMD too: PyTorch ROCm exposes the `torch.cuda` interface. A compatible host driver and supported GPU architecture are required. With Docker, expose `/dev/kfd` and the appropriate `/dev/dri` render device and supply the host's device group permissions. With Kubernetes, use the AMD device plugin and request `amd.com/gpu: 1`; see the chart's ROCm example. Do not use an NVIDIA runtime class.
 
@@ -141,7 +143,23 @@ The process runs as a nonroot user. Mount a writable model cache at `/models` an
 Regenerate the API lock from the repository root with:
 
 ```sh
-uv pip compile timestral/requirements-rocm.in --python-version 3.12 --python-platform x86_64-manylinux_2_28 --generate-hashes -o timestral/requirements-rocm.txt
+uv pip compile timestral/requirements-rocm.in --python-version 3.14 --python-platform x86_64-manylinux_2_28 --generate-hashes -o timestral/requirements-rocm.txt
 ```
 
 Keep the FastAPI, Pydantic Settings, and Uvicorn pins aligned with `pyproject.toml`. The ROCm lock excludes PyTorch, which must remain supplied by the AMD base. Local `uv sync` continues to select the CPU development environment.
+
+ROCm uses its own `requirements-torch-rocm.txt` constraints; CPU and CUDA pins
+remain independent. The image runs `pip check` and verifies the exact Torch
+version and HIP backend before adding API test dependencies. Tests run in a
+separate environment constrained by the complete runtime inventory, so test
+installation cannot upgrade a runtime package and hide a dependency failure.
+
+Regenerate the test-only lock after the API lock:
+
+```sh
+uv pip compile timestral/requirements-rocm-test.in --constraint timestral/requirements-rocm.txt --python-version 3.14 --python-platform x86_64-manylinux_2_28 --generate-hashes -o timestral/requirements-rocm-test.txt
+```
+
+The earlier gfx1201 forecast probe used the older ROCm stack. This updated
+image still requires a tensor/forecast acceptance run on the intended AMD node;
+CPU CI API tests do not establish GPU execution.

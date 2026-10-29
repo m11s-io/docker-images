@@ -1,6 +1,7 @@
 **
 !pyproject.toml
 !uv.lock
+!requirements-cuda.txt
 !check_version.py
 !app/
 !app/**
@@ -9,3 +10,6 @@
 !requirements-rocm.txt
 !tests/
 !tests/test_api.py
+
+!requirements-torch-rocm.txt
+!requirements-rocm-test.txt

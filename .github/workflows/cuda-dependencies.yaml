@@ -1,0 +1,29 @@
+name: CUDA dependency checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-contracts:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
+  renovate:
+    runs-on: ubuntu-26.04
+    container:
+      image: ghcr.io/renovatebot/renovate:43.160.0@sha256:28d6d66ffe2f4fd86bb29c9e9b5cae7215ada90b17605a45e35fa8d4a73159ac
+      options: --user 0
+    env:
+      GITHUB_COM_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate Renovate configuration
+        run: renovate-config-validator --strict renovate.json
+      - name: Verify CUDA update discovery, grouping and auto-merge policy
+        run: python3 scripts/check_cuda_renovate.py
