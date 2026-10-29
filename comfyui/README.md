@@ -121,3 +121,12 @@ The intended Talos AMD node is an established host baseline. Container device
 allocation and inference still require testing with the built candidate. Use
 `amd.com/gpu`, AMD node selection, separate storage and the existing non-root
 security policy; no privileged mode or relaxed seccomp settings are added.
+
+## OS package pins
+
+Direct apt dependencies in both backend Dockerfiles use exact distribution
+versions. Renovate reads the matching Debian Bookworm or Ubuntu Resolute
+repositories, including updates and security pockets. These direct pins do not
+lock apt's transitive dependencies or retain packages removed from live mirrors;
+image builds fail if a pinned version disappears rather than silently choosing
+another version. Refresh pins through reviewed dependency updates.

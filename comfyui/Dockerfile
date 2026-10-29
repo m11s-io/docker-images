@@ -14,6 +14,7 @@ ARG COMFYUI_REF=v0.43.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV CC=/usr/bin/gcc
 ENV COMFYUI_BACKEND=cuda
 ENV NVIDIA_VISIBLE_DEVICES=all
@@ -22,13 +23,13 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 # Keep a C compiler for runtime-generated launchers; CUDA helpers use wheels.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        ca-certificates \
-        gcc \
-        libc6-dev \
-        git \
-        libx11-6 \
-        libxcb1 \
-        libxext6 && \
+        ca-certificates=20250419~deb12u2 \
+        gcc=4:12.2.0-3 \
+        libc6-dev=2.36-9+deb12u14 \
+        git=1:2.39.5-0+deb12u3 \
+        libx11-6=2:1.8.4-2+deb12u2 \
+        libxcb1=1.15-1 \
+        libxext6=2:1.3.4-1+b1 && \
     rm -rf /var/lib/apt/lists/* && \
     python -m venv /opt/venv
 
