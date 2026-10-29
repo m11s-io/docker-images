@@ -7,7 +7,7 @@
 # Build:
 #   docker build -t m11s/comfyui:local comfyui
 
-FROM python:3.14.8-slim-bookworm@sha256:44e000a07b48bef1517a2b14adc93c17af728ca98858b5e24c6e1b18de1b2ef2 AS runtime
+FROM python:3.14.9-slim-bookworm@sha256:945c2676dc2b18e0c1f16879244122c57c0ffede60006bf3df159c507a31bcae AS runtime
 
 # renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
 ARG COMFYUI_REF=v0.43.0
