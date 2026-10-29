@@ -128,7 +128,8 @@
         "deb"
       ],
       "matchFileNames": [
-        "comfyui/Dockerfile.rocm"
+        "comfyui/Dockerfile.rocm",
+        "timestral/Dockerfile.rocm"
       ],
       "registryUrls": [
         "https://archive.ubuntu.com/ubuntu?suite=resolute&components=main,universe&binaryArch=amd64",

@@ -150,9 +150,10 @@ Keep the FastAPI, Pydantic Settings, and Uvicorn pins aligned with `pyproject.to
 
 ROCm uses its own `requirements-torch-rocm.txt` constraints; CPU and CUDA pins
 remain independent. The image runs `pip check` and verifies the exact Torch
-version and HIP backend before adding API test dependencies. Tests run in a
-separate environment constrained by the complete runtime inventory, so test
-installation cannot upgrade a runtime package and hide a dependency failure.
+version and HIP backend before adding API test dependencies. The application uses a virtual environment that inherits AMD's installed Torch
+without uninstalling distro-managed packages. Tests run in a disposable image
+stage constrained by the complete runtime inventory, so test installation cannot
+upgrade a runtime package and hide a dependency failure.
 
 Regenerate the test-only lock after the API lock:
 

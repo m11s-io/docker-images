@@ -6,6 +6,12 @@ FROM ${ROCM_BASE} AS runtime
 ARG TIMESTRAL_VERSION
 USER root
 WORKDIR /app
+# Keep distro-managed Python packages intact while inheriting AMD's Torch stack.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3-venv=3.14.3-0ubuntu2 && \
+    rm -rf /var/lib/apt/lists/* && \
+    python3 -m venv --system-site-packages /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 # Keep AMD's validated PyTorch and its matching ROCm libraries intact.
 COPY requirements-rocm.txt requirements-torch-rocm.txt check_version.py ./
 ENV PIP_CONSTRAINT=/app/requirements-torch-rocm.txt
@@ -37,14 +43,13 @@ COPY requirements-rocm-test.txt ./
 # Freeze the complete shipped environment before adding test-only dependencies.
 # Constraints prevent even transitive upgrades from hiding a runtime mismatch.
 RUN python3 -m pip freeze > /tmp/runtime-constraints.txt && \
-    python3 -m venv --system-site-packages /opt/test-venv && \
-    /opt/test-venv/bin/python -m pip install --no-cache-dir \
+    python3 -m pip install --no-cache-dir \
         --constraint /tmp/runtime-constraints.txt --require-hashes --no-deps \
         -r requirements-rocm-test.txt && \
-    /opt/test-venv/bin/python -m pip check
+    python3 -m pip check
 COPY tests ./tests
 USER 10001:10001
-RUN /opt/test-venv/bin/python -m pytest tests/test_api.py -q -p no:cacheprovider \
+RUN python3 -m pytest tests/test_api.py -q -p no:cacheprovider \
     && touch /tmp/timestral-api-validated
 
 FROM runtime AS final
