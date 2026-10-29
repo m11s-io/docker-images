@@ -12,8 +12,9 @@ def check_torch(variant: str) -> None:
     if variant == "cpu":
         project = tomllib.loads(Path("pyproject.toml").read_text())
         requirements = project["project"]["dependencies"]
-    elif variant == "cuda":
-        requirements = Path("requirements-cuda.txt").read_text().splitlines()
+    elif variant in ("cuda", "rocm"):
+        filename = "requirements-torch-rocm.txt" if variant == "rocm" else "requirements-cuda.txt"
+        requirements = Path(filename).read_text().splitlines()
     else:
         raise ValueError(f"Unknown Torch variant: {variant}")
     expected = next(line.split("==", 1)[1] for line in requirements if line.startswith("torch=="))
@@ -22,7 +23,10 @@ def check_torch(variant: str) -> None:
         raise RuntimeError(f"expected Torch {expected}, installed {actual}")
     if (torch.version.cuda is not None) != (variant == "cuda"):
         raise RuntimeError(f"Torch CUDA runtime does not match {variant} image")
-    print(f"Verified Torch {actual}, CUDA={torch.version.cuda}")
+    hip = getattr(torch.version, "hip", None)
+    if bool(hip) != (variant == "rocm"):
+        raise RuntimeError(f"Torch HIP runtime does not match {variant} image")
+    print(f"Verified Torch {actual}, CUDA={torch.version.cuda}, HIP={hip}")
 
 
 def main() -> int:

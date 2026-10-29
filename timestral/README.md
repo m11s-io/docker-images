@@ -7,7 +7,7 @@ This service wraps the upstream [`TimestralForecaster.forecast`](https://github.
 `MODEL_ID` defaults to `mistralai/Timestral-209M`. `MODEL_REVISION` is required
 and must be a full 40-character commit hash from the selected Hugging Face
 model repository. Set both values to select a different compatible checkpoint;
-the same CPU or CUDA image can load each size. The upstream Timestral family
+the same CPU, CUDA, or ROCm image can load each size. The upstream Timestral family
 includes 5M, 28M, 123M, and 209M checkpoints. Known immutable revisions are:
 
 | Checkpoint | Revision |
@@ -131,3 +131,36 @@ uv run python benchmarks/benchmark.py --models 28M --contexts 512 --horizons 96 
 ```
 
 Timestral inference is synchronous and compute-bound. This service intentionally allows one active forecast per process; scale replicas based on measured model-specific memory and latency. The configured API limits are admission safeguards, not performance guarantees.
+
+## AMD ROCm image
+
+The `-rocm` and `latest-rocm` tags use AMD's ROCm 10.1.0 / PyTorch 2.14.0 / Python 3.14 image on Ubuntu 26.04, pinned by digest. This variant runs the same API code and checkpoints as CPU and NVIDIA. It preserves the base image's PyTorch/ROCm installation and installs a separate hash-locked API dependency set compatible with that Python. See `Dockerfile.rocm` for the exact runtime versions.
+
+Use `MODEL_DEVICE=cuda` on AMD too: PyTorch ROCm exposes the `torch.cuda` interface. A compatible host driver and supported GPU architecture are required. With Docker, expose `/dev/kfd` and the appropriate `/dev/dri` render device and supply the host's device group permissions. With Kubernetes, use the AMD device plugin and request `amd.com/gpu: 1`; see the chart's ROCm example. Do not use an NVIDIA runtime class.
+
+The process runs as a nonroot user. Mount a writable model cache at `/models` and writable temporary storage at `/tmp`; ROCm compilation caches are directed there. The validated base is large, so allow for a slow first image pull. Weights are downloaded at startup, not baked into the image.
+
+Regenerate the API lock from the repository root with:
+
+```sh
+uv pip compile timestral/requirements-rocm.in --python-version 3.14 --python-platform x86_64-manylinux_2_28 --generate-hashes -o timestral/requirements-rocm.txt
+```
+
+Keep the FastAPI, Pydantic Settings, and Uvicorn pins aligned with `pyproject.toml`. The ROCm lock excludes PyTorch, which must remain supplied by the AMD base. Local `uv sync` continues to select the CPU development environment.
+
+ROCm uses its own `requirements-torch-rocm.txt` constraints; CPU and CUDA pins
+remain independent. The image runs `pip check` and verifies the exact Torch
+version and HIP backend before adding API test dependencies. The application uses a virtual environment that inherits AMD's installed Torch
+without uninstalling distro-managed packages. Tests run in a disposable image
+stage constrained by the complete runtime inventory, so test installation cannot
+upgrade a runtime package and hide a dependency failure.
+
+Regenerate the test-only lock after the API lock:
+
+```sh
+uv pip compile timestral/requirements-rocm-test.in --constraint timestral/requirements-rocm.txt --python-version 3.14 --python-platform x86_64-manylinux_2_28 --generate-hashes -o timestral/requirements-rocm-test.txt
+```
+
+The earlier gfx1201 forecast probe used the older ROCm stack. This updated
+image still requires a tensor/forecast acceptance run on the intended AMD node;
+CPU CI API tests do not establish GPU execution.

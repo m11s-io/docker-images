@@ -95,7 +95,8 @@
         "pip_requirements"
       ],
       "matchFileNames": [
-        "comfyui/requirements-rocm.txt"
+        "comfyui/requirements-rocm.txt",
+        "timestral/requirements-torch-rocm.txt"
       ],
       "registryUrls": [
         "https://stable.repo.amd.com/rocm/whl-next/"
@@ -127,7 +128,8 @@
         "deb"
       ],
       "matchFileNames": [
-        "comfyui/Dockerfile.rocm"
+        "comfyui/Dockerfile.rocm",
+        "timestral/Dockerfile.rocm"
       ],
       "registryUrls": [
         "https://archive.ubuntu.com/ubuntu?suite=resolute&components=main,universe&binaryArch=amd64",
@@ -135,6 +137,15 @@
         "https://security.ubuntu.com/ubuntu?suite=resolute-security&components=main,universe&binaryArch=amd64"
       ],
       "groupName": "ComfyUI ROCm dependencies",
+      "automerge": false
+    },
+    {
+      "description": "Review Timestral ROCm base and AMD package pins together after CI",
+      "matchFileNames": [
+        "timestral/Dockerfile.rocm",
+        "timestral/requirements-torch-rocm.txt"
+      ],
+      "groupName": "Timestral ROCm dependencies",
       "automerge": false
     }
   ],

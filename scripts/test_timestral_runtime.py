@@ -41,6 +41,22 @@ class TimestralRuntimeTest(unittest.TestCase):
                 self.assertIn("check_version.py", dockerfile)
                 self.assertIn("TIMESTRAL_VERSION", dockerfile)
 
+    def test_rocm_keeps_amd_torch_and_uses_matching_api_dependencies(self):
+        dockerfile = (ROOT / "timestral/Dockerfile.rocm").read_text()
+        self.assertIn("--require-hashes --no-deps -r requirements-rocm.txt", dockerfile)
+        self.assertIn('check_version.py "$TIMESTRAL_VERSION" rocm', dockerfile)
+        self.assertIn("MODEL_DEVICE=cuda", dockerfile)
+        self.assertIn("tests/test_api.py", dockerfile)
+        self.assertIn("COPY --from=validation", dockerfile)
+        requirements = (ROOT / "timestral/requirements-rocm.in").read_text().splitlines()
+        project = tomllib.loads((ROOT / "timestral/pyproject.toml").read_text())
+        for dependency in project["project"]["dependencies"]:
+            if dependency.startswith(("fastapi==", "pydantic-settings==", "uvicorn[standard]==")):
+                self.assertIn(dependency, requirements)
+        lock = (ROOT / "timestral/requirements-rocm.txt").read_text()
+        self.assertNotRegex(lock, r"(?m)^(torch|triton|nvidia-[a-z-]+)==")
+        upstream = next(d for d in project["project"]["dependencies"] if d.startswith("timestral @"))
+        self.assertIn(upstream, dockerfile)
     def test_torch_check_rejects_stale_installed_release(self):
         checker = ROOT / "timestral/check_version.py"
         for variant, suffix in (("cpu", "+cpu"), ("cuda", "+cu132")):
@@ -69,6 +85,27 @@ class TimestralRuntimeTest(unittest.TestCase):
                 stale = subprocess.run(command, cwd=fixture, env=env, capture_output=True, text=True)
                 self.assertNotEqual(stale.returncode, 0)
                 self.assertIn("expected Torch 2.15.0", stale.stderr)
+
+    def test_rocm_torch_check_accepts_hip_and_rejects_replacement(self):
+        checker = ROOT / "timestral/check_version.py"
+        for installed, cuda, hip, accepted in (
+            ("2.14.0+rocm10.1.0", None, "7.16.0", True),
+            ("2.15.0+cu134", "13.4", None, False),
+            ("2.14.0+rocm10.1.0", None, None, False),
+        ):
+            with self.subTest(installed=installed, hip=hip), tempfile.TemporaryDirectory() as directory:
+                fixture = pathlib.Path(directory)
+                for name, release in (("timestral", "1.0.0"), ("torch", installed)):
+                    metadata = fixture / f"{name}-{release}.dist-info"
+                    metadata.mkdir()
+                    (metadata / "METADATA").write_text(
+                        f"Metadata-Version: 2.1\nName: {name}\nVersion: {release}\n\n"
+                    )
+                (fixture / "torch.py").write_text(f"class version:\n    cuda = {cuda!r}\n    hip = {hip!r}\n")
+                (fixture / "requirements-torch-rocm.txt").write_text("torch==2.14.0+rocm10.1.0\n")
+                result = subprocess.run([sys.executable, str(checker), "1.0.0", "rocm"],
+                                        cwd=fixture, env={"PYTHONPATH": directory}, capture_output=True, text=True)
+                self.assertEqual(result.returncode == 0, accepted, result.stderr)
 
     def test_version_check_accepts_match_and_rejects_mismatch(self):
         checker = ROOT / "timestral/check_version.py"
