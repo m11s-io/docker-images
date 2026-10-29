@@ -13,6 +13,7 @@ ARG COMFYUI_REF=v0.43.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV CC=/usr/bin/gcc
 ENV COMFYUI_BACKEND=rocm
 
@@ -20,14 +21,14 @@ ENV COMFYUI_BACKEND=rocm
 # Keep a C compiler for runtime-generated launchers.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        ca-certificates \
-        python3-venv \
-        gcc \
-        libc6-dev \
-        git \
-        libx11-6 \
-        libxcb1 \
-        libxext6 && \
+        ca-certificates=20260816ubuntu0.26.04.1 \
+        python3-venv=3.14.3-0ubuntu2 \
+        gcc=4:15.2.0-5ubuntu1 \
+        libc6-dev=2.43-2ubuntu2.4 \
+        git=1:2.53.0-1ubuntu1.1 \
+        libx11-6=2:1.8.13-1ubuntu0.1 \
+        libxcb1=1.17.0-2ubuntu1 \
+        libxext6=2:1.3.4-1build3 && \
     rm -rf /var/lib/apt/lists/* && \
     python3 -m venv --system-site-packages /opt/venv
 

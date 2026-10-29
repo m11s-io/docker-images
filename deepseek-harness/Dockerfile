@@ -3,7 +3,7 @@
 FROM node:26-bookworm@sha256:3b764117159bda01d2396391e7789b6a9106af9729cfd001ef55e98557868310 AS build
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git python3 make g++ musl-tools ca-certificates \
+    && apt-get install -y --no-install-recommends git=1:2.39.5-0+deb12u3 python3=3.11.2-1+b1 make=4.3-4.1 g++=4:12.2.0-3 musl-tools=1.2.3-1 ca-certificates=20250419~deb12u2 \
     && rm -rf /var/lib/apt/lists/*
 
 ARG DSH_REF=dsh-v0.2.0-rc.2
@@ -27,7 +27,7 @@ RUN pnpm install --frozen-lockfile \
 FROM node:26-bookworm@sha256:3b764117159bda01d2396391e7789b6a9106af9729cfd001ef55e98557868310
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git ca-certificates \
+    && apt-get install -y --no-install-recommends git=1:2.39.5-0+deb12u3 ca-certificates=20250419~deb12u2 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 dsh \
     && useradd --system --uid 10001 --gid dsh --create-home dsh \
