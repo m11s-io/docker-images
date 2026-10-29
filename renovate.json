@@ -111,7 +111,8 @@
       "matchFileNames": [
         "comfyui/Dockerfile",
         "comfy-mcp/Dockerfile",
-        "chromium-cdp/Dockerfile"
+        "chromium-cdp/Dockerfile",
+        "deepseek-harness/Dockerfile"
       ],
       "registryUrls": [
         "https://deb.debian.org/debian?suite=bookworm&components=main&binaryArch=amd64",
