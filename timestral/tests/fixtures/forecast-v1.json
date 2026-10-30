@@ -1,0 +1,47 @@
+{
+  "id": "forecast-123",
+  "inputs": [
+    {
+      "name": "context",
+      "shape": [
+        1,
+        1,
+        5
+      ],
+      "datatype": "FP32",
+      "data": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0
+      ]
+    },
+    {
+      "name": "observation_mask",
+      "shape": [
+        1,
+        1,
+        5
+      ],
+      "datatype": "BOOL",
+      "data": [
+        true,
+        false,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "prediction_length",
+      "shape": [
+        1
+      ],
+      "datatype": "INT64",
+      "data": [
+        3
+      ]
+    }
+  ]
+}
