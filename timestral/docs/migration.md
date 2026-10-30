@@ -48,3 +48,12 @@ No rollout, client cutover, artifact publication, stable-tag update or old-servi
 retirement is authorized by the implementation plan alone. Candidate build code
 must keep those operations gated. Triton compatibility covers tested standard
 inference, metadata and readiness only; extensions require separate evidence.
+
+## Initial caller inventory
+
+A read-only scan of managed product, platform and registry sources found the
+legacy service documentation but no configured product caller of this endpoint.
+The wrapper's own tests and benchmark are reference callers. This does not prove
+that unmanaged or external callers are absent. Obtain the endpoint owner's
+complete caller inventory and traffic evidence before cutover or retirement.
+No legacy wrapper, dependency or reference test has been removed.

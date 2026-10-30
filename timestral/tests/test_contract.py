@@ -153,3 +153,17 @@ def test_documented_json_fixture_is_accepted_by_sdk_and_contract():
     assert req.id == 'forecast-123'
     assert got.prediction_length == 3
     np.testing.assert_array_equal(got.observation_mask, [[[True,False,True,True,True]]])
+
+
+def test_null_boolean_is_rejected_instead_of_coerced_to_missing():
+    req=request()
+    req.inputs[1]=InferInput('observation_mask',[1,1,5],'BOOL',data=[True,None,True,True,True])
+    with pytest.raises(InvalidInput): parse_forecast(req)
+
+
+def test_mismatched_json_content_count_is_rejected_before_array_allocation():
+    class Undecodable(InferInput):
+        def as_numpy(self): raise AssertionError('array allocation was attempted')
+    req=request()
+    req.inputs[0]=Undecodable('context',[1,1,5],'FP32',data=[1,2,3,4,5,6])
+    with pytest.raises(InvalidInput): parse_forecast(req)

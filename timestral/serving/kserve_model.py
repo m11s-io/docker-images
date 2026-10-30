@@ -51,6 +51,8 @@ class TimestralModel(Model):
     async def predict(self, payload: InferRequest, headers=None):
         if not self.ready: raise Unavailable('model is not ready')
         if not isinstance(payload,InferRequest): raise InvalidInput('standard V2 tensors are required')
+        if payload.model_name != self.name or (payload.model_version and payload.model_version != self.settings.model_revision):
+            raise InvalidInput('request identity does not match the loaded model revision')
         outputs = payload.request_outputs
         if outputs:
             names = [output.name for output in outputs]
@@ -65,8 +67,10 @@ class TimestralModel(Model):
         inputs = parse_forecast(payload)
         if not self._slot.acquire(blocking=False): raise Unavailable('inference capacity is occupied')
         backend = self._backend
+        started = threading.Event()
 
         def compute():
+            started.set()
             try:
                 result = backend.forecast(inputs)
                 expected = (*inputs.context.shape[:2],inputs.prediction_length,21)
@@ -80,7 +84,12 @@ class TimestralModel(Model):
         task = asyncio.create_task(asyncio.to_thread(compute))
         # Retrieve detached-task exceptions without logging inputs or secrets.
         def consume(done):
-            if not done.cancelled(): done.exception()
+            if not done.cancelled():
+                error = done.exception()
+                # If executor submission failed, no computation owns the slot.
+                # A cancelled task is deliberately excluded: its worker may run.
+                if error is not None and not started.is_set():
+                    self._slot.release()
         task.add_done_callback(consume)
         try:
             result = await asyncio.shield(task)
@@ -94,6 +103,11 @@ class TimestralModel(Model):
         response.parameters.update(model_id=self.settings.model_id,
                                    model_revision=self.settings.model_revision,
                                    backend=self.settings.backend)
+        if self.settings.backend == 'openvino':
+            response.parameters.update(experimental=True,max_context=256,per_shot_horizon_patches=5)
+            digest = getattr(self._backend,'artifact_manifest_sha256',None)
+            if digest is not None:
+                response.parameters['artifact_manifest_sha256'] = digest
         if outputs:
             wanted = {output.name for output in outputs}
             response.outputs = [output for output in response.outputs if output.name in wanted]

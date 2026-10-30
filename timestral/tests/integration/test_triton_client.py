@@ -6,6 +6,7 @@ import pytest
 
 HTTP = os.environ.get('TIMESTRAL_TEST_HTTP_URL')
 GRPC = os.environ.get('TIMESTRAL_TEST_GRPC_URL')
+PREVIEW = os.environ.get('TIMESTRAL_TEST_PREVIEW') == '1'
 pytestmark = pytest.mark.skipif(not (HTTP and GRPC),reason='requires actual candidate image HTTP/gRPC endpoints')
 
 
@@ -15,11 +16,12 @@ def reference():
     import torch
     torch.set_num_threads(2)
     return TimestralForecaster.from_pretrained(
-        os.environ['MODEL_ID'],revision=os.environ['MODEL_REVISION'],device='cpu')
+        os.environ['MODEL_ID'],revision=os.environ['MODEL_REVISION'],device='cpu',
+        **({'max_context':256,'per_shot_horizon_patches':5} if PREVIEW else {}))
 
 
 @pytest.mark.parametrize('transport',['http-json','http-binary','grpc'])
-@pytest.mark.parametrize('case',['short','nonaligned','long','missing','grouped','blocks','covariates','options'])
+@pytest.mark.parametrize('case',['short','nonaligned','long','missing','grouped','blocks','multi-block','covariates','symmetry-off','clip-off','options'])
 def test_standard_inference_matches_unchanged_upstream(reference,transport,case):
     if transport.startswith('http'):
         import tritonclient.http as protocol
@@ -49,17 +51,20 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     assert metadata['name'] == 'timestral'
     assert {o['name'] for o in metadata['outputs']} == {'quantiles','median','quantile_levels'}
     b,v,t,h = {'short':(1,1,7,3),'nonaligned':(1,1,65,35),'long':(1,1,1103,33),
-               'missing':(1,1,65,35),'grouped':(2,2,65,35),'blocks':(1,1,65,1024),
-               'covariates':(1,1,65,35),'options':(1,1,65,35)}[case]
+               'missing':(1,1,65,35),'grouped':(2,2,65,35),'blocks':(1,1,65,1024),'multi-block':(1,1,65,200),
+               'covariates':(1,1,65,35),'symmetry-off':(1,1,65,35),'clip-off':(1,1,65,35),'options':(1,1,65,35)}[case]
+    if case == 'long': t = min(32768, reference.max_context + 65)
     context = np.sin(np.arange(b*v*t,dtype=np.float32).reshape(b,v,t)/7)
     mask = np.ones(context.shape,dtype=bool)
     if case == 'missing': mask[...,1::3] = False
     values = {'context':context,'observation_mask':mask,
               'prediction_length':np.array([h],dtype=np.int64)}
     kwargs = {'observation_mask':mask}
-    if case == 'options':
-        values.update(symmetric_averaging=np.array([False]),clip_nonnegative=np.array([False]))
-        kwargs.update(symmetric_averaging=False,clip_nonnegative=False)
+    if case in ('symmetry-off','clip-off','options'):
+        if case == 'clip-off': context[:] = np.abs(context)
+        symmetric, clip = case == 'clip-off', case == 'symmetry-off'
+        values.update(symmetric_averaging=np.array([symmetric]),clip_nonnegative=np.array([clip]))
+        kwargs.update(symmetric_averaging=symmetric,clip_nonnegative=clip)
     if case == 'covariates':
         for name in ('past_covariates','known_covariates','categorical_past_covariates','categorical_known_covariates'):
             length = t+h if 'known' in name else t
@@ -69,7 +74,6 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
             values[name],values[name+'_mask'] = a,observed
             internal = a.copy(); internal[~observed] = np.nan
             kwargs[name] = internal
-    expected = reference.forecast(context,h,**kwargs)
     inputs = []
     types = {np.dtype('float32'):'FP32',np.dtype('float64'):'FP64',np.dtype('int64'):'INT64',np.dtype('bool'):'BOOL'}
     for name,a in values.items():
@@ -78,6 +82,13 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
         else: inp.set_data_from_numpy(a)
         inputs.append(inp)
     request_id = str(uuid.uuid4())
+    if PREVIEW and ((b,v)!=(1,1) or t>256 or h>320 or case=='covariates'):
+        from tritonclient.utils import InferenceServerException
+        with client, pytest.raises(InferenceServerException) as error:
+            client.infer('timestral',inputs,request_id=request_id,headers={'content-type':'application/json'} if transport=='http-json' else None)
+        assert error.value.status() == ('400' if transport.startswith('http') else 'StatusCode.INVALID_ARGUMENT')
+        return
+    expected = reference.forecast(context,h,**kwargs)
     with client:
         result = client.infer('timestral',inputs,request_id=request_id,headers={'content-type':'application/json'} if transport=='http-json' else None)
     response = result.get_response()

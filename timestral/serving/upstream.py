@@ -35,9 +35,13 @@ class Settings:
 
     @classmethod
     def from_env(cls):
+        marker = Path(__file__).resolve().parents[1]/'image-variant'
+        backend = os.environ.get('TIMESTRAL_BACKEND','cpu')
+        if marker.exists() and marker.read_text().strip() != backend:
+            raise ValueError('backend does not match the packaged variant')
         return cls(model_revision=os.environ.get('MODEL_REVISION',''),
                    model_id=os.environ.get('MODEL_ID','mistralai/Timestral-209M'),
-                   backend=os.environ.get('TIMESTRAL_BACKEND','cpu'),
+                   backend=backend,
                    model_device=os.environ.get('MODEL_DEVICE','cpu'),
                    hf_home=os.environ.get('HF_HOME','/models/huggingface'),
                    torch_num_threads=int(os.environ.get('TORCH_NUM_THREADS','2')))
@@ -78,7 +82,27 @@ class UpstreamForecaster:
         import torch
         from timestral import TimestralForecaster
         if settings.backend == 'openvino':
-            raise RuntimeError('OpenVINO profile backend is not accepted yet')
+            from .artifacts import verify_profiles
+            root = os.environ.get('TIMESTRAL_FORECAST_ARTIFACTS', '')
+            verify_profiles(root, os.environ.get('TIMESTRAL_ARTIFACT_MANIFEST_SHA256',''),
+                            settings.model_id, settings.model_revision)
+            # The integration directory is named openvino, like the installed
+            # vendor package. Load its fixed file path without shadowing that
+            # package or modifying any upstream module.
+            import importlib.util
+            path = Path(__file__).resolve().parents[1]/'openvino'/'backend.py'
+            spec = importlib.util.spec_from_file_location('timestral_openvino_backend',path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            torch.set_num_threads(settings.torch_num_threads)
+            from .artifacts import validate_preview_request
+            class PreviewForecaster(cls):
+                def forecast(self, inputs):
+                    validate_preview_request(inputs)
+                    return super().forecast(inputs)
+            backend = PreviewForecaster(module.create_forecaster(root))
+            backend.artifact_manifest_sha256 = os.environ['TIMESTRAL_ARTIFACT_MANIFEST_SHA256']
+            return backend
         device = _check_device(settings, torch)
         cache = Path(settings.hf_home).expanduser()
         cache.mkdir(parents=True,exist_ok=True)
@@ -86,6 +110,18 @@ class UpstreamForecaster:
         import tempfile
         with tempfile.TemporaryFile(dir=cache): pass
         torch.set_num_threads(settings.torch_num_threads)
+        if settings.backend == 'cuda':
+            if any(os.environ.get(name) == '1' for name in
+                   ('TORCH_ALLOW_TF32_CUBLAS_OVERRIDE','NVIDIA_TF32_OVERRIDE')):
+                raise RuntimeError('forced TF32 override is incompatible with FP32 execution')
+            # Use the 2.14 precision API consistently; mixing it with legacy
+            # allow_tf32/set_float32_matmul_precision settings is unsupported.
+            torch.backends.fp32_precision = 'ieee'
+            torch.backends.cuda.matmul.fp32_precision = 'ieee'
+            torch.backends.cudnn.conv.fp32_precision = 'ieee'
+            torch.backends.cudnn.rnn.fp32_precision = 'ieee'
+        else:
+            torch.set_float32_matmul_precision('highest')
         forecaster = TimestralForecaster.from_pretrained(
             settings.model_id, revision=settings.model_revision, device=device,
             cache_dir=str(cache), token=os.environ.get('HF_TOKEN') or None)

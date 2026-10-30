@@ -129,3 +129,53 @@ async def test_binary_response_uses_official_public_response_configuration(tmp_p
     from kserve import InferResponse
     decoded = InferResponse.from_bytes(body,header_length)
     np.testing.assert_array_equal(decoded.outputs[1].as_numpy(), [[[1,1,1]]])
+
+
+@pytest.mark.parametrize('device,dtype',[('meta','float32'),('cpu','float16')])
+def test_loaded_weights_must_match_requested_device_and_precision(monkeypatch,tmp_path,device,dtype):
+    import torch
+    from timestral import TimestralForecaster
+    neural = torch.nn.Linear(1,1,device=device,dtype=getattr(torch,dtype))
+    monkeypatch.setattr(TimestralForecaster,'from_pretrained',lambda *a,**kw:SimpleNamespace(model=neural))
+    with pytest.raises(RuntimeError,match='device and FP32'):
+        UpstreamForecaster.load(Settings(model_revision=REVISION,hf_home=str(tmp_path)))
+
+
+@pytest.mark.asyncio
+async def test_failed_executor_submission_releases_capacity(monkeypatch,tmp_path):
+    m=model(tmp_path,BlockingBackend()); m.load()
+    original=asyncio.to_thread
+    async def fail(*args,**kwargs): raise RuntimeError('executor unavailable')
+    monkeypatch.setattr(asyncio,'to_thread',fail)
+    with pytest.raises(RuntimeError,match='forecast inference failed'): await m.predict(request())
+    monkeypatch.setattr(asyncio,'to_thread',original)
+    assert (await m.predict(request())).id=='forecast-123'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('field,value',[('model_name','other'),('model_version','b'*40)])
+async def test_inference_identity_cannot_select_another_model(tmp_path,field,value):
+    m=model(tmp_path,BlockingBackend()); m.load()
+    req=request(); setattr(req,field,value)
+    with pytest.raises(InvalidInput): await m.predict(req)
+
+
+def test_packaged_variant_cannot_be_changed_by_runtime_environment(monkeypatch,tmp_path):
+    import serving.upstream as upstream
+    (tmp_path/'image-variant').write_text('cuda\n')
+    monkeypatch.setattr(upstream,'__file__',str(tmp_path/'serving/upstream.py'))
+    monkeypatch.setenv('MODEL_REVISION',REVISION)
+    monkeypatch.setenv('TIMESTRAL_BACKEND','cpu')
+    monkeypatch.setenv('MODEL_DEVICE','cpu')
+    with pytest.raises(ValueError,match='packaged variant'): Settings.from_env()
+
+
+@pytest.mark.asyncio
+async def test_preview_response_declares_its_distinct_forecast_configuration(tmp_path):
+    m=TimestralModel(Settings(model_revision='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f',
+        model_id='mistralai/Timestral-5M',backend='openvino'),loader=lambda _:BlockingBackend())
+    m.load()
+    response=await m.predict(request())
+    assert response.parameters['experimental'] is True
+    assert response.parameters['max_context']==256
+    assert response.parameters['per_shot_horizon_patches']==5

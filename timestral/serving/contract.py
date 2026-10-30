@@ -36,18 +36,23 @@ def _fail(message):
     raise InvalidInput(message)
 
 
-def _check_values(data, datatype):
+def _check_values(data, datatype, limit, depth=0):
     """Reject JSON coercions before the SDK converts mixed values to numeric data."""
-    if data is None:
-        return  # Binary contents are decoded and checked by as_numpy below.
+    if limit < 0 or depth > 32:
+        _fail('tensor contents exceed declared size or nesting depth')
     if isinstance(data, np.ndarray):
         if data.dtype != DTYPES[datatype]:
             _fail('tensor storage dtype does not match declaration')
-        return
+        if data.size > limit:
+            _fail('tensor contents exceed declared size')
+        return data.size
     if isinstance(data, Iterable) and not isinstance(data, (str, bytes)):
+        count = 0
         for item in data:
-            _check_values(item, datatype)
-        return
+            count += _check_values(item, datatype, limit-count, depth+1)
+            if count > limit:
+                _fail('tensor contents exceed declared size')
+        return count
     if datatype == 'BOOL':
         valid = isinstance(data, (bool, np.bool_))
     elif datatype == 'INT64':
@@ -56,11 +61,17 @@ def _check_values(data, datatype):
         valid = isinstance(data, numbers.Real) and not isinstance(data, (bool, np.bool_))
     if not valid:
         _fail('tensor contains invalid scalar types')
+    return 1
 
 
 def _array(inp: InferInput) -> np.ndarray:
     try:
-        _check_values(inp.data, inp.datatype)
+        if inp.data is not None:
+            count = _check_values(inp.data, inp.datatype, math.prod(inp.shape))
+            # Raw gRPC contents have an empty typed-data list. The SDK decodes
+            # those bytes as a view; nonempty JSON/typed data must match exactly.
+            if count and count != math.prod(inp.shape):
+                _fail('tensor contents do not match declared size')
         value = inp.as_numpy()
     except (TypeError, ValueError, OverflowError, RecursionError):
         _fail('invalid tensor contents')

@@ -1,0 +1,202 @@
+name: Timestral standard-serving acceptance
+
+on:
+  pull_request:
+    paths:
+      - "timestral/**"
+      - "scripts/*timestral*"
+      - ".github/workflows/build.yaml"
+      - ".github/workflows/timestral-standard.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: timestral-standard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+        with:
+          version: 0.13.6
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "timestral/**/uv.lock"
+      - name: Check packaging and tag routing
+        run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s scripts -p 'test_*.py'
+      - name: Verify all candidate frozen locks
+        run: |
+          for project in timestral/dependencies/{cpu,cuda,rocm} timestral/openvino; do
+            uv lock --project "$project" --check
+          done
+      - name: Unit and legacy regression tests
+        env:
+          PYTHONPATH: timestral
+        run: uv run --frozen --project timestral/dependencies/cpu python -m pytest timestral/tests timestral/openvino/tests -q -o asyncio_default_fixture_loop_scope=function
+
+  cpu-image:
+    needs: unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - model: 5M
+            revision: bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f
+          - model: 209M
+            revision: 9874d252ab0aae16f7f7c999f98f98d6ad7d8365
+    env:
+      MODEL_ID: mistralai/Timestral-${{ matrix.model }}
+      MODEL_REVISION: ${{ matrix.revision }}
+      TIMESTRAL_TEST_HTTP_URL: localhost:18080
+      TIMESTRAL_TEST_GRPC_URL: localhost:18081
+      PYTHONPATH: timestral
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+        with:
+          version: 0.13.6
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: timestral/dependencies/cpu/uv.lock
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Build native amd64 candidate without publication
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: timestral
+          file: timestral/Dockerfile.cpu
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: timestral-standard:candidate
+          cache-from: type=gha,scope=timestral-standard-cpu
+          cache-to: type=gha,scope=timestral-standard-cpu,mode=max
+      - name: Start actual image with external model cache
+        run: |
+          mkdir -p "$RUNNER_TEMP/model-cache" "$RUNNER_TEMP/evidence"
+          chmod 0777 "$RUNNER_TEMP/model-cache"
+          docker run -d --name timestral-standard \
+            -p 127.0.0.1:18080:8080 -p 127.0.0.1:18081:8081 \
+            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
+            -e MODEL_ID -e MODEL_REVISION timestral-standard:candidate
+          docker image inspect timestral-standard:candidate > "$RUNNER_TEMP/evidence/image-inspect.json"
+      - name: Wait for standard readiness
+        run: |
+          for attempt in $(seq 1 180); do
+            if curl --fail --silent http://localhost:18080/v2/models/timestral/ready; then
+              exit 0
+            fi
+            if [[ $(docker inspect --format '{{.State.Running}}' timestral-standard) != true ]]; then
+              docker logs timestral-standard
+              exit 1
+            fi
+            sleep 2
+          done
+          docker logs timestral-standard
+          exit 1
+      - name: Compare actual-image JSON REST, binary REST and gRPC final forecasts
+        run: |
+          uv run --frozen --project timestral/dependencies/cpu python -m pytest \
+            timestral/tests/integration/test_triton_client.py -q \
+            -o asyncio_default_fixture_loop_scope=function \
+            --junitxml="$RUNNER_TEMP/evidence/forecast-parity.xml"
+      - name: Save logs and remove test container
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence"
+          docker logs timestral-standard > "$RUNNER_TEMP/evidence/server.log" 2>&1 || true
+          docker rm -f timestral-standard || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: timestral-cpu-${{ matrix.model }}-${{ github.sha }}
+          path: ${{ runner.temp }}/evidence/
+          if-no-files-found: error
+
+  openvino-preview:
+    needs: unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      PYTHONPATH: timestral
+      MODEL_ID: mistralai/Timestral-5M
+      MODEL_REVISION: bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f
+      TIMESTRAL_TEST_HTTP_URL: localhost:18080
+      TIMESTRAL_TEST_GRPC_URL: localhost:18081
+      TIMESTRAL_TEST_PREVIEW: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+        with:
+          version: 0.13.6
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "timestral/openvino/**/uv.lock"
+      - name: Check direct runtime and export guards
+        run: |
+          uv run --frozen --project timestral/openvino python -m pytest \
+            timestral/tests/test_openvino_profiles.py timestral/openvino/tests -q \
+            -o asyncio_default_fixture_loop_scope=function
+      - name: Export versioned profiles and compare complete forecasts
+        run: |
+          uv run --frozen --project timestral/openvino/export python \
+            timestral/openvino/export/profiles.py --output "$RUNNER_TEMP/openvino-candidate"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Build direct-runtime image without publication
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: timestral
+          file: timestral/Dockerfile.openvino
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: timestral-standard:openvino-preview
+          cache-from: type=gha,scope=timestral-standard-openvino
+          cache-to: type=gha,scope=timestral-standard-openvino,mode=max
+      - name: Start preview with read-only verified profiles
+        run: |
+          digest=$(cat "$RUNNER_TEMP/openvino-candidate/evidence/manifest-sha256.txt")
+          docker run -d --name timestral-openvino-standard \
+            -p 127.0.0.1:18080:8080 -p 127.0.0.1:18081:8081 \
+            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            --mount "type=bind,src=$RUNNER_TEMP/openvino-candidate/profiles,dst=/profiles,readonly" \
+            -e MODEL_ID -e MODEL_REVISION -e TIMESTRAL_FORECAST_ARTIFACTS=/profiles \
+            -e "TIMESTRAL_ARTIFACT_MANIFEST_SHA256=$digest" timestral-standard:openvino-preview
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:18080/v2/models/timestral/ready; then
+              exit 0
+            fi
+            if [[ $(docker inspect --format '{{.State.Running}}' timestral-openvino-standard) != true ]]; then
+              docker logs timestral-openvino-standard
+              exit 1
+            fi
+            sleep 2
+          done
+          exit 1
+      - name: Verify shared REST/gRPC inference and unsupported capability errors
+        run: |
+          uv run --frozen --project timestral/openvino python -m pytest \
+            timestral/tests/integration/test_triton_client.py -q \
+            -o asyncio_default_fixture_loop_scope=function \
+            --junitxml="$RUNNER_TEMP/openvino-candidate/evidence/protocol-parity.xml"
+      - name: Save image evidence and remove preview container
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/openvino-candidate/evidence"
+          docker image inspect timestral-standard:openvino-preview > "$RUNNER_TEMP/openvino-candidate/evidence/image-inspect.json" || true
+          docker logs timestral-openvino-standard > "$RUNNER_TEMP/openvino-candidate/evidence/server.log" 2>&1 || true
+          docker rm -f timestral-openvino-standard || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: timestral-openvino-preview-${{ github.sha }}
+          path: ${{ runner.temp }}/openvino-candidate/evidence/
+          if-no-files-found: error

@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.1", "tritonclient[http,grpc]==2.73.0"]
+dev = ["pydantic-settings==2.16.1", "pytest==9.1.1", "pytest-asyncio==1.4.1", "tritonclient[http,grpc]==2.73.0"]
 
 [tool.uv]
 package = false

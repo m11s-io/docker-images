@@ -28,15 +28,15 @@ identified separately by repository and 40-character commit.
 | --- | --- | --- | --- | --- | --- |
 | cpu | CPython 3.12.16 / bookworm | torch 2.14.1+cpu | explicit cpu | upstream config + safetensors | pending image/transport/forecast evidence |
 | cuda | same | torch 2.14.1+cu130 | explicit cuda:N, NVIDIA | upstream config + safetensors | pending final forecasts on target |
-| rocm | same, wheel-supplied userspace | torch 2.14.1+rocm7.14 | explicit cuda:N, HIP gfx1201 | upstream config + safetensors | experimental; host compatibility pending |
-| openvino | same | OpenVINO 2026.4.1; CPU torch for upstream algorithms | explicit CPU | verified versioned FP32 profile bundle | experimental; bounded 5M only |
+| rocm | same, wheel-supplied userspace | torch 2.14.1+rocm7.2 | explicit cuda:N, HIP gfx1201 | upstream config + safetensors | experimental; host compatibility pending |
+| openvino | same | OpenVINO 2026.4.1; torch 2.6.0+cpu for upstream algorithms | explicit CPU | verified versioned FP32 profile bundle | experimental; bounded 5M only |
 
 Immutable shared candidate base:
 `python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337`.
 Resolved from the official multi-platform index; runtime images target amd64.
 The CUDA cp312 amd64 wheel SHA256 is
 `5359b255ac68c0cabb8293952b38e00f0d1a570815cd87f19b61af702c071410`;
-ROCm is `e1f968060d0e329d3b4564196ef85887af8f11f81c6aec42d727bc6abff6c447`.
+ROCm is `fc35e48fd83329f5d60ab925951d138edb5a6fce84323600703637fbc693541c`.
 These prove availability, not execution. Frozen locks are the complete dependency
 inventory once resolved. Export dependencies stay separate from serving.
 
@@ -54,7 +54,7 @@ other targets until separately validated. Require compatible amdgpu/KFD host
 module, /dev/kfd and assigned /dev/dri render nodes with correct permissions,
 AMD device plugin, and ROCm userspace/host compatibility. Talos host compatibility
 with this candidate is unproven. No HSA_OVERRIDE_GFX_VERSION or CPU fallback.
-See [AMD's versioned compatibility matrix](https://rocm-handbook.amd.com/projects/amd-rocm-programming-guide/en/docs-7.14.0/compatibility/compatibility-matrix.html).
+See [AMD's versioned compatibility matrix](https://rocm.docs.amd.com/en/docs-7.2.0/compatibility/compatibility-matrix.html).
 A supported LLVM target alone does not establish support for an arbitrary host OS.
 
 ## Existing candidate and evidence limits
@@ -70,3 +70,12 @@ Reusable candidate code: direct block execution, scaler binding, bounded final
 forecast parity and artifact verification. Exclude Python-node bindings,
 MediaPipe graph, pyovms and OVMS runtime. Preserve historical experiment evidence
 and the `timestral-openvino.yaml` OIDC workflow identity.
+
+ROCm resolution selected the official 7.2 wheel with Triton ROCm 3.8.0 from
+the same index. The proposed 7.14 wheel requires a separately distributed SDK
+graph; no dependency overrides were applied to force it through.
+
+CUDA execution explicitly selects IEEE FP32 through the
+[PyTorch 2.14 precision API](https://docs.pytorch.org/docs/2.14/notes/cuda.html).
+Forced TF32 environment overrides are rejected; device forecasts still need
+measured parity on the actual target before acceptance.
