@@ -35,4 +35,10 @@ class ImageTest(unittest.TestCase):
             for excluded in ['!timestral/ovms/**','!timestral/Dockerfile.ovms']:
                 self.assertIn(excluded,paths[variant])
 
+    def test_shared_context_changes_trigger_actual_image_validation(self):
+        import yaml
+        workflow=yaml.safe_load((ROOT.parents[1]/'.github/workflows/timestral-ovms.yaml').read_text())
+        triggers=workflow.get('on',workflow.get(True))
+        self.assertIn('timestral/.dockerignore',triggers['pull_request']['paths'])
+
 if __name__=='__main__':unittest.main()

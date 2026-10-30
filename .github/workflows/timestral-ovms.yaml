@@ -5,6 +5,7 @@ on:
     paths:
       - "timestral/ovms/**"
       - "timestral/Dockerfile.ovms"
+      - "timestral/.dockerignore"
       - ".github/workflows/timestral-ovms.yaml"
 permissions:
   contents: read
@@ -34,11 +35,11 @@ jobs:
           docker run -d --name timestral-forecast-test --cpus=2 \
             --read-only --cap-drop=ALL --security-opt=no-new-privileges \
             --tmpfs /tmp:rw,size=256m \
-            -p 127.0.0.1:18000:8000 \
+            -p 127.0.0.1:18000:8000 -p 127.0.0.1:19000:9000 \
             -v "$RUNNER_TEMP/forecast-proof:/models/forecast:ro" \
-            timestral-ovms:test
-          uv run --project timestral/ovms/export --frozen python timestral/ovms/tests/integration.py \
-            --root "$RUNNER_TEMP/forecast-proof"
+            timestral-ovms:test --config_path /opt/timestral-forecast/config.json --rest_port 8000 --port 9000
+          uv run --project timestral/ovms --frozen python timestral/ovms/tests/integration.py \
+            --root "$RUNNER_TEMP/forecast-proof" --grpc-url 127.0.0.1:19000
       - name: Diagnostics and cleanup
         if: always()
         run: |

@@ -14,7 +14,7 @@ def request(url, body=None):
     with urllib.request.urlopen(req,timeout=30) as response:return json.load(response)
 
 
-def run(root,url):
+def run(root,url,grpc_url=None):
     deadline=time.monotonic()+180
     while True:
         try:request(url+'/v2/models/timestral/ready');break
@@ -47,9 +47,32 @@ def run(root,url):
     try:request(url+'/v2/models/timestral/infer',bad)
     except urllib.error.HTTPError as error:assert 400<=error.code<600
     else:raise AssertionError('unsupported horizon was accepted')
-    (root/'image-rest-validation.json').write_text(json.dumps({'passed':True,'cases':rows,'protocol':'KServe V2 REST','unsupported_horizon_rejected':True},indent=2)+'\n')
+    grpc_rows=[]
+    if grpc_url:
+        import tritonclient.grpc as grpcclient
+        with grpcclient.InferenceServerClient(grpc_url) as client:
+            assert client.is_model_ready('timestral')
+            for name,case in reference.items():
+                arrays=[('context',np.array(case['context'],dtype=np.float32),'FP32'),
+                        ('observation_mask',np.array(case['mask'],dtype=np.bool_),'BOOL'),
+                        ('prediction_length',np.array([case['horizon']],dtype=np.int64),'INT64')]
+                inputs=[]
+                for field,value,datatype in arrays:
+                    tensor=grpcclient.InferInput(field,list(value.shape),datatype)
+                    tensor.set_data_from_numpy(value);inputs.append(tensor)
+                result=client.infer('timestral',inputs,client_timeout=30)
+                actual=result.as_numpy('quantiles');expected=np.array(case['outputs']['True'],dtype=np.float32)
+                assert actual.shape==expected.shape and np.isfinite(actual).all()
+                np.testing.assert_allclose(actual,expected,rtol=1e-4,atol=1e-4)
+                levels=result.as_numpy('quantile_levels');median=result.as_numpy('median')
+                assert levels.shape==(21,) and np.count_nonzero(levels==.5)==1
+                np.testing.assert_array_equal(median,actual[...,np.flatnonzero(levels==.5)[0]])
+                grpc_rows.append({'case':name,'shape':list(actual.shape),'max_absolute_error':float(np.max(np.abs(actual-expected)))})
+                print('KServe gRPC final forecast passed:',grpc_rows[-1],flush=True)
+    (root/'image-rest-validation.json').write_text(json.dumps({'passed':True,'cases':rows,'protocol':'KServe V2 REST and gRPC' if grpc_url else 'KServe V2 REST','grpc_cases':grpc_rows,'unsupported_horizon_rejected':True},indent=2)+'\n')
 
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--root',type=Path,required=True);parser.add_argument('--url',default='http://127.0.0.1:18000')
-    args=parser.parse_args();run(args.root,args.url)
+    parser.add_argument('--grpc-url')
+    args=parser.parse_args();run(args.root,args.url,args.grpc_url)
