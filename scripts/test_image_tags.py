@@ -45,17 +45,17 @@ class ImageTagsTest(unittest.TestCase):
         self.assertEqual(result.stdout.splitlines()[0], "m11s/example:v0.31.0-x86_64")
 
     def test_timestral_variants_resolve_pinned_version_and_distinct_commit_aliases(self):
-        for variant in ("cpu", "cuda"):
+        for variant in ("cpu", "cuda", "rocm", "openvino"):
             with self.subTest(variant=variant):
                 dockerfile = (pathlib.Path(__file__).parents[1] / "timestral" /
                               f"Dockerfile.{variant}")
-                result = self.resolve("--version-arg", "TIMESTRAL_VERSION",
-                                      f"--suffix=-{variant}", f"--latest=latest-{variant}",
+                result = self.resolve("--version-arg", "SERVING_VERSION",
+                                      f"--suffix=-{variant}", f"--latest=candidate-standard-v1-{variant}",
                                       dockerfile=dockerfile.read_text())
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(), [
-                    f"m11s/example:1.0.0-{variant}",
-                    f"m11s/example:latest-{variant}",
+                    f"m11s/example:standard-v1-0.1.0-{variant}",
+                    f"m11s/example:candidate-standard-v1-{variant}",
                     f"m11s/example:sha-494d7fbb6b32-{variant}",
                 ])
 
