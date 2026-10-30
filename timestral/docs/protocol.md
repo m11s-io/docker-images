@@ -50,3 +50,14 @@ Invalid/unsupported input uses KServe InvalidInput (REST 400, gRPC
 INVALID_ARGUMENT). Occupied capacity or unready model uses ModelNotReady
 (REST 503, gRPC UNAVAILABLE). Internal failures are redacted. Cancellation does
 not free the inference slot until the underlying computation has stopped.
+
+## Inspected SDK/client interoperability details
+
+Triton 2.73.0 JSON inference must pass
+`headers={"content-type": "application/json"}`. Binary inference uses the
+client's standard binary header. With the inspected KServe source, health
+responses have bodies whereas Triton's HTTP readiness methods do not drain them.
+Use a separate context-managed HTTP client for each readiness probe, closing it
+before using an inference client. Reusing a concurrency=1 client for repeated
+readiness probes can exhaust its pool. The diagnostic tests cover this explicit
+usage; unrestricted readiness-client reuse is not an accepted capability.
