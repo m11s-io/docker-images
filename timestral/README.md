@@ -1,133 +1,59 @@
-# Timestral Forecast API
+# Timestral standard serving candidate
 
-This service wraps the upstream [`TimestralForecaster.forecast`](https://github.com/mistralai/timestral) API. It loads one checkpoint per process and serves forecasts on port `8000`. Run one Uvicorn worker per pod so the process uses one model and admits one forecast at a time.
+One official KServe Python ModelServer and shared Timestral handler, with variant
+names `cpu`, `cuda`, `rocm`, `openvino`. The handler calls unchanged, pinned
+upstream forecasting. Images contain code and dependencies; weights and IR stay
+external and revision pinned. Standard ports: REST 8080, gRPC 8081.
 
-## Checkpoint and startup
+**Acceptance is pending.** Existing `/forecast` deployments and legacy
+`latest-cpu` / `latest-cuda` aliases must remain available during migration.
+No candidate is promoted merely because it builds. See the
+[runtime matrix](docs/runtime-matrix.md), [V2 contract](docs/protocol.md) and
+[migration/rollback gates](docs/migration.md).
 
-`MODEL_ID` defaults to `mistralai/Timestral-209M`. `MODEL_REVISION` is required
-and must be a full 40-character commit hash from the selected Hugging Face
-model repository. Set both values to select a different compatible checkpoint;
-the same CPU or CUDA image can load each size. The upstream Timestral family
-includes 5M, 28M, 123M, and 209M checkpoints. Known immutable revisions are:
+| Variant | Execution | Current status |
+| --- | --- | --- |
+| cpu | upstream PyTorch CPU | candidate; real-image numerical acceptance pending |
+| cuda | upstream NVIDIA CUDA 13.0 | candidate; actual target forecast acceptance pending |
+| rocm | upstream HIP/ROCm 7.2, gfx1201 only | experimental; host/device acceptance pending |
+| openvino | direct OpenVINO CPU neural profiles, upstream forecasting | experimental bounded 5M; new artifact and image acceptance pending |
 
-| Checkpoint | Revision |
-| --- | --- |
-| `mistralai/Timestral-5M` (smoke test) | `bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f` |
-| `mistralai/Timestral-28M` (benchmark) | `49b26409ac87b5935539a5d8ffe7f397b720db47` |
-| `mistralai/Timestral-123M` | `5a147287addda85f6acd8da3fb8858fe9af7e8f7` |
-| `mistralai/Timestral-209M` | `9874d252ab0aae16f7f7c999f98f98d6ad7d8365` |
-
-Model weights are downloaded to `HF_HOME` (default `/models/huggingface`). The cache must be writable. Set `HF_TOKEN` only when Hugging Face access requires it; it is treated as a secret and is never included in API errors. Startup fails if model loading fails or if `MODEL_DEVICE=cuda` but CUDA is unavailable. The service does not fall back to CPU.
-
-## HTTP contract
-
-`POST /forecast` accepts a JSON object:
-
-```json
-{
-  "context": [[[1.0, 2.0, null, 4.0]]],
-  "prediction_length": 1,
-  "observation_mask": [[[true, true, true, false]]],
-  "past_covariates": [[[0.0, 1.0, 0.0, 1.0]]],
-  "known_covariates": [[[0.0, 1.0, 0.0, 1.0, 0.0]]],
-  "categorical_past_covariates": [[[1, 2, 1, 3]]],
-  "categorical_known_covariates": [[[1, 2, 1, 3, 2]]],
-  "symmetric_averaging": true,
-  "clip_nonnegative": true
-}
-```
-
-`context` is strictly `[batch, variates, time]`. `null` means a missing numerical observation and is passed upstream as NaN. The optional boolean mask has the same shape. Numeric and categorical past covariates are `[batch, covariates, context_time]`; known-future covariates are `[batch, covariates, context_time + prediction_length]`. Categorical codes retain the upstream target-encoding behavior. `symmetric_averaging` and `clip_nonnegative` default to the upstream defaults (`true`).
-
-Success returns the model id, immutable revision, quantile levels, quantiles shaped `[batch, variates, prediction_length, 21]`, and median shaped `[batch, variates, prediction_length]`:
-
-```json
-{
-  "model": "mistralai/Timestral-209M",
-  "revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
-  "quantile_levels": [0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.99],
-  "quantiles": [[[[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1]]]],
-  "median": [[[1.1]]]
-}
-```
-
-The numeric values in this example are illustrative. Endpoints `GET /healthz` and `GET /readyz` do not run inference. Readiness returns `503` until the checkpoint has loaded.
-
-| Status | Meaning |
-| --- | --- |
-| `413` | Declared or streamed request body exceeds the configured byte limit |
-| `422` | Invalid JSON fields, shape, values or configured work budget |
-| `503` | Model is not ready or another inference is using the single slot |
-| `500` | Inference failed or upstream returned an invalid/nonfinite forecast |
-
-Errors do not include request series, tokens or upstream exception text. A disconnected/cancelled request does not stop a running PyTorch call; the inference slot stays occupied until that call actually finishes.
+The old wrapper and reference tests remain until an authorized client cutover.
+[Legacy API documentation](docs/legacy-api.md) describes the preserved historical
+contract, not the new Dockerfiles.
 
 ## Configuration
 
-All names below are environment variables. Limits apply before converting request arrays to tensors or starting inference. The row budget counts target and covariate rows together; the output budget counts quantile elements.
+Set `MODEL_ID` explicitly when selecting a model other than the preserved default
+`mistralai/Timestral-209M`. `MODEL_REVISION` is required and must be its immutable
+40-character commit. `HF_HOME` is a writable external cache (default
+`/models/huggingface`); inject `HF_TOKEN` only at runtime if needed. Never bake
+weights, caches or tokens into images. `TORCH_NUM_THREADS` defaults to 2.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `MODEL_ID` | `mistralai/Timestral-209M` | Hugging Face model repository id |
-| `MODEL_REVISION` | required | Full immutable 40-character model commit |
-| `MODEL_DEVICE` | `cpu` | `cpu` or `cuda`; CUDA never falls back silently |
-| `HF_HOME` | `/models/huggingface` | Writable Hugging Face cache directory |
-| `HF_TOKEN` | unset | Optional secret for gated/private model access |
-| `TORCH_NUM_THREADS` | `2` | CPU thread count configured at startup |
-| `MAX_REQUEST_BYTES` | `8388608` | Maximum JSON body size (8 MiB) |
-| `MAX_BATCH_SIZE` | `8` | Maximum batch dimension |
-| `MAX_ROWS_PER_SERIES` | `32` | Maximum target-plus-covariate row count |
-| `MAX_CONTEXT_STEPS` | `32768` | Maximum context length |
-| `MAX_PREDICTION_LENGTH` | `1024` | Maximum forecast horizon |
-| `MAX_OUTPUT_ELEMENTS` | `1000000` | Maximum quantile output elements |
+`TIMESTRAL_BACKEND` is cpu/cuda/rocm/openvino and must match the packaged framework.
+`MODEL_DEVICE` is cpu or explicit cuda:N (including PyTorch's HIP API for AMD).
+Missing accelerators, wrong vendor/framework, unsupported architectures and device
+mismatches fail startup. There is no automatic CPU fallback. One worker and one
+model inference slot are enforced; a cancelled caller cannot oversubscribe it.
 
-Every limit must be a positive integer. Invalid configuration, missing revision, unwritable cache, model load errors and unavailable CUDA cause startup failure.
+The OpenVINO preview requires `MODEL_ID=mistralai/Timestral-5M`, its documented
+revision, `TIMESTRAL_FORECAST_ARTIFACTS` pointing to a read-only profile bundle and
+`TIMESTRAL_ARTIFACT_MANIFEST_SHA256` from its independently pinned publication.
+The old OVMS block artifact is not this new artifact format. See
+[OpenVINO preview](openvino/README.md) for strict capability limits.
 
-## Running locally
+## Protocol and validation
 
-With Python 3.15 and `uv` installed on Linux:
+Send the [JSON fixture](tests/fixtures/forecast-v1.json) to
+`/v2/models/timestral/infer` with `Content-Type: application/json`. Standard
+metadata and readiness are served by KServe. Tensor names, masks, covariates,
+limits, binary encodings, response identity and SDK/client limitations are in
+[protocol.md](docs/protocol.md). HTTP deployment acceptance requires a gateway
+that bounds actual request bodies, including chunked uploads, to 8 MiB before
+SDK decoding.
 
-```sh
-export MODEL_REVISION=9874d252ab0aae16f7f7c999f98f98d6ad7d8365
-export MODEL_DEVICE=cpu
-export HF_HOME="$PWD/.model-cache"
-uv sync --frozen
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
-```
-
-Python 3.15 PyTorch wheels are available for Linux through the official PyTorch indexes. On macOS, use the Linux container to run this service.
-
-CUDA uses the same service code. The CUDA image installs the pinned CUDA PyTorch wheel. For a local venv, install the matching wheel after syncing the locked app dependencies, then run Uvicorn with `--no-sync` so uv does not restore the CPU wheel:
-
-```sh
-export MODEL_REVISION=9874d252ab0aae16f7f7c999f98f98d6ad7d8365
-export MODEL_DEVICE=cuda
-uv sync --frozen --no-dev --no-install-package torch
-CUDA_CHANNEL=$(sed -n 's/^torch==[^+]*+\(cu[0-9]*\)$/\1/p' requirements-cuda.txt)
-uv pip install --python .venv/bin/python \
-  --index-url "https://download.pytorch.org/whl/$CUDA_CHANNEL" -r requirements-cuda.txt
-uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
-```
-
-The CUDA runtime version follows the pinned PyTorch wheel in `requirements-cuda.txt`. Renovate updates stable CUDA variants and the matching CPU Torch release together, then auto merges after required GitHub checks pass. The host driver must support the selected runtime, and the container must receive a GPU. Setting `MODEL_DEVICE=cuda` does not allocate a GPU by itself.
-## Tests and benchmarks
-
-The API unit tests use an injected forecaster double and need no checkpoint:
-
-```sh
-uv run pytest tests/test_api.py -q
-```
-
-The real CPU HTTP-vs-upstream smoke test is opt-in because it downloads the pinned 5M checkpoint:
-
-```sh
-TIMESTRAL_RUN_REAL_TESTS=1 uv run pytest tests/test_inference.py -m cpu -q
-```
-
-`benchmarks/benchmark.py` accepts selectable model, context, horizon, variate and numeric-covariate cases. It emits one JSON record per case with cold load time, warm p50/p95 latency and peak memory. Its defaults describe the larger sizing matrix; narrow arguments make an initial practical run manageable:
-
-```sh
-uv run python benchmarks/benchmark.py --models 28M --contexts 512 --horizons 96 --variates 1 --covariates none --repeats 2
-```
-
-Timestral inference is synchronous and compute-bound. This service intentionally allows one active forecast per process; scale replicas based on measured model-specific memory and latency. The configured API limits are admission safeguards, not performance guarantees.
+Native amd64 CI owns heavy builds and checkpoint tests. The integration suite
+uses pinned Triton HTTP/gRPC clients against the actual candidate image and an
+unchanged same-model upstream reference. CPU and device numerical evidence,
+image digests and hardware acceptance remain separate gates. Triton extensions
+beyond the tested standard inference operations are not promised.
