@@ -24,4 +24,13 @@ class OVMSTest(unittest.TestCase):
                     {"outputs":[dict(good["outputs"][0],data=[float("nan")]*672)]}]:
             with self.assertRaises(ValueError):self.module.parse_response(bad)
 
+    def test_metadata_rejects_unnamed_export_before_inference(self):
+        self.assertTrue(hasattr(self.module,"validate_metadata"),"OVMS metadata gate is missing")
+        good={"inputs":[{"name":"context","datatype":"FP32","shape":[1,128]},
+                        {"name":"observed","datatype":"BOOL","shape":[1,128]}],
+              "outputs":[{"name":"quantiles","datatype":"FP32","shape":[1,32,21]}]}
+        self.module.validate_metadata(good)
+        good["inputs"][0]["name"]="146"
+        with self.assertRaises(ValueError):self.module.validate_metadata(good)
+
 if __name__ == "__main__":unittest.main()

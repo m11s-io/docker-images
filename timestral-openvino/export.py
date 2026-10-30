@@ -121,11 +121,19 @@ def worker(args) -> None:
         ir = ov.convert_model(block, example_input=tuple(torch.from_numpy(x) for x in example),
                               input=[("context", [1, 128], ov.Type.f32),
                                      ("observed", [1, 128], ov.Type.boolean)])
+    # Conversion input hints do not guarantee serialized tensor names.
+    ir.input(0).get_tensor().set_names({"context"})
+    ir.input(1).get_tensor().set_names({"observed"})
     ir.output(0).get_tensor().set_names({"quantiles"})
     dest = output / "model/1/model.xml"
     dest.parent.mkdir(parents=True)
     ov.save_model(ir, dest, compress_to_fp16=False)
-    compiled = ov.Core().compile_model(str(dest), "CPU", {"INFERENCE_PRECISION_HINT": "f32"})
+    core = ov.Core()
+    saved = core.read_model(str(dest))
+    contract = {port.get_any_name(): (list(port.shape), port.element_type) for port in saved.inputs}
+    if contract != {"context": ([1, 128], ov.Type.f32), "observed": ([1, 128], ov.Type.boolean)}:
+        raise ValueError("serialized IR input contract mismatch")
+    compiled = core.compile_model(saved, "CPU", {"INFERENCE_PRECISION_HINT": "f32"})
     fixtures = json.loads((output / "validation-fixtures.json").read_text())
     results = {}
     for name, case in fixtures.items():

@@ -29,6 +29,18 @@ def parse_response(response: dict):
         raise ValueError("malformed KServe response") from error
 
 
+def validate_metadata(metadata: dict) -> None:
+    expected = {
+        "inputs": {"context": ("FP32", [1, 128]), "observed": ("BOOL", [1, 128])},
+        "outputs": {"quantiles": ("FP32", [1, 32, 21])},
+    }
+    for direction, contract in expected.items():
+        ports = metadata.get(direction, [])
+        actual = {port.get("name"): (port.get("datatype"), port.get("shape")) for port in ports}
+        if len(ports) != len(contract) or actual != contract:
+            raise ValueError(f"OVMS {direction} metadata does not match the artifact contract")
+
+
 def request(url: str, body=None):
     encoded = None if body is None else json.dumps(body, allow_nan=False).encode()
     req = urllib.request.Request(url, data=encoded, headers={"Content-Type": "application/json"})
@@ -51,6 +63,7 @@ def validate(bundle: Path, url: str, startup_timeout: float = 120) -> None:
             if time.monotonic() >= deadline:
                 raise TimeoutError("OVMS model did not become ready")
             time.sleep(1)
+    validate_metadata(request(url + "/v2/models/model"))
     fixtures = json.loads((bundle / "validation-fixtures.json").read_text())
     results = {}
     for name, case in fixtures.items():

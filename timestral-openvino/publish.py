@@ -18,6 +18,16 @@ def validate_environment() -> None:
             raise ValueError(f"publication requires the configured main dispatch: {key}")
 
 
+def upload_bundle(api, bundle: Path, parent: str):
+    allowed = FILES | {"SHA256SUMS", ".gitattributes"}
+    if set(api.list_repo_files(DESTINATION, revision=parent)) - allowed:
+        raise ValueError("remote repository contains unexpected files; refusing to publish")
+    return api.upload_folder(repo_id=DESTINATION, folder_path=str(bundle),
+                             commit_message=f"Validated OpenVINO export from {os.environ.get('GITHUB_SHA', '')[:12]}",
+                             allow_patterns=sorted(FILES | {"SHA256SUMS"}),
+                             parent_commit=parent)
+
+
 def publish(bundle: Path) -> str:
     validate_environment()
     verify(bundle)
@@ -30,9 +40,7 @@ def publish(bundle: Path) -> str:
     info = api.model_info(DESTINATION)
     if not info.private:
         raise ValueError("experimental model repository must remain private")
-    commit = api.upload_folder(repo_id=DESTINATION, folder_path=str(bundle),
-                               commit_message=f"Validated OpenVINO export from {os.environ['GITHUB_SHA'][:12]}",
-                               allow_patterns=sorted(FILES | {"SHA256SUMS"}))
+    commit = upload_bundle(api, bundle, info.sha)
     revision = commit.oid
     names = set(api.list_repo_files(DESTINATION, revision=revision))
     if names - {".gitattributes"} != FILES | {"SHA256SUMS"}:

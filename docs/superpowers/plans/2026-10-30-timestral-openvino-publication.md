@@ -79,3 +79,6 @@ The user authorized workflow preparation and a first validated upload. Review th
 - Task3 red: workflow and publish environment tests fail for missing functionality. Green: main-dispatch-only publication and exact OIDC destination tests pass; nine total new tests.
 - Ruling: Move full conversion/OVMS execution to GitHub CI at user direction. Local ARM emulation is redundant; CI will supply the actual integration evidence before merge/publication. No successful export or model upload is claimed yet.
 - Heavy checks will run on the PR through the new workflow, with no HF write credentials.
+
+- CI run40978091619: real conversion and all upstream parity checks passed; OVMS loaded the model but rejected inference because the serialized context tensor name was numeric. Fixed by explicitly naming both tensors, checking the reloaded IR contract and checking OVMS metadata before requests. Regression metadata test watched fail then pass.
+- Fresh whole-change review found one important issue: remote inventory was checked after mutation. Fixed with a preflight inventory at the observed parent SHA and upload parent_commit enforcement. Regression verifies unexpected files prevent upload and the inspected parent is used. Eleven total tests now pass. No other critical/important findings.
