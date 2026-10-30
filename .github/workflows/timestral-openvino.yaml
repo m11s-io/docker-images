@@ -1,0 +1,96 @@
+name: Timestral OpenVINO experimental
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "timestral-openvino/**"
+      - ".github/workflows/timestral-openvino.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: timestral-openvino-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: timestral-openvino
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.13.5"
+      - name: Install isolated frozen export dependencies
+        run: uv sync --frozen
+      - name: Unit tests
+        run: uv run --frozen python -m unittest discover -s tests
+      - name: Export and compare against unmodified upstream
+        run: uv run --frozen python export.py --output "$RUNNER_TEMP/bundle"
+      - name: Validate real OVMS REST inference
+        run: |
+          docker run -d --name timestral-ovms --platform linux/amd64 \
+            -p 127.0.0.1:18000:8000 \
+            -v "$RUNNER_TEMP/bundle/model:/models/model:ro" \
+            openvino/model_server:2026.4.1@sha256:148e3fe802261ed0b5b634de3bbccdefe7176a218ec34a88e382b40704c34a1c \
+            --model_name model --model_path /models/model --rest_port 8000 \
+            --plugin_config '{"INFERENCE_PRECISION_HINT":"f32"}'
+          uv run --frozen python validate_ovms.py --bundle "$RUNNER_TEMP/bundle"
+      - name: Seal publication bundle
+        run: |
+          cp model-card.md "$RUNNER_TEMP/bundle/README.md"
+          uv run --frozen python package.py --bundle "$RUNNER_TEMP/bundle"
+      - name: OVMS diagnostics and cleanup
+        if: always()
+        run: |
+          if docker container inspect timestral-ovms >/dev/null 2>&1; then
+            docker logs timestral-ovms
+            docker rm -f timestral-ovms
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: timestral-openvino-validated
+          path: ${{ runner.temp }}/bundle/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [validate]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      HF_OIDC_RESOURCE: ${{ vars.HF_TIMESTRAL_OPENVINO_REPO }}
+    defaults:
+      run:
+        working-directory: timestral-openvino
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.13.5"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: timestral-openvino-validated
+          path: ${{ runner.temp }}/bundle/
+      - name: Install frozen dependencies and verify bundle
+        run: |
+          test -n "$HF_OIDC_RESOURCE"
+          uv sync --frozen
+          uv run --frozen python package.py --verify "$RUNNER_TEMP/bundle"
+      - name: Publish through OIDC and verify immutable HF commit
+        run: uv run --frozen python publish.py --bundle "$RUNNER_TEMP/bundle"
