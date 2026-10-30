@@ -30,7 +30,7 @@ def client():
         yield client
 
 
-@pytest.mark.parametrize('case',['missing-datatype','invalid-binary-header','truncated-binary','invalid-json'])
+@pytest.mark.parametrize('case',['missing-datatype','invalid-binary-header','truncated-binary','invalid-json','invalid-binary-datatype'])
 def test_pre_model_failures_are_400_without_echo_or_log(client,caplog,case):
     private='private-series-marker-847236'
     body={'inputs':[{'name':private,'shape':[1,1,1],'data':[1234567.875]}]}
@@ -38,9 +38,10 @@ def test_pre_model_failures_are_400_without_echo_or_log(client,caplog,case):
     elif case=='invalid-binary-header':
         response=client.post('/v2/models/timestral/infer',content=b'{}',headers={
             'content-type':'application/octet-stream','inference-header-content-length':private})
-    elif case=='truncated-binary':
+    elif case in ('truncated-binary','invalid-binary-datatype'):
         body['inputs'][0].update(datatype='FP32',parameters={'binary_data_size':4})
         body['inputs'][0].pop('data')
+        if case=='invalid-binary-datatype': body['inputs'][0]['datatype']=123
         raw=json.dumps(body).encode()
         response=client.post('/v2/models/timestral/infer',content=raw+b'\x00',headers={
             'content-type':'application/octet-stream','inference-header-content-length':str(len(raw))})

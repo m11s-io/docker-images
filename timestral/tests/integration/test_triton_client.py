@@ -106,7 +106,7 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     np.testing.assert_allclose(levels,expected.quantile_levels,rtol=1e-6,atol=1e-7)
 
 
-@pytest.mark.parametrize('case',['missing-datatype','invalid-binary-header','truncated-binary','invalid-json'])
+@pytest.mark.parametrize('case',['missing-datatype','invalid-binary-header','truncated-binary','invalid-json','invalid-binary-datatype'])
 def test_actual_image_redacts_malformed_transport(case):
     import httpx
     import json
@@ -117,9 +117,10 @@ def test_actual_image_redacts_malformed_transport(case):
     elif case=='invalid-binary-header':
         response=httpx.post(url,content=b'{}',headers={'content-type':'application/octet-stream',
                             'inference-header-content-length':private})
-    elif case=='truncated-binary':
+    elif case in ('truncated-binary','invalid-binary-datatype'):
         body['inputs'][0].update(datatype='FP32',parameters={'binary_data_size':4})
         body['inputs'][0].pop('data')
+        if case=='invalid-binary-datatype': body['inputs'][0]['datatype']=123
         raw=json.dumps(body).encode()
         response=httpx.post(url,content=raw+b'\x00',headers={'content-type':'application/octet-stream',
                             'inference-header-content-length':str(len(raw))})

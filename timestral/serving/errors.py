@@ -17,5 +17,5 @@ def configure_transport_errors(app):
     # These specific hooks survive the SDK's later registration of its generic
     # Exception handler. SDK InvalidInput/ModelNotReady retain their more-specific
     # standard mappings, while decoder and schema failures are redacted here.
-    for error in (RequestValidationError,ValueError,TypeError,KeyError,OverflowError):
+    for error in (RequestValidationError,ValueError,TypeError,KeyError,OverflowError,AttributeError):
         app.add_exception_handler(error,_invalid_transport)
