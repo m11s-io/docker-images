@@ -41,4 +41,16 @@ class ImageTest(unittest.TestCase):
         triggers=workflow.get('on',workflow.get(True))
         self.assertIn('timestral/.dockerignore',triggers['pull_request']['paths'])
 
+    def test_mediapipe_stream_tags_have_unique_indices(self):
+        import re
+        graph=(ROOT/'adapter/graph.pbtxt').read_text()
+        for section in graph.split('node {'):
+            for direction in ['input_stream','output_stream']:
+                streams=re.findall(direction+r': "([^\"]+)"',section)
+                slots=[]
+                for stream in streams:
+                    parts=stream.split(':')
+                    slots.append((parts[0],int(parts[1]) if len(parts)==3 else 0))
+                self.assertEqual(len(slots),len(set(slots)), 'duplicate MediaPipe tag/index slots')
+
 if __name__=='__main__':unittest.main()
