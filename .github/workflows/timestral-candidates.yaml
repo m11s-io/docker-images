@@ -1,0 +1,76 @@
+name: Timestral hardware-acceptance candidates
+
+# Explicit publication for isolated hardware testing; never promotes a variant.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s scripts -p 'test_timestral*.py'
+
+  candidate:
+    needs: checks
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [cpu, cuda, rocm]
+    env:
+      CANDIDATE: m11s/timestral:acceptance-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Free ephemeral runner disk
+        if: ${{ matrix.variant != 'cpu' }}
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+      - name: Build acceptance image
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: timestral
+          file: timestral/Dockerfile.${{ matrix.variant }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.CANDIDATE }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=timestral-${{ matrix.variant }}
+          cache-to: type=gha,scope=timestral-${{ matrix.variant }},mode=min
+      - name: Record immutable candidate identity
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          digest = os.environ['DIGEST']
+          assert digest.startswith('sha256:') and len(digest) == 71
+          report = dict(variant=os.environ['VARIANT'], source=os.environ['GITHUB_SHA'],
+                        tag=os.environ['CANDIDATE'], image='m11s/timestral@'+digest,
+                        hardware_acceptance='pending', promotion='forbidden')
+          Path('candidate.json').write_text(json.dumps(report, indent=2)+'\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('```json\n'+json.dumps(report, indent=2)+'\n```\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: timestral-acceptance-${{ matrix.variant }}
+          path: candidate.json
