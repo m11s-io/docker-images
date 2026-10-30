@@ -1,10 +1,10 @@
-# Experimental Timestral OpenVINO publication
+# Experimental Timestral OpenVINO block export
 
 This separate Python 3.12 project exports only the fixed-shape single-block
 neural prediction path. It does not change the existing Timestral API images.
 See `model-card.md` for the artifact contract and limitations.
 
-The workflow `.github/workflows/timestral-openvino.yaml` runs the heavy validation
+The repository workflow `.github/workflows/timestral-openvino.yaml` runs the heavy validation
 on an x86 GitHub-hosted runner. It exports FP32 IR, compares all quantiles against
 unmodified pinned upstream, serves the IR through pinned OVMS and performs real
 KServe REST requests. The dependency environment is frozen in `uv.lock`.
@@ -36,3 +36,9 @@ The output directory must be new. Tests use synthetic data only. Validation
 reports record actual observed architecture/CPU; no native Intel or performance
 validation is claimed. Full forecasting orchestration, covariates, dynamic
 shapes and cluster deployment remain outside this export.
+
+This directory moved from the old top-level `timestral-openvino/` into
+`timestral/ovms/export/`. Its published fixed-block artifact remains separate from
+the broader forecasting profiles required by the OVMS adapter. Run its commands
+from this directory; the workflow filename stays unchanged because HF trust
+claims are bound to that exact filename.

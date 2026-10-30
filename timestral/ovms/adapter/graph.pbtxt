@@ -1,0 +1,22 @@
+input_stream: "OVMS_PY_TENSOR:0:context"
+input_stream: "OVMS_PY_TENSOR:1:observation_mask"
+input_stream: "OVMS_PY_TENSOR:2:prediction_length"
+output_stream: "OVMS_PY_TENSOR:0:quantiles"
+output_stream: "OVMS_PY_TENSOR:1:median"
+output_stream: "OVMS_PY_TENSOR:2:quantile_levels"
+node {
+  name: "timestral_forecast"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "INPUT:0:context"
+  input_stream: "INPUT:1:observation_mask"
+  input_stream: "INPUT:2:prediction_length"
+  output_stream: "OUTPUT:0:quantiles"
+  output_stream: "OUTPUT:1:median"
+  output_stream: "OUTPUT:2:quantile_levels"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/opt/timestral-forecast/model.py"
+    }
+  }
+}
