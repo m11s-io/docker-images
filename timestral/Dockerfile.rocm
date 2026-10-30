@@ -23,10 +23,10 @@ COPY dependencies/rocm/pyproject.toml dependencies/rocm/uv.lock ./
 COPY check_version.py ./
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
-    && python -m pip install --no-cache-dir uv==0.13.6 \
+    && /usr/local/bin/python -m pip install --no-cache-dir uv==0.13.6 \
     && uv sync --frozen --no-dev \
     && /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" \
-    && python -m pip uninstall -y uv \
+    && /usr/local/bin/python -m pip uninstall -y uv \
     && apt-get purge -y --auto-remove git \
     && rm -rf /var/lib/apt/lists/* /tmp/uv-cache
 WORKDIR /app
