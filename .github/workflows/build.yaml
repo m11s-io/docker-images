@@ -379,6 +379,7 @@ jobs:
             version_ref: SERVING_VERSION
             tag_suffix: -rocm
             latest: candidate-standard-v1-rocm
+            cache_mode: min
           - context: timestral-openvino
             build_context: timestral
             dockerfile: timestral/Dockerfile.openvino
