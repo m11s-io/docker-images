@@ -5,7 +5,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
   "torch==2.6.0+cpu",
   "openvino==2026.4.1",
-  "numpy==2.2.6",
+  "numpy==2.5.4",
   "safetensors==0.6.2",
   "huggingface-hub==1.19.0",
 ]
