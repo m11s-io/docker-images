@@ -443,8 +443,8 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
-      - name: Free space for AMD's multi-architecture base
-        if: ${{ steps.checkout.outcome == 'success' && matrix.context == 'comfyui-rocm' }}
+      - name: Free space for large accelerator builds
+        if: ${{ steps.checkout.outcome == 'success' && (matrix.context == 'comfyui-rocm' || matrix.context == 'timestral-cuda' || matrix.context == 'timestral-rocm') }}
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h /

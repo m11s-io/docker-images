@@ -36,7 +36,11 @@ def profiles(root,bad=None,dynamic=False):
             # All admitted lengths are multiples of 32, so this is exactly 21
             # at runtime while shape inference retains a symbolic dimension.
             length=ops.gather(ops.shape_of(context,'i64'),ops.constant([1]),ops.constant(0))
-            width=ops.add(ops.floor_mod(length,ops.constant([32])),ops.constant([20 if bad=='dynamic-output' else 21]))
+            if bad=='dynamic-output':
+                first=ops.gather(ops.reshape(context,ops.constant([-1]),False),ops.constant([0]),ops.constant(0))
+                width=ops.add(ops.convert(ops.absolute(first),'i64'),ops.constant([20]))
+            else:
+                width=ops.add(ops.floor_mod(length,ops.constant([32])),ops.constant([21]))
             target=ops.concat([ops.constant([1,h*32]),width],0)
             out=ops.broadcast(ops.constant(np.float32(0)),target)
         out.output(0).get_tensor().set_names({'wrong' if bad=='output-name' else 'quantiles'})
@@ -70,5 +74,8 @@ def test_symbolic_output_shape_is_verified_for_every_supported_context(tmp_path)
 
 def test_incompatible_symbolic_execution_fails_before_ready(tmp_path):
     profiles(tmp_path,bad='dynamic-output',dynamic=True)
-    with pytest.raises(ValueError,match='block result'):
+    shape=ov.Core().read_model(tmp_path/'block-1.xml').output(0).get_partial_shape()
+    assert shape.is_dynamic
+    assert shape.compatible(ov.PartialShape([1,32,21]))
+    with pytest.raises(ValueError):
         module().OpenVINOBlocks(tmp_path)
