@@ -52,6 +52,8 @@ on:
           - vllm-openai-orjson
           - timestral-cpu
           - timestral-cuda
+          - timestral-rocm
+          - timestral-openvino
       skip_push:
         description: 'Dry-run: build without pushing to Docker Hub'
         required: false
@@ -101,6 +103,8 @@ jobs:
       vllm-openai-orjson: ${{ steps.filter.outputs.vllm-openai-orjson }}
       timestral-cpu: ${{ steps.filter.outputs.timestral-cpu }}
       timestral-cuda: ${{ steps.filter.outputs.timestral-cuda }}
+      timestral-rocm: ${{ steps.filter.outputs.timestral-rocm }}
+      timestral-openvino: ${{ steps.filter.outputs.timestral-openvino }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -234,24 +238,47 @@ jobs:
             timestral-cpu:
               - 'scripts/test_timestral_runtime.py'
               - 'scripts/image_tags.py'
-              - 'timestral/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
+              - 'scripts/test_timestral_standard.py'
+              - '.github/workflows/timestral-standard.yaml'
+              - 'timestral/serving/**'
+              - 'timestral/tests/**'
+              - 'timestral/.dockerignore'
+              - 'timestral/check_version.py'
+              - 'timestral/Dockerfile.cpu'
+              - 'timestral/dependencies/cpu/**'
             timestral-cuda:
               - 'scripts/test_timestral_runtime.py'
               - 'scripts/image_tags.py'
-              - 'timestral/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
+              - 'scripts/test_timestral_standard.py'
+              - '.github/workflows/timestral-standard.yaml'
+              - 'timestral/serving/**'
+              - 'timestral/tests/**'
+              - 'timestral/.dockerignore'
+              - 'timestral/check_version.py'
+              - 'timestral/Dockerfile.cuda'
+              - 'timestral/dependencies/cuda/**'
+            timestral-rocm:
+              - 'scripts/image_tags.py'
+              - 'scripts/test_timestral_standard.py'
+              - '.github/workflows/timestral-standard.yaml'
+              - 'timestral/serving/**'
+              - 'timestral/tests/**'
+              - 'timestral/.dockerignore'
+              - 'timestral/check_version.py'
+              - 'timestral/Dockerfile.rocm'
+              - 'timestral/dependencies/rocm/**'
+            timestral-openvino:
+              - 'scripts/image_tags.py'
+              - 'scripts/test_timestral_standard.py'
+              - '.github/workflows/timestral-standard.yaml'
+              - 'timestral/serving/**'
+              - 'timestral/tests/**'
+              - 'timestral/.dockerignore'
+              - 'timestral/check_version.py'
+              - 'timestral/Dockerfile.openvino'
+              - 'timestral/openvino/**'
 
+  # Preserve legacy latest-cpu/latest-cuda: Timestral candidates never publish here.
   build:
     needs: [changes]
     if: ${{ !failure() && !cancelled() }}
@@ -327,21 +354,42 @@ jobs:
             dockerfile: timestral/Dockerfile.cpu
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral forecasting API with CPU-only PyTorch.
+            description: Timestral standard V2 cpu candidate; acceptance pending.
             version_source: version-arg
-            version_ref: TIMESTRAL_VERSION
+            version_ref: SERVING_VERSION
             tag_suffix: -cpu
-            latest: latest-cpu
+            latest: candidate-standard-v1-cpu
           - context: timestral-cuda
             build_context: timestral
             dockerfile: timestral/Dockerfile.cuda
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral forecasting API with NVIDIA CUDA-enabled PyTorch.
+            description: Timestral standard V2 cuda candidate; acceptance pending.
             version_source: version-arg
-            version_ref: TIMESTRAL_VERSION
+            version_ref: SERVING_VERSION
             tag_suffix: -cuda
-            latest: latest-cuda
+            latest: candidate-standard-v1-cuda
+          - context: timestral-rocm
+            build_context: timestral
+            dockerfile: timestral/Dockerfile.rocm
+            readme_file: timestral/README.md
+            repository: m11s/timestral
+            description: Timestral standard V2 rocm candidate; acceptance pending.
+            version_source: version-arg
+            version_ref: SERVING_VERSION
+            tag_suffix: -rocm
+            latest: candidate-standard-v1-rocm
+            cache_mode: min
+          - context: timestral-openvino
+            build_context: timestral
+            dockerfile: timestral/Dockerfile.openvino
+            readme_file: timestral/README.md
+            repository: m11s/timestral
+            description: Timestral standard V2 openvino candidate; acceptance pending.
+            version_source: version-arg
+            version_ref: SERVING_VERSION
+            tag_suffix: -openvino
+            latest: candidate-standard-v1-openvino
     steps:
       - name: Checkout
         id: checkout
@@ -390,14 +438,14 @@ jobs:
           fi
 
       - name: Log in to Docker Hub
-        if: ${{ !matrix.validation_only && github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ !matrix.validation_only && !startsWith(matrix.context, 'timestral-') && github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
-      - name: Free space for AMD's multi-architecture base
-        if: ${{ steps.checkout.outcome == 'success' && matrix.context == 'comfyui-rocm' }}
+      - name: Free space for large accelerator builds
+        if: ${{ steps.checkout.outcome == 'success' && (matrix.context == 'comfyui-rocm' || matrix.context == 'timestral-cuda' || matrix.context == 'timestral-rocm') }}
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h /
@@ -414,7 +462,7 @@ jobs:
           context: ${{ matrix.build_context || matrix.context }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
-          push: ${{ !matrix.validation_only && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
+          push: ${{ !matrix.validation_only && !startsWith(matrix.context, 'timestral-') && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
           load: ${{ matrix.context == 'comfyui-cuda' && (github.event_name == 'pull_request' || github.event.inputs.skip_push == 'true') }}
           tags: ${{ steps.image-tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.context }}
@@ -482,7 +530,7 @@ jobs:
             "$GGUF_IMAGE" /app/verify_image.py --gguf
 
       - name: Update Docker Hub repository overview
-        if: ${{ !matrix.validation_only && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ !matrix.validation_only && !startsWith(matrix.context, 'timestral-') && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
         with:
           username: ${{ secrets.DOCKER_USER }}
