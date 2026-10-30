@@ -61,3 +61,12 @@ Use a separate context-managed HTTP client for each readiness probe, closing it
 before using an inference client. Reusing a concurrency=1 client for repeated
 readiness probes can exhaust its pool. The diagnostic tests cover this explicit
 usage; unrestricted readiness-client reuse is not an accepted capability.
+
+The entry point configures specific exception handlers on the official SDK app
+through its public application API. This covers schema and binary decoding
+failures that happen before Model.predict: responses use a generic 400 and the
+exceptions are not stringified or logged. No inference routes or separate HTTP
+application/server are added. Actual-image malformed-transport tests cover
+missing datatypes, malformed JSON/headers and truncated binary tensors. gRPC
+startup rejects nonpositive/unlimited receive limits as well as limits above
+8 MiB.

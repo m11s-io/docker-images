@@ -104,3 +104,27 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     np.testing.assert_allclose(q,expected.quantiles.cpu().numpy(),rtol=1e-5,atol=1e-5)
     np.testing.assert_allclose(median,expected.median.cpu().numpy(),rtol=1e-5,atol=1e-5)
     np.testing.assert_allclose(levels,expected.quantile_levels,rtol=1e-6,atol=1e-7)
+
+
+@pytest.mark.parametrize('case',['missing-datatype','invalid-binary-header','truncated-binary','invalid-json'])
+def test_actual_image_redacts_malformed_transport(case):
+    import httpx
+    import json
+    private='private-series-marker-847236'
+    body={'inputs':[{'name':private,'shape':[1,1,1],'data':[1234567.875]}]}
+    url=f'http://{HTTP}/v2/models/timestral/infer'
+    if case=='missing-datatype': response=httpx.post(url,json=body)
+    elif case=='invalid-binary-header':
+        response=httpx.post(url,content=b'{}',headers={'content-type':'application/octet-stream',
+                            'inference-header-content-length':private})
+    elif case=='truncated-binary':
+        body['inputs'][0].update(datatype='FP32',parameters={'binary_data_size':4})
+        body['inputs'][0].pop('data')
+        raw=json.dumps(body).encode()
+        response=httpx.post(url,content=raw+b'\x00',headers={'content-type':'application/octet-stream',
+                            'inference-header-content-length':str(len(raw))})
+    else:
+        response=httpx.post(url,content='{"'+private,headers={'content-type':'application/json'})
+    assert response.status_code==400
+    assert private not in response.text
+    assert '1234567.875' not in response.text
