@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+# syntax=docker/dockerfile:1.28.0@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
 #
 # An MCP server for a separately deployed ComfyUI instance. ComfyUI is
 # deliberately not bundled: comfy-mcp is a thin wrapper over comfy-cli, and
@@ -11,7 +11,7 @@ ARG COMFY_CLI_REF=v1.22.0
 ARG COMFY_MCP_REF=v0.10.0
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
+    apt-get install -y --no-install-recommends git=1:2.39.5-0+deb12u3 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
@@ -33,7 +33,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY entrypoint.py healthcheck.py /opt/comfy-mcp-image/
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
+    apt-get install -y --no-install-recommends git=1:2.39.5-0+deb12u3 && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd --system --gid 10001 comfy && \
     useradd --system --uid 10001 --gid comfy --create-home --home-dir /workspace comfy && \
