@@ -13,25 +13,27 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class TimestralRuntimeTest(unittest.TestCase):
-    def test_python_315_is_used_by_project_both_images_and_ci(self):
+    def test_legacy_python_is_preserved_while_candidate_images_use_312(self):
         project = tomllib.loads((ROOT / "timestral/pyproject.toml").read_text())
         self.assertEqual(project["project"]["requires-python"], ">=3.15,<3.16")
         for variant in ("cpu", "cuda"):
             dockerfile = (ROOT / f"timestral/Dockerfile.{variant}").read_text()
-            self.assertRegex(dockerfile, r"ARG PYTHON_BASE=python:3\.15\.\d+-slim-bookworm@sha256:[a-f0-9]{64}")
+            self.assertRegex(dockerfile, r"ARG PYTHON_BASE=python:3\.12\.\d+-slim-bookworm@sha256:[a-f0-9]{64}")
         workflow = (ROOT / ".github/workflows/build.yaml").read_text()
         job = workflow.split("  timestral-tests:", 1)[1].split("\n  changes:", 1)[0]
         self.assertIn('python-version: "3.15"', job)
 
     def test_cpu_uses_frozen_lock_and_cuda_uses_same_torch_release(self):
-        project = tomllib.loads((ROOT / "timestral/pyproject.toml").read_text())
+        project = tomllib.loads((ROOT / "timestral/dependencies/cpu/pyproject.toml").read_text())
         requirement = next(d for d in project["project"]["dependencies"] if d.startswith("torch=="))
         release = requirement.split("==", 1)[1].split("+", 1)[0]
         cpu = (ROOT / "timestral/Dockerfile.cpu").read_text()
         self.assertIn("uv sync --frozen --no-dev", cpu)
         self.assertNotIn("--no-install-package torch", cpu)
-        cuda_requirements = (ROOT / "timestral/requirements-cuda.txt").read_text()
-        self.assertRegex(cuda_requirements, rf"torch=={re.escape(release)}\+cu\d+(?:\s|$)")
+        cuda = (ROOT / "timestral/Dockerfile.cuda").read_text()
+        cuda_project = tomllib.loads((ROOT / "timestral/dependencies/cuda/pyproject.toml").read_text())
+        self.assertIn(f"torch=={release}+cu130", cuda_project["project"]["dependencies"])
+        self.assertIn("uv sync --frozen --no-dev", cuda)
 
     def test_both_images_check_installed_upstream_version(self):
         for variant in ("cpu", "cuda"):
