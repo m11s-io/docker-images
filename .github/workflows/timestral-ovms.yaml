@@ -1,0 +1,53 @@
+name: Timestral OVMS forecast image
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "timestral/ovms/**"
+      - "timestral/Dockerfile.ovms"
+      - ".github/workflows/timestral-ovms.yaml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.13.5"
+      - name: Unit tests
+        run: uv run --no-project --python 3.12 --with numpy==2.2.6 --with pyyaml==6.0.3 python -m unittest discover -s timestral/ovms/tests -p 'test_*.py'
+      - name: Build the derived OVMS image
+        run: docker build -f timestral/Dockerfile.ovms -t timestral-ovms:test timestral
+      - name: Prepare broader profiles and original full-forecast references
+        env:
+          FORECAST_PROOF_ROOT: ${{ runner.temp }}/forecast-proof
+        run: uv run --project timestral/ovms/export --frozen python timestral/ovms/tests/prepare_artifacts.py
+      - name: Run actual packaged adapter through OVMS
+        run: |
+          chmod -R a+rX "$RUNNER_TEMP/forecast-proof"
+          docker run -d --name timestral-forecast-test --cpus=2 \
+            --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+            --tmpfs /tmp:rw,size=256m \
+            -p 127.0.0.1:18000:8000 \
+            -v "$RUNNER_TEMP/forecast-proof:/models/forecast:ro" \
+            timestral-ovms:test
+          uv run --project timestral/ovms/export --frozen python timestral/ovms/tests/integration.py \
+            --root "$RUNNER_TEMP/forecast-proof"
+      - name: Diagnostics and cleanup
+        if: always()
+        run: |
+          if docker container inspect timestral-forecast-test >/dev/null 2>&1; then
+            docker logs timestral-forecast-test
+            docker rm -f timestral-forecast-test
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: timestral-ovms-forecast-validation
+          path: ${{ runner.temp }}/forecast-proof/image-rest-validation.json
+          if-no-files-found: error

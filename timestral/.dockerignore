@@ -5,5 +5,11 @@
 !check_version.py
 !app/
 !app/**
+!ovms/
+!ovms/pyproject.toml
+!ovms/uv.lock
+!ovms/fetch_source.py
+!ovms/adapter/
+!ovms/adapter/**
 **/__pycache__
 **/*.pyc

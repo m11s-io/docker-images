@@ -2,7 +2,7 @@
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[4]
 
 class WorkflowTest(unittest.TestCase):
     def test_publication_requires_main_dispatch_and_successful_validation(self):

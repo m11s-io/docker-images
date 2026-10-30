@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1.28.0@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
+ARG PYTHON_BASE=python:3.12-slim@sha256:1148dbb014615300fa7e713b2f94f550c0d1c69780c0805f84f093ceee34dd0b
+ARG OVMS_BASE=openvino/model_server:2026.4.1@sha256:148e3fe802261ed0b5b634de3bbccdefe7176a218ec34a88e382b40704c34a1c
+FROM ${PYTHON_BASE} AS dependencies
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv UV_PYTHON_DOWNLOADS=never UV_LINK_MODE=copy
+WORKDIR /build
+RUN python -m pip install --no-cache-dir uv==0.13.5
+COPY ovms/pyproject.toml ovms/uv.lock ./
+RUN uv sync --frozen --no-dev
+COPY ovms/fetch_source.py ./
+RUN python fetch_source.py /opt/upstream
+
+FROM ${OVMS_BASE} AS runtime
+USER root
+COPY --from=dependencies /opt/venv/lib/python3.12/site-packages/ /opt/timestral-deps/
+COPY --from=dependencies /opt/upstream/ /opt/upstream/
+COPY ovms/adapter/ /opt/timestral-forecast/
+ENV PYTHONPATH=/opt/timestral-forecast:/opt/upstream/src:/opt/timestral-deps:/ovms/lib/python:/ovms/python_deps \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TIMESTRAL_FORECAST_ARTIFACTS=/models/forecast \
+    OMP_NUM_THREADS=2 MKL_NUM_THREADS=2
+LABEL org.opencontainers.image.title="Timestral forecasting through OVMS KServe V2" \
+      org.opencontainers.image.source="https://github.com/m11s-io/docker-images" \
+      io.m11s.timestral.source-revision="a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff"
+USER 5000:5000
+EXPOSE 8000
+ENTRYPOINT ["/ovms/bin/ovms"]
+CMD ["--config_path", "/opt/timestral-forecast/config.json", "--rest_port", "8000"]

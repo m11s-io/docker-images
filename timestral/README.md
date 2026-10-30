@@ -1,4 +1,25 @@
-# Timestral Forecast API
+# Timestral images
+
+## Project layout
+
+| Variant | Dockerfile | Runtime and dependencies | Status |
+| --- | --- | --- | --- |
+| CPU API | `Dockerfile.cpu` | `app/`, root `pyproject.toml` / `uv.lock` | Existing `/forecast` service |
+| CUDA API | `Dockerfile.cuda` | Same API source, CUDA dependency selection | Existing variant |
+| OVMS | `Dockerfile.ovms` | `ovms/adapter/`, `ovms/pyproject.toml` / `uv.lock` | Bounded KServe forecasting candidate |
+
+`ovms/export/` contains the separately locked Python3.12 export/validation tools.
+Its original fixed128-to32 exporter remains an experimental block artifact path;
+it is not the full forecasting service. The candidate's integration tests prepare
+broader profiles and compare final forecasts. See [OVMS documentation](ovms/README.md).
+
+Keep dependencies separate: the existing API uses Python3.15, while the pinned
+OVMS embeds Python3.12. One shared `.dockerignore` admits API and OVMS runtime files; each Dockerfile
+copies only its own inputs. Export tools, tests and caches stay outside the build context. Model weights and exported
+IR stay outside runtime source and Docker images. Historical specs/plans retain
+the old exporter path as an execution record.
+
+## Existing CPU/CUDA forecasting API
 
 This service wraps the upstream [`TimestralForecaster.forecast`](https://github.com/mistralai/timestral) API. It loads one checkpoint per process and serves forecasts on port `8000`. Run one Uvicorn worker per pod so the process uses one model and admits one forecast at a time.
 
