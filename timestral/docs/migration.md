@@ -57,3 +57,13 @@ The wrapper's own tests and benchmark are reference callers. This does not prove
 that unmanaged or external callers are absent. Obtain the endpoint owner's
 complete caller inventory and traffic evidence before cutover or retirement.
 No legacy wrapper, dependency or reference test has been removed.
+
+## Hardware-acceptance candidates
+
+The manual `timestral-candidates.yaml` workflow runs only on `main` and publishes
+CPU/CUDA/ROCm images for isolated acceptance jobs. Each tag contains the complete
+source commit, workflow run ID, attempt, and variant; it is never reused by a
+subsequent run. Use the recorded `m11s/timestral@sha256:...` reference in jobs.
+The `timestral-acceptance-<variant>` artifacts record these identities and mark
+hardware acceptance pending. These images are test inputs, not promoted releases;
+ordinary builds still cannot publish Timestral or update the legacy aliases.
