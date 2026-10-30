@@ -20,7 +20,7 @@ def module():
     return backend
 
 
-def profiles(root,bad=None):
+def profiles(root,bad=None,dynamic=False):
     levels=(.01,.05,.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95,.99)
     TimestralConfig(patch_size=32,d_model=16,num_heads=2,mlp_hidden_dim=32,
                     block_schedule=('time',),quantile_knots=levels,block_size=5,context_length=256).save(root/'config.json')
@@ -32,6 +32,13 @@ def profiles(root,bad=None):
         context.output(0).get_tensor().set_names({'wrong' if bad=='input-name' else 'context'})
         observed.output(0).get_tensor().set_names({'observed'})
         out=ops.constant(np.zeros((1,h*32,20 if bad=='output-shape' else 21),dtype=np.float16 if bad=='output-type' else np.float32))
+        if dynamic:
+            # All admitted lengths are multiples of 32, so this is exactly 21
+            # at runtime while shape inference retains a symbolic dimension.
+            length=ops.gather(ops.shape_of(context,'i64'),ops.constant([1]),ops.constant(0))
+            width=ops.add(ops.floor_mod(length,ops.constant([32])),ops.constant([20 if bad=='dynamic-output' else 21]))
+            target=ops.concat([ops.constant([1,h*32]),width],0)
+            out=ops.broadcast(ops.constant(np.float32(0)),target)
         out.output(0).get_tensor().set_names({'wrong' if bad=='output-name' else 'quantiles'})
         model=ov.Model([out],[context,observed])
         ov.save_model(model,root/f'block-{h}.xml',compress_to_fp16=False)
@@ -53,3 +60,15 @@ def test_direct_execution_uses_no_reference_neural_module_or_parameters(tmp_path
     assert result.shape==(1,32,21)
     assert result.dtype==torch.float32
     assert torch.count_nonzero(result)==0
+
+
+def test_symbolic_output_shape_is_verified_for_every_supported_context(tmp_path):
+    profiles(tmp_path,dynamic=True)
+    backend=module().OpenVINOBlocks(tmp_path)
+    assert set(backend.compiled)=={1,2,3,4,5}
+
+
+def test_incompatible_symbolic_execution_fails_before_ready(tmp_path):
+    profiles(tmp_path,bad='dynamic-output',dynamic=True)
+    with pytest.raises(ValueError,match='block result'):
+        module().OpenVINOBlocks(tmp_path)

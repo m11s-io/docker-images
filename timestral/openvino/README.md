@@ -46,3 +46,10 @@ short/nonaligned/maximum contexts, missingness, multiple decode blocks and all
 four boolean-option combinations before writing a manifest. CI retains the
 report separately from runtime artifacts. This is a prepared validation path;
 no successful native export or image acceptance is claimed until CI runs.
+
+Converted outputs may retain symbolic dimensions even though every accepted
+forecast has fixed row/horizon/quantile dimensions. Startup checks compatible
+metadata, then executes every admitted patch-aligned context length (32 through
+256) for each of the five profiles and rejects incorrect shapes/dtypes/nonfinite
+results before Ready. Every subsequent neural result is checked again. CI retains
+both the versioned candidate profiles and their evidence for later publication.

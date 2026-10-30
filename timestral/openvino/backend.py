@@ -31,11 +31,17 @@ class OpenVINOBlocks:
                         shape[1].get_min_length() != 32 or shape[1].get_max_length() != 256):
                     raise ValueError('invalid IR input type or shape')
             output = model.output(0)
-            if output.get_element_type() != ov.Type.f32 or list(output.get_shape()) != [1, horizon*32, 21]:
+            if (output.get_element_type() != ov.Type.f32 or
+                    not output.get_partial_shape().compatible(ov.PartialShape([1, horizon*32, 21]))):
                 raise ValueError('invalid IR output type or shape')
             self.compiled[horizon] = core.compile_model(model, 'CPU', {
                 'INFERENCE_PRECISION_HINT': 'f32', 'INFERENCE_NUM_THREADS': 2,
                 'NUM_STREAMS': 1, 'ENABLE_CPU_PINNING': False})
+            # Conversion may retain symbolic output dimensions. Prove every
+            # admitted concrete context profile before declaring the model ready.
+            for length in range(32,257,32):
+                self._execute(self.compiled[horizon],np.zeros((1,length),dtype=np.float32),
+                              np.ones((1,length),dtype=bool),horizon)
 
     def eval(self):
         return self
@@ -57,11 +63,15 @@ class OpenVINOBlocks:
         if known_future is not None or known_future_mask is not None or horizon_patches not in self.compiled:
             raise ValueError('unsupported forecast profile')
         compiled = self.compiled[horizon_patches]
-        result = compiled({'context': inputs.contiguous().numpy(),
-                           'observed': observed.contiguous().numpy()})[compiled.output(0)]
+        result = self._execute(compiled,inputs.contiguous().numpy(),observed.contiguous().numpy(),horizon_patches)
+        return torch.from_numpy(result.copy())
+
+    @staticmethod
+    def _execute(compiled,context,observed,horizon_patches):
+        result = compiled({'context':context,'observed':observed})[compiled.output(0)]
         if result.shape != (1, horizon_patches * 32, 21) or result.dtype != np.float32 or not np.isfinite(result).all():
             raise ValueError('invalid OpenVINO block result')
-        return torch.from_numpy(result.copy())
+        return result
 
 
 class CPUForecaster(TimestralForecaster):

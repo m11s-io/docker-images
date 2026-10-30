@@ -198,5 +198,5 @@ jobs:
         if: always()
         with:
           name: timestral-openvino-preview-${{ github.sha }}
-          path: ${{ runner.temp }}/openvino-candidate/evidence/
+          path: ${{ runner.temp }}/openvino-candidate/
           if-no-files-found: error
