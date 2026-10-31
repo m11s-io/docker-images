@@ -102,7 +102,19 @@ jobs:
           done
           docker logs timestral-standard
           exit 1
+      - name: Generate independent reference in matching runtime userland
+        run: |
+          mkdir -p "$RUNNER_TEMP/reference"
+          chmod 0777 "$RUNNER_TEMP/reference"
+          docker run --rm --entrypoint python \
+            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
+            --mount "type=bind,src=$RUNNER_TEMP/reference,dst=/reference" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/timestral/tests/integration,dst=/diagnostics,readonly" \
+            -e MODEL_ID -e MODEL_REVISION timestral-standard:candidate /diagnostics/reference.py
       - name: Compare actual-image JSON REST, binary REST and gRPC final forecasts
+        env:
+          TIMESTRAL_REFERENCE_DIR: ${{ runner.temp }}/reference
         run: |
           uv run --frozen --project timestral/dependencies/cpu python -m pytest \
             timestral/tests/integration/test_triton_client.py -q \
