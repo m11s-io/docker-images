@@ -17,18 +17,20 @@ LABEL org.opencontainers.image.title="Timestral standard V2 candidate (rocm)" \
 ENV PATH=/opt/venv/bin:${PATH} \
     MODEL_DEVICE=cuda:0 TIMESTRAL_BACKEND=rocm \
     HF_HOME=/models/huggingface TORCH_NUM_THREADS=2 \
+    TRITON_CACHE_DIR=/tmp/triton TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor \
     PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /build
 COPY dependencies/rocm/pyproject.toml dependencies/rocm/uv.lock ./
 COPY check_version.py ./
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git libatomic1 gcc libc6-dev \
     && /usr/local/bin/python -m pip install --no-cache-dir uv==0.13.6 \
     && uv sync --frozen --no-dev \
     && /opt/venv/bin/python check_version.py "$TIMESTRAL_VERSION" \
     && /usr/local/bin/python -m pip uninstall -y uv \
     && apt-get purge -y --auto-remove git \
-    && rm -rf /var/lib/apt/lists/* /tmp/uv-cache
+    && rm -rf /var/lib/apt/lists/* /tmp/uv-cache \
+    && /opt/venv/bin/python -c "import torch; assert torch.version.hip and not torch.version.cuda"
 WORKDIR /app
 COPY serving/ ./serving/
 RUN addgroup --system --gid 10001 timestral \

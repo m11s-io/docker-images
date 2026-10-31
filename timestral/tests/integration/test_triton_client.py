@@ -12,6 +12,15 @@ pytestmark = pytest.mark.skipif(not (HTTP and GRPC),reason='requires actual cand
 
 @pytest.fixture(scope='module')
 def reference():
+    if os.environ.get('TIMESTRAL_REFERENCE_DIR'):
+        import json
+        from pathlib import Path
+        from types import SimpleNamespace
+        root = Path(os.environ['TIMESTRAL_REFERENCE_DIR'])
+        metadata = json.loads((root/'metadata.json').read_text())
+        assert metadata['model_id'] == os.environ['MODEL_ID']
+        assert metadata['revision'] == os.environ['MODEL_REVISION']
+        return SimpleNamespace(max_context=metadata['max_context'], root=root)
     from timestral import TimestralForecaster
     import torch
     torch.set_num_threads(2)
@@ -50,30 +59,11 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
         metadata = MessageToDict(metadata,preserving_proto_field_name=True)
     assert metadata['name'] == 'timestral'
     assert {o['name'] for o in metadata['outputs']} == {'quantiles','median','quantile_levels'}
-    b,v,t,h = {'short':(1,1,7,3),'nonaligned':(1,1,65,35),'long':(1,1,1103,33),
-               'missing':(1,1,65,35),'grouped':(2,2,65,35),'blocks':(1,1,65,1024),'multi-block':(1,1,65,200),
-               'covariates':(1,1,65,35),'symmetry-off':(1,1,65,35),'clip-off':(1,1,65,35),'options':(1,1,65,35)}[case]
-    if case == 'long': t = min(32768, reference.max_context + 65)
-    context = np.sin(np.arange(b*v*t,dtype=np.float32).reshape(b,v,t)/7)
-    mask = np.ones(context.shape,dtype=bool)
-    if case == 'missing': mask[...,1::3] = False
-    values = {'context':context,'observation_mask':mask,
-              'prediction_length':np.array([h],dtype=np.int64)}
-    kwargs = {'observation_mask':mask}
-    if case in ('symmetry-off','clip-off','options'):
-        if case == 'clip-off': context[:] = np.abs(context)
-        symmetric, clip = case == 'clip-off', case == 'symmetry-off'
-        values.update(symmetric_averaging=np.array([symmetric]),clip_nonnegative=np.array([clip]))
-        kwargs.update(symmetric_averaging=symmetric,clip_nonnegative=clip)
-    if case == 'covariates':
-        for name in ('past_covariates','known_covariates','categorical_past_covariates','categorical_known_covariates'):
-            length = t+h if 'known' in name else t
-            a = (np.arange(length).reshape(1,1,length)%3).astype(np.float64 if name.startswith('categorical') else np.float32)
-            if name.startswith('categorical'): a += 2**24
-            observed = np.ones(a.shape,dtype=bool); observed[...,2::5] = False
-            values[name],values[name+'_mask'] = a,observed
-            internal = a.copy(); internal[~observed] = np.nan
-            kwargs[name] = internal
+    from forecast_cases import make_case
+    b,v,t,h,context,values,kwargs = make_case(case, reference.max_context)
+    if hasattr(reference, 'root'):
+        with np.load(reference.root/f'{case}.npz') as arrays:
+            values = {key[6:]: arrays[key] for key in arrays.files if key.startswith('input_')}
     inputs = []
     types = {np.dtype('float32'):'FP32',np.dtype('float64'):'FP64',np.dtype('int64'):'INT64',np.dtype('bool'):'BOOL'}
     for name,a in values.items():
@@ -88,7 +78,16 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
             client.infer('timestral',inputs,request_id=request_id,headers={'content-type':'application/json'} if transport=='http-json' else None)
         assert error.value.status() == ('400' if transport.startswith('http') else 'StatusCode.INVALID_ARGUMENT')
         return
-    expected = reference.forecast(context,h,**kwargs)
+    if hasattr(reference, 'root'):
+        with np.load(reference.root/f'{case}.npz') as arrays:
+            expected_q = arrays['quantiles']
+            expected_median = arrays['median']
+            expected_levels = arrays['quantile_levels']
+    else:
+        expected = reference.forecast(context,h,**kwargs)
+        expected_q = expected.quantiles.cpu().numpy()
+        expected_median = expected.median.cpu().numpy()
+        expected_levels = expected.quantile_levels
     with client:
         result = client.infer('timestral',inputs,request_id=request_id,headers={'content-type':'application/json'} if transport=='http-json' else None)
     response = result.get_response()
@@ -101,9 +100,9 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     assert q.shape == (b,v,h,21)
     assert median.shape == (b,v,h)
     assert levels.shape == (21,)
-    np.testing.assert_allclose(q,expected.quantiles.cpu().numpy(),rtol=1e-5,atol=1e-5)
-    np.testing.assert_allclose(median,expected.median.cpu().numpy(),rtol=1e-5,atol=1e-5)
-    np.testing.assert_allclose(levels,expected.quantile_levels,rtol=1e-6,atol=1e-7)
+    np.testing.assert_allclose(q,expected_q,rtol=1e-5,atol=1e-5)
+    np.testing.assert_allclose(median,expected_median,rtol=1e-5,atol=1e-5)
+    np.testing.assert_allclose(levels,expected_levels,rtol=1e-6,atol=1e-7)
 
 
 @pytest.mark.parametrize('case',['missing-datatype','invalid-binary-header','truncated-binary','invalid-json','invalid-binary-datatype'])
