@@ -112,6 +112,7 @@ jobs:
             --mount "type=bind,src=$RUNNER_TEMP/reference,dst=/reference" \
             --mount "type=bind,src=$GITHUB_WORKSPACE/timestral/tests/integration,dst=/diagnostics,readonly" \
             -e MODEL_ID -e MODEL_REVISION timestral-standard:candidate /diagnostics/reference.py
+          cp -a "$RUNNER_TEMP/reference" "$RUNNER_TEMP/evidence/reference"
       - name: Compare actual-image JSON REST, binary REST and gRPC final forecasts
         env:
           TIMESTRAL_REFERENCE_DIR: ${{ runner.temp }}/reference
