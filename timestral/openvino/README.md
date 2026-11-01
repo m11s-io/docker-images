@@ -6,14 +6,15 @@ inheriting upstream Timestral scaling, refinement, encoding and forecast loops.
 No OVMS process, Python node, MediaPipe graph or pyovms dependency is included.
 No reference neural weights or fake model parameters are allocated at runtime.
 
-The only candidate profile family is Timestral-5M revision
-`bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f`, source
+Candidate bundles select either Timestral-5M revision
+`bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f` or Timestral-209M revision
+`9874d252ab0aae16f7f7c999f98f98d6ad7d8365`, source
 `a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff`, FP32. It uses explicit
 max_context=256 and per_shot_horizon_patches=5. This differs from unrestricted
 upstream defaults; compare final forecasts against that exact configuration.
 
 Capabilities: B=1, V=1, 1<=T<=256, 1<=H<=320, no covariates. Grouped rows,
-larger contexts/horizons, other model sizes and all covariates fail explicitly.
+larger contexts/horizons, 28M/123M and all covariates fail explicitly.
 Both boolean options pass through upstream; their final-forecast acceptance
 remains required. No neural PyTorch fallback exists.
 
@@ -53,3 +54,16 @@ metadata, then executes every admitted patch-aligned context length (32 through
 256) for each of the five profiles and rejects incorrect shapes/dtypes/nonfinite
 results before Ready. Every subsequent neural result is checked again. CI retains
 both the versioned candidate profiles and their evidence for later publication.
+
+
+Each bundle is pinned to exactly one model identity; a 5M bundle cannot serve a
+209M request or vice versa. The exporter accepts `--model-size 5M|209M`, and native
+CI separately exports, compares final forecasts, and probes the shared image for
+each size. 209M remains pending until its own native checks pass.
+
+Manual `standard-v1` publication uses the existing OIDC workflow and appends
+`standard-v1/<manifest-sha256>/profiles/` with validation evidence alongside it.
+The legacy HF files and revisions are preserved. Use the returned HF commit,
+subdirectory and manifest SHA256 together; never select a bundle by model name
+alone. The repository retains its historical 5M name for existing trust claims;
+model identity is explicit in each release manifest.

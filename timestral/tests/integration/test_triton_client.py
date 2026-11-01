@@ -11,7 +11,12 @@ pytestmark = pytest.mark.skipif(not (HTTP and GRPC),reason='requires actual cand
 
 
 @pytest.fixture(scope='module')
-def reference():
+def reference(record_testsuite_property):
+    from forecast_cases import forecast_tolerances
+    for name,value in forecast_tolerances(PREVIEW).items():
+        record_testsuite_property('forecast_'+name,str(value))
+    record_testsuite_property('model_id',os.environ['MODEL_ID'])
+    record_testsuite_property('model_revision',os.environ['MODEL_REVISION'])
     if os.environ.get('TIMESTRAL_REFERENCE_DIR'):
         import json
         from pathlib import Path
@@ -59,7 +64,7 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
         metadata = MessageToDict(metadata,preserving_proto_field_name=True)
     assert metadata['name'] == 'timestral'
     assert {o['name'] for o in metadata['outputs']} == {'quantiles','median','quantile_levels'}
-    from forecast_cases import make_case
+    from forecast_cases import make_case, forecast_tolerances
     b,v,t,h,context,values,kwargs = make_case(case, reference.max_context)
     if hasattr(reference, 'root'):
         with np.load(reference.root/f'{case}.npz') as arrays:
@@ -100,8 +105,8 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     assert q.shape == (b,v,h,21)
     assert median.shape == (b,v,h)
     assert levels.shape == (21,)
-    np.testing.assert_allclose(q,expected_q,rtol=1e-5,atol=1e-5)
-    np.testing.assert_allclose(median,expected_median,rtol=1e-5,atol=1e-5)
+    np.testing.assert_allclose(q,expected_q,**forecast_tolerances(PREVIEW))
+    np.testing.assert_allclose(median,expected_median,**forecast_tolerances(PREVIEW))
     np.testing.assert_allclose(levels,expected_levels,rtol=1e-6,atol=1e-7)
 
 

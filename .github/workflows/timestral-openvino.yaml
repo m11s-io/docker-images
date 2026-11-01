@@ -2,6 +2,12 @@ name: Timestral OpenVINO experimental
 
 on:
   workflow_dispatch:
+    inputs:
+      bundle_contract:
+        description: 'Profile contract to validate and publish'
+        type: choice
+        default: legacy-ovms
+        options: [legacy-ovms, standard-v1]
   pull_request:
     paths:
       - "timestral-openvino/**"
@@ -16,6 +22,7 @@ concurrency:
 
 jobs:
   validate:
+    if: ${{ inputs.bundle_contract != 'standard-v1' }}
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     defaults:
@@ -94,3 +101,55 @@ jobs:
           uv run --frozen python package.py --verify "$RUNNER_TEMP/bundle"
       - name: Publish through OIDC and verify immutable HF commit
         run: uv run --frozen python publish.py --bundle "$RUNNER_TEMP/bundle"
+
+  standard-validate:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.bundle_contract == 'standard-v1' && github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/timestral-standard.yaml
+
+  standard-publish:
+    needs: standard-validate
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.bundle_contract == 'standard-v1' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      max-parallel: 1
+      matrix:
+        model: [5M, 209M]
+    env:
+      HF_OIDC_RESOURCE: ${{ vars.HF_TIMESTRAL_OPENVINO_REPO }}
+      PYTHONPATH: timestral
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+        with:
+          version: '0.13.6'
+          python-version: '3.12'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: timestral-openvino-preview-${{ matrix.model }}-${{ github.sha }}
+          path: ${{ runner.temp }}/standard-bundle
+      - name: Seal same-run publication identity
+        env:
+          BUNDLE: ${{ runner.temp }}/standard-bundle
+        run: |
+          python3 - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['BUNDLE'])
+          (root/'evidence/provenance.json').write_text(json.dumps(dict(
+              source=os.environ['GITHUB_SHA'],run=os.environ['GITHUB_RUN_ID'])))
+          PYTHON
+      - name: Verify, publish versioned profiles and recheck immutable HF commit
+        env:
+          BUNDLE: ${{ runner.temp }}/standard-bundle
+        run: |
+          uv run --frozen --project timestral/openvino/export python \
+            timestral-openvino/publish_standard.py --bundle "$BUNDLE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: timestral-standard-publication-${{ matrix.model }}
+          path: standard-publication.json
+          if-no-files-found: error

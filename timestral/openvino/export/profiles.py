@@ -111,8 +111,10 @@ def worker(args):
         (evidence/'parity.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
 
 
-def export(output):
-    from serving.artifacts import SOURCE_REVISION,PREVIEW_REVISION,PROFILE_FILES,verify_profiles
+def export(output,model_size='5M'):
+    from serving.artifacts import SOURCE_REVISION,MODEL_REVISIONS,PROFILE_FILES,verify_profiles
+    model_id='mistralai/Timestral-'+model_size
+    model_revision=MODEL_REVISIONS[model_id]
     from fetch_source import fetch
     from rewrites import patch_source
     from huggingface_hub import snapshot_download
@@ -123,26 +125,27 @@ def export(output):
     with tempfile.TemporaryDirectory() as tmp:
         source=Path(tmp)/'source'; fetch(source)
         patched=Path(tmp)/'conversion-only'; patch_source(source,patched)
-        checkpoint=Path(snapshot_download('mistralai/Timestral-5M',revision=PREVIEW_REVISION,
+        checkpoint=Path(snapshot_download(model_id,revision=model_revision,
                                          allow_patterns=['config.json','model.safetensors'],token=False))
         shutil.copyfile(checkpoint/'config.json',output/'profiles/config.json')
         shutil.copyfile(source/'LICENSE',output/'profiles/LICENSE')
-        shutil.copyfile(Path(__file__).with_name('model-card.md'),output/'profiles/README.md')
+        card=Path(__file__).with_name('model-card.md').read_text()
+        (output/'profiles/README.md').write_text(card+'\n\nModel: '+model_id+'\nRevision: '+model_revision+'\n')
         for mode,src in [('reference',source),('convert',patched),('runtime',source)]:
             subprocess.run([sys.executable,str(Path(__file__).resolve()),'--worker',mode,
                             '--source',str(src),'--checkpoint',str(checkpoint),'--output',str(output.resolve())],check=True)
     # Only a fully passing run reaches a versioned manifest. Publication remains
     # independent; CI evidence is retained alongside, outside the runtime bundle.
     report=output/'evidence/parity.json'
-    manifest={'format':'timestral-openvino-profiles-v1','model_id':'mistralai/Timestral-5M',
-              'model_revision':PREVIEW_REVISION,'source_revision':SOURCE_REVISION,'precision':'FP32',
+    manifest={'format':'timestral-openvino-profiles-v1','model_id':model_id,
+              'model_revision':model_revision,'source_revision':SOURCE_REVISION,'precision':'FP32',
               'max_context':256,'per_shot_horizon_patches':5,
               'parity_report_sha256':hashlib.sha256(report.read_bytes()).hexdigest(),
               'files':{name:hashlib.sha256((output/'profiles'/name).read_bytes()).hexdigest() for name in sorted(PROFILE_FILES)}}
     raw=(json.dumps(manifest,sort_keys=True,indent=2)+'\n').encode()
     (output/'profiles/manifest.json').write_bytes(raw)
     digest=hashlib.sha256(raw).hexdigest()
-    verify_profiles(output/'profiles',digest,'mistralai/Timestral-5M',PREVIEW_REVISION)
+    verify_profiles(output/'profiles',digest,model_id,model_revision)
     (output/'evidence/manifest-sha256.txt').write_text(digest+'\n')
     print('Validated candidate manifest SHA256: '+digest)
 
@@ -150,8 +153,9 @@ def export(output):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--model-size',choices=['5M','209M'],default='5M')
     parser.add_argument('--worker',choices=['reference','convert','runtime'])
     parser.add_argument('--source'); parser.add_argument('--checkpoint')
     args=parser.parse_args()
     if args.worker: worker(args)
-    else: export(args.output)
+    else: export(args.output,args.model_size)

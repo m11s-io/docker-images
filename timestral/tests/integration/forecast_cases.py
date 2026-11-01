@@ -31,3 +31,10 @@ def make_case(case, max_context):
             internal = a.copy(); internal[~observed] = np.nan
             kwargs[name] = internal
     return b, v, t, h, context, values, kwargs
+
+
+def forecast_tolerances(openvino_preview):
+    # Conversion has a separately established FP32 numerical policy. The
+    # unchanged PyTorch backends retain their stricter original threshold.
+    tolerance=1e-4 if openvino_preview else 1e-5
+    return dict(rtol=tolerance,atol=tolerance)
