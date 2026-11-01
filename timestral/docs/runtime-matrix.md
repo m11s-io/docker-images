@@ -26,10 +26,10 @@ identified separately by repository and 40-character commit.
 
 | Variant | Candidate Python/base | Framework | Device | Artifact | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| cpu | CPython 3.12.16 / bookworm | torch 2.14.1+cpu | explicit cpu | upstream config + safetensors | pending image/transport/forecast evidence |
-| cuda | same | torch 2.14.1+cu130 | explicit cuda:N, NVIDIA | upstream config + safetensors | pending final forecasts on target |
-| rocm | same, wheel-supplied userspace | torch 2.14.1+rocm7.2 | explicit cuda:N, HIP gfx1201 | upstream config + safetensors | experimental; host compatibility pending |
-| openvino | same | OpenVINO 2026.4.1; torch 2.6.0+cpu for upstream algorithms | explicit CPU | verified versioned FP32 profile bundle | experimental; model-specific 5M/209M candidates, native acceptance required |
+| cpu | CPython 3.12.16 / bookworm | torch 2.14.1+cpu | explicit cpu | upstream config + safetensors | 5M/209M native forecasts/protocol passed; candidate published |
+| cuda | same | torch 2.14.1+cu130 | explicit cuda:N, NVIDIA | upstream config + safetensors | same-GPU upstream parity passed; CPU equivalence unaccepted |
+| rocm | same, wheel-supplied userspace | torch 2.14.1+rocm7.2 | explicit cuda:N, HIP gfx1201 | upstream config + safetensors | experimental; actual gfx1201 inference tested; CPU equivalence unaccepted |
+| openvino | same | OpenVINO 2026.4.1; torch 2.6.0+cpu for upstream algorithms | explicit CPU | verified versioned FP32 profile bundle | experimental; bounded 5M/209M native parity/protocol passed, image/profiles published |
 
 Immutable shared candidate base:
 `python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337`.
@@ -79,3 +79,5 @@ CUDA execution explicitly selects IEEE FP32 through the
 [PyTorch 2.14 precision API](https://docs.pytorch.org/docs/2.14/notes/cuda.html).
 Forced TF32 environment overrides are rejected; device forecasts still need
 measured parity on the actual target before acceptance.
+
+Current publication receipts: [four image digests and both OpenVINO bundle revisions](verification/2026-11-01-published-candidates.json). Cross-device policy remains unaccepted after [independent validation](verification/2026-11-01-independent-device-budgets.md). The hardware audit and initial candidate-history sections above are historical observations, not current deployment status.

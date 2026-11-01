@@ -36,7 +36,7 @@ PR #130's reusable direct backend is extracted here with stronger artifact/type
 checks. Its throwaway export proof and the old fixed 128->32 publication format
 are not promoted into this format. The isolated profile exporter and native CI acceptance job are implemented;
 their execution, same-configuration final parity, actual-image REST/gRPC evidence
-and separately authorized OIDC publication are still pending. Keep the existing `timestral-openvino.yaml`
+and publication must use their own complete validation gates. Keep the existing `timestral-openvino.yaml`
 workflow identity/trust unchanged until that new publication is validated.
 
 Run `profiles.py` in the frozen `openvino/export` environment on native amd64.
@@ -59,7 +59,9 @@ both the versioned candidate profiles and their evidence for later publication.
 Each bundle is pinned to exactly one model identity; a 5M bundle cannot serve a
 209M request or vice versa. The exporter accepts `--model-size 5M|209M`, and native
 CI separately exports, compares final forecasts, and probes the shared image for
-each size. 209M remains pending until its own native checks pass.
+each size. Both 5M and 209M native export/final-forecast and actual-image protocol checks
+passed in publication run 41328090420. The image and model-specific bundles are
+published; see [immutable receipts](../docs/verification/2026-11-01-published-candidates.json).
 
 Manual `standard-v1` publication uses the existing OIDC workflow and appends
 `standard-v1/<manifest-sha256>/profiles/` with validation evidence alongside it.

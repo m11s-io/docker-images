@@ -16,7 +16,7 @@ No candidate is promoted merely because it builds. See the
 | cpu | upstream PyTorch CPU | candidate; real-image numerical acceptance pending |
 | cuda | upstream NVIDIA CUDA 13.0 | candidate; actual target forecast acceptance pending |
 | rocm | upstream HIP/ROCm 7.2, gfx1201 only | experimental; host/device acceptance pending |
-| openvino | direct OpenVINO CPU neural profiles, upstream forecasting | experimental model-specific 5M/209M candidates; native acceptance required |
+| openvino | direct OpenVINO CPU neural profiles, upstream forecasting | published experimental 5M/209M preview; native parity/protocol passed |
 
 The old wrapper and reference tests remain until an authorized client cutover.
 [Legacy API documentation](docs/legacy-api.md) describes the preserved historical
@@ -57,3 +57,18 @@ uses pinned Triton HTTP/gRPC clients against the actual candidate image and an
 unchanged same-model upstream reference. CPU and device numerical evidence,
 image digests and hardware acceptance remain separate gates. Triton extensions
 beyond the tested standard inference operations are not promised.
+
+
+## Published candidates and validation
+
+All four candidate image digests and the two model-specific OpenVINO HF bundle
+revisions are recorded in [publication receipts](docs/verification/2026-11-01-published-candidates.json).
+The OpenVINO image supports either 5M or 209M with its matching verified bundle;
+both passed native export, final-forecast and JSON/binary REST/gRPC checks.
+The preview bounds remain B=V=1, context<=256, horizon<=320, no covariates.
+These are experimental publications, not stable aliases or a service cutover.
+
+CPU 5M/209M reference and protocol checks passed. GPU serving matches unchanged
+upstream on the same GPU, but full cross-device equivalence remains unaccepted:
+[independent validation](docs/verification/2026-11-01-independent-device-budgets.md)
+rejected the provisional numerical budget. No new CPU/GPU tolerance is enabled.
