@@ -87,25 +87,19 @@ class ComfyValidationTest(unittest.TestCase):
         result = self.check_backend("_EXT_AVAILABLE = True\n_EXT_ERROR = None\n")
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def exercise(self, source, *, gguf=False):
+    def exercise(self, source):
         with tempfile.TemporaryDirectory() as directory:
             Path(directory, "main.py").write_text(source)
             with contextlib.chdir(directory), contextlib.redirect_stdout(io.StringIO()):
-                verify.check_startup(gguf, timeout_seconds=5)
+                verify.check_startup(timeout_seconds=5)
 
     def test_rejects_a_process_that_exits_before_ready(self):
         with self.assertRaisesRegex(RuntimeError, "exited"):
             self.exercise("raise SystemExit(7)")
 
-    def test_rejects_missing_gguf_node_even_when_server_is_healthy(self):
-        with self.assertRaisesRegex(RuntimeError, "UnetLoaderGGUF"):
-            self.exercise("NODES = {}\n" + SERVER, gguf=True)
-
     def test_accepts_healthy_generic_server(self):
         self.exercise("NODES = {}\n" + SERVER)
 
-    def test_accepts_healthy_gguf_server_with_loader(self):
-        self.exercise("NODES = {'UnetLoaderGGUF': {}}\n" + SERVER, gguf=True)
 
 
 if __name__ == '__main__':

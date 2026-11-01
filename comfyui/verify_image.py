@@ -80,7 +80,7 @@ def check_dependencies(backend: str = "cuda") -> None:
           f"CUDA={torch.version.cuda}, HIP={getattr(torch.version, 'hip', None)}")
 
 
-def check_startup(gguf: bool, timeout_seconds: float = 120) -> None:
+def check_startup(timeout_seconds: float = 120) -> None:
     # Use a free loopback port so this can also run beside a local ComfyUI server.
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
@@ -106,11 +106,6 @@ def check_startup(gguf: bool, timeout_seconds: float = 120) -> None:
                     time.sleep(min(0.5, max(0, deadline - time.monotonic())))
             else:
                 raise RuntimeError("ComfyUI startup timed out")
-            if gguf:
-                with urlopen(base + "/object_info", timeout=10) as response:
-                    nodes = json.load(response)
-                if "UnetLoaderGGUF" not in nodes:
-                    raise RuntimeError("ComfyUI-GGUF did not register UnetLoaderGGUF")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -125,9 +120,8 @@ def check_startup(gguf: bool, timeout_seconds: float = 120) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--gguf", action="store_true")
     parser.add_argument("--backend", choices=("cuda", "rocm"),
                         default=os.environ.get("COMFYUI_BACKEND", "cuda"))
     args = parser.parse_args()
     check_dependencies(args.backend)
-    check_startup(args.gguf)
+    check_startup()
