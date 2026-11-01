@@ -168,8 +168,17 @@ def run(report):
                         response = http_infer(values, identity, transport == 'http-binary')
                     assert response.id == identity and response.model_name == 'timestral'
                     actual = {out.name: out.as_numpy() for out in response.outputs}
-                    error = compare(actual, expected)
-                    case = dict(case=name, transport=transport, max_absolute_error=error,
+                    passed = True
+                    try:
+                        error = compare(actual, expected)
+                    except AssertionError:
+                        # Preserve the failure while collecting the remaining
+                        # cases; never make one mismatch hide later coverage.
+                        passed = False
+                        report.setdefault('failed_cases', []).append(dict(case=name, transport=transport))
+                        error = {key: float(np.max(np.abs(actual[key]-expected[key])))
+                                 for key in expected if key in actual and actual[key].shape == expected[key].shape}
+                    case = dict(case=name, transport=transport, passed=passed, max_absolute_error=error,
                                 elapsed_seconds=time.monotonic()-start)
                     report['cases'].append(case)
                     print(json.dumps(case), flush=True)
@@ -180,6 +189,8 @@ def run(report):
         except subprocess.TimeoutExpired:
             server.kill()
             server.wait()
+    if report.get('failed_cases'):
+        raise AssertionError('GPU forecasts exceed the unchanged CPU parity threshold')
     report['result'] = 'passed'
 
 
