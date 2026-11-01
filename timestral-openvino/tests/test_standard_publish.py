@@ -59,3 +59,47 @@ class StandardPublishTest(unittest.TestCase):
                     self.assertEqual(p.verify_bundle(root)[0],expected)
                     (evidence/'provenance.json').write_text('{}')
                     with self.assertRaises(ValueError):p.verify_bundle(root)
+
+    def test_publish_preserves_legacy_and_checks_uploaded_parent_inventory_and_bytes(self):
+        import contextlib,os,tempfile,types
+        from unittest.mock import patch
+        p=self.module()
+        class API:
+            def __init__(self):self.files={'.gitattributes':b'lfs','model/1/model.bin':b'legacy'};self.uploads=[]
+            def model_info(self,repo):return types.SimpleNamespace(private=True,sha='parent')
+            def list_repo_files(self,repo_id,revision):return list(self.files)
+            def upload_folder(self,**kwargs):
+                self.uploads.append(kwargs)
+                for path in Path(kwargs['folder_path']).rglob('*'):
+                    if path.is_file():self.files[kwargs['path_in_repo']+'/'+path.relative_to(kwargs['folder_path']).as_posix()]=path.read_bytes()
+                return types.SimpleNamespace(oid='verified-commit')
+        with tempfile.TemporaryDirectory() as tmp,contextlib.chdir(tmp):
+            root=Path(tmp);bundle=root/'bundle'
+            names={'profiles/manifest.json',*(f'evidence/{name}' for name in p.EVIDENCE)}
+            for name in names:
+                path=bundle/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(name)
+            api=API();downloads=[]
+            def download(repo,filename,revision):
+                self.assertEqual(revision,'verified-commit')
+                downloads.append(filename);path=root/'remote'/filename
+                path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(api.files[filename]);return str(path)
+            sdk=types.SimpleNamespace(HfApi=lambda:api,hf_hub_download=download)
+            env=dict(GITHUB_SHA='a'*40,GITHUB_RUN_ID='42')
+            with patch.object(p,'validate_environment'),patch.object(p,'verify_bundle',return_value=('b'*64,{'manifest.json'})),patch.dict(sys.modules,{'huggingface_hub':sdk}),patch.dict(os.environ,env,clear=True):
+                result=p.publish(bundle)
+                self.assertEqual(result['revision'],'verified-commit')
+                self.assertEqual(api.uploads[0]['parent_commit'],'parent')
+                self.assertEqual(api.files['model/1/model.bin'],b'legacy')
+                self.assertEqual(set(downloads),{'standard-v1/'+'b'*64+'/'+name for name in names})
+                # A retry verifies an existing complete release without upload;
+                # changing any published byte must never silently overwrite it.
+                api.model_info=lambda repo:types.SimpleNamespace(private=True,sha='verified-commit')
+                api.files['standard-v1/'+'b'*64+'/profiles/manifest.json']=b'corrupt'
+                with self.assertRaisesRegex(ValueError,'checksum mismatch'):p.publish(bundle)
+                self.assertEqual(len(api.uploads),1)
+                api.files.pop('standard-v1/'+'b'*64+'/profiles/manifest.json')
+                with self.assertRaisesRegex(ValueError,'incomplete'):p.publish(bundle)
+                self.assertEqual(len(api.uploads),1)
+                api.files['secret.txt']=b'never upload'
+                with self.assertRaisesRegex(ValueError,'unexpected files'):p.publish(bundle)
+                self.assertEqual(len(api.uploads),1)
