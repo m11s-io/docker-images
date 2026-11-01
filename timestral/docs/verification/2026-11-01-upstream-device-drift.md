@@ -37,6 +37,13 @@ the table uses the maximum across outputs and horizons. These thresholds describ
 this fixture, not a universally safe horizon. The maximum is not necessarily at
 horizon 1024: the upstream algorithm also depends on the requested horizon.
 
+## Follow-up validation
+
+The provisional budget below was subsequently rejected by
+[independent scale/history validation](2026-11-01-independent-device-budgets.md).
+No cross-device tolerance was adopted. Keep the original measurements as the
+controlled diagnosis; do not treat the provisional suggestion as acceptance.
+
 ## Interpretation and acceptance policy
 
 The experiment isolates device-dependent upstream numerical execution, but does

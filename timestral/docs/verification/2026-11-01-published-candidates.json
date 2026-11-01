@@ -1,0 +1,62 @@
+{
+  "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+  "image_run": 41328095351,
+  "profile_run": 41328090420,
+  "status": "published-experimental-candidates",
+  "images": [
+    {
+      "variant": "cpu",
+      "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+      "tag": "m11s/timestral:acceptance-6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262-41328095351-1-cpu",
+      "image": "m11s/timestral@sha256:74fc93989f8b71bc97e41cd61122114326de21e0779180f05b27dfc463ce56a1",
+      "hardware_acceptance": "pending",
+      "promotion": "forbidden"
+    },
+    {
+      "variant": "cuda",
+      "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+      "tag": "m11s/timestral:acceptance-6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262-41328095351-1-cuda",
+      "image": "m11s/timestral@sha256:ad9d5a3d65e1895cc03b22c28c3290b0230773d522f54041da94eed1a180ba67",
+      "hardware_acceptance": "pending",
+      "promotion": "forbidden"
+    },
+    {
+      "variant": "openvino",
+      "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+      "tag": "m11s/timestral:acceptance-6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262-41328095351-1-openvino",
+      "image": "m11s/timestral@sha256:5719f642b6f750dd9d26585776c0949667d7aca2788ad460dc13416c0bbcb494",
+      "hardware_acceptance": "pending",
+      "promotion": "forbidden"
+    },
+    {
+      "variant": "rocm",
+      "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+      "tag": "m11s/timestral:acceptance-6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262-41328095351-1-rocm",
+      "image": "m11s/timestral@sha256:0d30377978d0191831e1b2d146decb37feb0c791210207b588d919f351f58291",
+      "hardware_acceptance": "pending",
+      "promotion": "forbidden"
+    }
+  ],
+  "openvino_profiles": {
+    "209M": {
+      "repository": "m11s-org/Timestral-5M-OpenVINO-experimental",
+      "revision": "0ed8d879c4b52b7e138b66cc98f8d91a45136b8c",
+      "path": "standard-v1/9203e3c04af76fab1ffde055a9358b1417519c56d87f399d7a232afa57921ba1",
+      "manifest_sha256": "9203e3c04af76fab1ffde055a9358b1417519c56d87f399d7a232afa57921ba1",
+      "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+      "run": "41328090420",
+      "status": "experimental-preview"
+    },
+    "5M": {
+      "repository": "m11s-org/Timestral-5M-OpenVINO-experimental",
+      "revision": "4ef5a7e934791901667df7c69f3b902c025e290a",
+      "path": "standard-v1/2365ee36bb28855be4417de39ad79fac73892fe2d0a98fb7e31e4f4352fdd2b1",
+      "manifest_sha256": "2365ee36bb28855be4417de39ad79fac73892fe2d0a98fb7e31e4f4352fdd2b1",
+      "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+      "run": "41328090420",
+      "status": "experimental-preview"
+    }
+  },
+  "stable_promotion": false,
+  "client_cutover": false
+}
