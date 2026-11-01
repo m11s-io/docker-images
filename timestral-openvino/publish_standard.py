@@ -15,13 +15,20 @@ from publication_inventory import is_standard_file,validate_remote_inventory
 EVIDENCE={'parity.json','protocol-parity.xml','provenance.json','manifest-sha256.txt'}
 
 
-def verify_protocol(path):
+def verify_protocol(path,model_id=None,model_revision=None):
     root=ET.parse(path).getroot()
     suites=[root] if root.tag=='testsuite' else list(root.findall('testsuite'))
     if not suites or sum(int(s.get('tests','0')) for s in suites)<38:
         raise ValueError('complete actual-image protocol evidence is required')
     if any(int(s.get(key,'0')) for s in suites for key in ('failures','errors','skipped')):
         raise ValueError('protocol evidence must pass without skipped tests')
+    properties={p.get('name'):p.get('value') for suite in suites
+                for p in suite.findall('properties/property')}
+    if any(properties.get('forecast_'+name)!='0.0001' for name in ('rtol','atol')):
+        raise ValueError('protocol evidence has an unexpected OpenVINO tolerance')
+    if model_id is not None and (properties.get('model_id')!=model_id or
+                                properties.get('model_revision')!=model_revision):
+        raise ValueError('protocol evidence model identity mismatch')
 
 
 def verify_bundle(bundle):
@@ -49,7 +56,7 @@ def verify_bundle(bundle):
             not isinstance(case.get('max_absolute_error'),(int,float)) or
             not math.isfinite(case['max_absolute_error']) or case['max_absolute_error']<0):
             raise ValueError('unexpected profile parity tolerance')
-    verify_protocol(bundle/'evidence/protocol-parity.xml')
+    verify_protocol(bundle/'evidence/protocol-parity.xml',model_id,MODEL_REVISIONS[model_id])
     provenance=json.loads((bundle/'evidence/provenance.json').read_text())
     if provenance!={'source':os.environ['GITHUB_SHA'],'run':os.environ['GITHUB_RUN_ID']}:
         raise ValueError('publication provenance does not match this run')
