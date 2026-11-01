@@ -17,5 +17,5 @@ class CandidatePublicationTest(unittest.TestCase):
         self.assertNotIn('id-token: write', workflow)
         self.assertIn('provenance: mode=max', workflow)
         self.assertIn('steps.build.outputs.digest', workflow)
-        self.assertIn('variant: [cpu, cuda, rocm]', workflow)
+        self.assertIn('variant: [cpu, cuda, rocm, openvino]', workflow)
         self.assertIn('python -m unittest discover -s scripts', workflow)

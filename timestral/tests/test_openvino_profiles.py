@@ -65,3 +65,20 @@ def test_openvino_load_verifies_artifacts_without_loading_reference_weights(monk
     monkeypatch.setenv('TIMESTRAL_ARTIFACT_MANIFEST_SHA256','0'*64)
     with pytest.raises(ValueError,match='profile'):
         UpstreamForecaster.load(Settings(model_revision=REVISION,model_id='mistralai/Timestral-5M',backend='openvino'))
+
+
+@pytest.mark.parametrize('model_id,revision',[
+    ('mistralai/Timestral-5M',REVISION),
+    ('mistralai/Timestral-209M','9874d252ab0aae16f7f7c999f98f98d6ad7d8365'),
+])
+def test_model_specific_profile_bundle_requires_matching_pinned_identity(tmp_path,model_id,revision):
+    bundle(tmp_path)
+    manifest=json.loads((tmp_path/'manifest.json').read_text())
+    manifest.update(model_id=model_id,model_revision=revision)
+    raw=json.dumps(manifest,sort_keys=True).encode()
+    (tmp_path/'manifest.json').write_bytes(raw)
+    digest=hashlib.sha256(raw).hexdigest()
+    got=verify_profiles(tmp_path,digest,model_id,revision)
+    assert got['model_id']==model_id
+    other='mistralai/Timestral-209M' if model_id.endswith('-5M') else 'mistralai/Timestral-5M'
+    with pytest.raises(ValueError):verify_profiles(tmp_path,digest,other,revision)

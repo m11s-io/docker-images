@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from package import FILES, digest, verify
+from publication_inventory import is_standard_file,validate_remote_inventory
 
 DESTINATION = "m11s-org/Timestral-5M-OpenVINO-experimental"
 
@@ -19,9 +20,7 @@ def validate_environment() -> None:
 
 
 def upload_bundle(api, bundle: Path, parent: str):
-    allowed = FILES | {"SHA256SUMS", ".gitattributes"}
-    if set(api.list_repo_files(DESTINATION, revision=parent)) - allowed:
-        raise ValueError("remote repository contains unexpected files; refusing to publish")
+    validate_remote_inventory(api.list_repo_files(DESTINATION, revision=parent))
     return api.upload_folder(repo_id=DESTINATION, folder_path=str(bundle),
                              commit_message=f"Validated OpenVINO export from {os.environ.get('GITHUB_SHA', '')[:12]}",
                              allow_patterns=sorted(FILES | {"SHA256SUMS"}),
@@ -43,7 +42,8 @@ def publish(bundle: Path) -> str:
     commit = upload_bundle(api, bundle, info.sha)
     revision = commit.oid
     names = set(api.list_repo_files(DESTINATION, revision=revision))
-    if names - {".gitattributes"} != FILES | {"SHA256SUMS"}:
+    validate_remote_inventory(names)
+    if {name for name in names if not is_standard_file(name)} - {".gitattributes"} != FILES | {"SHA256SUMS"}:
         raise ValueError("remote commit contains missing or unexpected files")
     for name in FILES | {"SHA256SUMS"}:
         remote = Path(hf_hub_download(DESTINATION, filename=name, revision=revision))

@@ -61,7 +61,7 @@ No legacy wrapper, dependency or reference test has been removed.
 ## Hardware-acceptance candidates
 
 The manual `timestral-candidates.yaml` workflow runs only on `main` and publishes
-CPU/CUDA/ROCm images for isolated acceptance jobs. Each tag contains the complete
+CPU/CUDA/ROCm/OpenVINO images for isolated acceptance jobs. Each tag contains the complete
 source commit, workflow run ID, attempt, and variant; it is never reused by a
 subsequent run. Use the recorded `m11s/timestral@sha256:...` reference in jobs.
 The `timestral-acceptance-<variant>` artifacts record these identities and mark

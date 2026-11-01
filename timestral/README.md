@@ -16,7 +16,7 @@ No candidate is promoted merely because it builds. See the
 | cpu | upstream PyTorch CPU | candidate; real-image numerical acceptance pending |
 | cuda | upstream NVIDIA CUDA 13.0 | candidate; actual target forecast acceptance pending |
 | rocm | upstream HIP/ROCm 7.2, gfx1201 only | experimental; host/device acceptance pending |
-| openvino | direct OpenVINO CPU neural profiles, upstream forecasting | experimental bounded 5M; new artifact and image acceptance pending |
+| openvino | direct OpenVINO CPU neural profiles, upstream forecasting | experimental model-specific 5M/209M candidates; native acceptance required |
 
 The old wrapper and reference tests remain until an authorized client cutover.
 [Legacy API documentation](docs/legacy-api.md) describes the preserved historical
@@ -36,7 +36,7 @@ Missing accelerators, wrong vendor/framework, unsupported architectures and devi
 mismatches fail startup. There is no automatic CPU fallback. One worker and one
 model inference slot are enforced; a cancelled caller cannot oversubscribe it.
 
-The OpenVINO preview requires `MODEL_ID=mistralai/Timestral-5M`, its documented
+The OpenVINO preview selects `MODEL_ID=mistralai/Timestral-5M` or `mistralai/Timestral-209M`, its matching documented
 revision, `TIMESTRAL_FORECAST_ARTIFACTS` pointing to a read-only profile bundle and
 `TIMESTRAL_ARTIFACT_MANIFEST_SHA256` from its independently pinned publication.
 The old OVMS block artifact is not this new artifact format. See

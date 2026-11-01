@@ -8,6 +8,7 @@ on:
       - ".github/workflows/build.yaml"
       - ".github/workflows/timestral-standard.yaml"
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -35,6 +36,8 @@ jobs:
           for project in timestral/dependencies/{cpu,cuda,rocm} timestral/openvino; do
             uv lock --project "$project" --check
           done
+      - name: Artifact publication guard tests
+        run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s timestral-openvino/tests
       - name: Unit and legacy regression tests
         env:
           PYTHONPATH: timestral
@@ -136,12 +139,20 @@ jobs:
 
   openvino-preview:
     needs: unit
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - model: 5M
+            revision: bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f
+          - model: 209M
+            revision: 9874d252ab0aae16f7f7c999f98f98d6ad7d8365
     runs-on: ubuntu-26.04
     timeout-minutes: 60
     env:
       PYTHONPATH: timestral
-      MODEL_ID: mistralai/Timestral-5M
-      MODEL_REVISION: bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f
+      MODEL_ID: mistralai/Timestral-${{ matrix.model }}
+      MODEL_REVISION: ${{ matrix.revision }}
       TIMESTRAL_TEST_HTTP_URL: localhost:18080
       TIMESTRAL_TEST_GRPC_URL: localhost:18081
       TIMESTRAL_TEST_PREVIEW: "1"
@@ -161,7 +172,7 @@ jobs:
       - name: Export versioned profiles and compare complete forecasts
         run: |
           uv run --frozen --project timestral/openvino/export python \
-            timestral/openvino/export/profiles.py --output "$RUNNER_TEMP/openvino-candidate"
+            timestral/openvino/export/profiles.py --model-size "${{ matrix.model }}" --output "$RUNNER_TEMP/openvino-candidate"
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Build direct-runtime image without publication
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
@@ -210,6 +221,6 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: timestral-openvino-preview-${{ github.sha }}
+          name: timestral-openvino-preview-${{ matrix.model }}-${{ github.sha }}
           path: ${{ runner.temp }}/openvino-candidate/
           if-no-files-found: error

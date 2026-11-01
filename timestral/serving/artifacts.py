@@ -6,6 +6,8 @@ import re
 
 SOURCE_REVISION='a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff'
 PREVIEW_REVISION='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f'
+MODEL_REVISIONS={'mistralai/Timestral-5M':PREVIEW_REVISION,
+                 'mistralai/Timestral-209M':'9874d252ab0aae16f7f7c999f98f98d6ad7d8365'}
 PROFILE_FILES={'config.json','LICENSE','README.md',*(f'block-{h}.{ext}' for h in range(1,6) for ext in ('xml','bin'))}
 
 
@@ -28,8 +30,8 @@ def verify_profiles(root, manifest_sha256, model_id, model_revision):
     manifest=json.loads(raw)
     if (manifest.get('format')!='timestral-openvino-profiles-v1' or
         manifest.get('source_revision')!=SOURCE_REVISION or
-        manifest.get('model_id')!=model_id or model_id!='mistralai/Timestral-5M' or
-        manifest.get('model_revision')!=model_revision or model_revision!=PREVIEW_REVISION or
+        manifest.get('model_id')!=model_id or model_id not in MODEL_REVISIONS or
+        manifest.get('model_revision')!=model_revision or model_revision!=MODEL_REVISIONS.get(model_id) or
         manifest.get('precision')!='FP32' or manifest.get('max_context')!=256 or
         manifest.get('per_shot_horizon_patches')!=5 or
         set(manifest.get('files',{}))!=PROFILE_FILES):
@@ -48,4 +50,4 @@ def validate_preview_request(inputs):
     from kserve.errors import InvalidInput
     if (inputs.context.shape[:2]!=(1,1) or inputs.context.shape[-1]>256 or
             inputs.prediction_length>320 or inputs.covariates):
-        raise InvalidInput('OpenVINO preview supports one 5M target row, context<=256, horizon<=320, no covariates')
+        raise InvalidInput('OpenVINO preview supports one target row, context<=256, horizon<=320, no covariates')
