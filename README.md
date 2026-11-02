@@ -18,7 +18,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/comfy-mcp](https://hub.docker.com/r/m11s/comfy-mcp) | MCP server for controlling ComfyUI | ![Version](https://img.shields.io/docker/v/m11s/comfy-mcp/latest?label=) |
 | [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | Web interface for DeepSeek Harness | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness/latest?label=) |
 | [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium for remote browser automation | ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Fchromium-cdp%2Ftags%3Fname%3Dbookworm-%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=&color=blue) |
-| [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM with orjson for JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson/latest-x86_64?label=) |
+| [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM with orjson for JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson/latest?label=) |
 | [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Time-series forecasting server (experimental) | [![cpu tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-cpu%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=CPU&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-cpu)<br>[![cuda tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-cuda%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=CUDA&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-cuda)<br>[![rocm tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-rocm%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=ROCM&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-rocm)<br>[![openvino tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-openvino%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=OpenVINO&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-openvino) |
 
 ## Quick Start
@@ -34,7 +34,7 @@ docker pull m11s/comfyui:latest-rocm
 docker pull m11s/comfy-mcp:latest
 docker pull m11s/deepseek-harness:latest
 docker pull m11s/chromium-cdp:latest
-docker pull m11s/vllm-openai-orjson:latest-x86_64
+docker pull m11s/vllm-openai-orjson:latest
 ```
 
 Timestral currently publishes experimental acceptance builds rather than `latest-*` aliases.

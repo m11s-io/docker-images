@@ -333,7 +333,8 @@ jobs:
             description: vLLM OpenAI server image with faster orjson serialization.
             version_source: base-arg
             version_ref: VLLM_BASE_IMAGE
-            latest: latest-x86_64
+            strip_suffix: -x86_64
+            latest: latest
           - context: timestral-cpu
             build_context: timestral
             dockerfile: timestral/Dockerfile.cpu
