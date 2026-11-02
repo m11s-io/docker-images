@@ -6,8 +6,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git=1:2.39.5-0+deb12u3 python3=3.11.2-1+b1 make=4.3-4.1 g++=4:12.2.0-3 musl-tools=1.2.3-1 ca-certificates=20250419~deb12u2 \
     && rm -rf /var/lib/apt/lists/*
 
-ARG DSH_REF=dsh-v0.2.0-rc.2
-ARG DSH_COMMIT=639ed015397290b3745d163aafe02ffee4aa3f84
+ARG DSH_REF=dsh-v0.2.1-rc.5
+ARG DSH_COMMIT=b830ec950faba0a46dda564be3e2d854afed94f1
 RUN git init /opt/deepseek-harness \
     && git -C /opt/deepseek-harness remote add origin https://github.com/deepseek-ai/deepseek-harness.git \
     && git -C /opt/deepseek-harness fetch --depth=1 origin "refs/tags/${DSH_REF}" \
@@ -15,7 +15,7 @@ RUN git init /opt/deepseek-harness \
     && git -C /opt/deepseek-harness checkout --detach FETCH_HEAD
 
 # Node 25+ no longer bundles Corepack; install the pinned package manager directly.
-RUN npm install --global pnpm@11.7.0
+RUN npm install --global pnpm@11.28.5
 
 WORKDIR /opt/deepseek-harness
 
@@ -36,6 +36,7 @@ RUN apt-get update \
 
 COPY --from=build --chown=dsh:dsh /opt/deepseek-harness /opt/deepseek-harness
 COPY --chown=dsh:dsh entrypoint.sh /usr/local/bin/dsh-entrypoint
+COPY --chown=dsh:dsh bind-host.mjs healthcheck.mjs /usr/local/lib/dsh/
 # The profile resolver exposes the CLI dependency closure, not root devDependencies.
 # These plugins are already installed and built from the pinned workspace.
 RUN node --input-type=module -e 'import fs from "node:fs"; const path = "/opt/deepseek-harness/apps/cli/package.json"; const pkg = JSON.parse(fs.readFileSync(path, "utf8")); for (const name of ["@deepseek-ai/dsh-browser-use", "@deepseek-ai/dsh-experimental-browser-use-playwright-mcp"]) pkg.dependencies[name] = "workspace:*"; fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");' \
@@ -49,8 +50,11 @@ EXPOSE 3080
 ENTRYPOINT ["/usr/local/bin/dsh-entrypoint"]
 
 # Validate the assembled runtime before either platform can be published.
-RUN --mount=type=bind,source=tests/smoke.mjs,target=/tmp/dsh-smoke.mjs node /tmp/dsh-smoke.mjs
+RUN --mount=type=bind,source=tests/smoke.mjs,target=/tmp/dsh-smoke.mjs \
+    --mount=type=bind,source=tests/bind-host.test.mjs,target=/usr/local/lib/dsh/tests/bind-host.test.mjs \
+    node --test /usr/local/lib/dsh/tests/bind-host.test.mjs \
+    && node /tmp/dsh-smoke.mjs
 
 # Check HTTP availability without requiring an authenticated session.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD ["node", "-e", "fetch('http://127.0.0.1:3080/', {redirect: 'manual', signal: AbortSignal.timeout(5000)}).then(r => process.exit((r.status >= 200 && r.status < 400) || [401, 403].includes(r.status) ? 0 : 1)).catch(() => process.exit(1))"]
+    CMD ["node", "/usr/local/lib/dsh/healthcheck.mjs"]
