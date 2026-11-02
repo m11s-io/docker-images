@@ -2,10 +2,16 @@
 
 ## Agreed goal
 
-Deploy Timestral through KServe on general CPU, NVIDIA GPU and supported AMD GPU,
-with an optional Intel CPU optimization. Use standard serving protocols and
+Deploy Timestral through KServe on four required backends: CPU, NVIDIA CUDA,
+supported AMD ROCm and direct OpenVINO. Support both Timestral-5M and Timestral-209M. Use standard serving protocols and
 upstream forecasting algorithms; do not maintain a separate HTTP API or fork
 Timestral. Variant names are `cpu`, `cuda`, `rocm`, `openvino`.
+
+The final deliverable includes a measured speed/forecast-accuracy comparison of
+all eight backend/model combinations on the same real held-out cases. Forecast
+accuracy means error against actual future observations; upstream parity is a
+separate serving-correctness check. OpenVINO is mandatory, with its supported
+bounds declared explicitly. A partial table does not complete the objective.
 
 ## Architecture
 

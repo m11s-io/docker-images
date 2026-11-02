@@ -1,5 +1,6 @@
 # Timestral Published Candidates to Rollout Implementation Plan
 
+> **Superseded for execution:** use [the four-required-backend speed/accuracy plan](2026-11-02-timestral-four-backends-speed-accuracy.md). This file remains historical context/evidence; do not resume its oversized benchmark workflow.
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task by task, with one independent review before integration. Use TDD for behavior changes. Read the status and evidence before doing work; do not repeat completed exports, builds or experiments without a new reason. The user requested local `main`, normal protected integration, and terminal-only work (no browser).
 
 **Goal:** Turn the published Timestral candidates into explicitly accepted, measured, safely deployable services, then migrate clients with a verified rollback.
