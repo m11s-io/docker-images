@@ -19,7 +19,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | Web interface for DeepSeek Harness | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness/latest?label=) |
 | [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium for remote browser automation | ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Fchromium-cdp%2Ftags%3Fname%3Dbookworm-%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=&color=blue) |
 | [m11s/vllm-openai](https://hub.docker.com/r/m11s/vllm-openai) | vLLM with orjson for JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai/latest-orjson?label=) |
-| [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Time-series forecasting server (experimental) | [![cpu tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-cpu%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=CPU&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-cpu)<br>[![cuda tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-cuda%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=CUDA&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-cuda)<br>[![rocm tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-rocm%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=ROCM&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-rocm)<br>[![openvino tag](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Ftimestral%2Ftags%3Fname%3D-openvino%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=OpenVINO&color=blue)](https://hub.docker.com/r/m11s/timestral/tags?name=-openvino) |
+| [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Time-series forecasting server | ![cpu](https://img.shields.io/docker/v/m11s/timestral/latest-cpu?label=CPU) <br> ![cuda](https://img.shields.io/docker/v/m11s/timestral/latest-cuda?label=CUDA) <br> ![rocm](https://img.shields.io/docker/v/m11s/timestral/latest-rocm?label=ROCm) <br> ![openvino](https://img.shields.io/docker/v/m11s/timestral/latest-openvino?label=OpenVINO) |
 
 ## Quick Start
 
@@ -37,15 +37,13 @@ docker pull m11s/chromium-cdp:latest
 docker pull m11s/vllm-openai:latest-orjson
 ```
 
-Timestral currently publishes experimental acceptance builds rather than `latest-*` aliases.
-Use the same build for each backend:
+Timestral is available in four runtime flavors:
 
 ```bash
-TIMESTRAL_TAG=acceptance-c6d10649195102f3eab0b1a5cdce8b8af7166969-41475450331-1
-docker pull m11s/timestral:${TIMESTRAL_TAG}-cpu
-docker pull m11s/timestral:${TIMESTRAL_TAG}-cuda
-docker pull m11s/timestral:${TIMESTRAL_TAG}-rocm
-docker pull m11s/timestral:${TIMESTRAL_TAG}-openvino
+docker pull m11s/timestral:latest-cpu
+docker pull m11s/timestral:latest-cuda
+docker pull m11s/timestral:latest-rocm
+docker pull m11s/timestral:latest-openvino
 ```
 
 These commands download the images. See the [Timestral runtime setup](timestral/README.md)
@@ -61,8 +59,8 @@ version sources, tags, and build platforms, and the
 Image-specific configuration and usage are documented in each image's directory.
 
 To request a rebuild, use **Run workflow** in the build workflow and select an
-image or `all`. Timestral is validated there but published separately through
-[`timestral-candidates.yaml`](.github/workflows/timestral-candidates.yaml).
+image or `all`. Timestral uses the same version-and-flavor publishing scheme as
+the other images.
 
 Run the tag resolver checks with
 `python3 -m unittest discover -s scripts -p 'test_*.py'`.
