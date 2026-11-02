@@ -122,7 +122,9 @@ def check_lookup(same_release: bool) -> None:
                 assert upgrade["automerge"] is True, upgrade
                 assert upgrade["platformAutomerge"] is True, upgrade
                 assert upgrade["ignoreTests"] is False, upgrade
-                assert not upgrade.get("pendingChecks"), upgrade
+                assert upgrade["minimumReleaseAge"] == "14 days", upgrade
+                assert upgrade["minimumReleaseAgeBehaviour"] == "timestamp-required", upgrade
+                assert upgrade["internalChecksFilter"] == "strict", upgrade
                 checked.add((filename, upgrade["depName"]))
                 branch_names.setdefault(GROUPS[filename], set()).add(upgrade["branchName"])
                 print(f"{filename}: {upgrade['currentValue']} -> {upgrade['newValue']}; "
