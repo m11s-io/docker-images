@@ -24,11 +24,12 @@ contract, not the new Dockerfiles.
 
 ## Published candidates
 
-Use the [published tags and immutable digests](docs/verification/2026-11-01-published-candidates.json)
-for CPU, CUDA, ROCm and OpenVINO, plus the matching model/artifact revisions.
-`candidate-standard-v1-*` names are local CI build labels, not published release
-aliases. These images remain experimental candidates; legacy `latest-cpu` and
-`latest-cuda` retain the old `/forecast` contract.
+The current acceptance image tags are listed in the root [Quick Start](../README.md#quick-start)
+and on [Docker Hub](https://hub.docker.com/r/m11s/timestral/tags).
+The [2026-11-01 publication receipt](docs/verification/2026-11-01-published-candidates.json)
+records an earlier build, not the current release. `candidate-standard-v1-*` names
+are local CI build labels, not published release aliases. These images remain
+experimental candidates; `latest-*` aliases are not currently published.
 
 ## Configuration
 
