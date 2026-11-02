@@ -45,8 +45,27 @@ def test_final_forecast_gate_rejects_bad_shape_dtype_finiteness_and_parity():
         with pytest.raises((ValueError,AssertionError)): exporter.validate_outputs(expected,actual,65)
 
 
+@pytest.fixture
+def native_openvino(request,tmp_path):
+    import importlib.metadata
+    import os,shutil,subprocess,sys
+    try:importlib.metadata.version('openvino')
+    except importlib.metadata.PackageNotFoundError:pytest.skip('requires native OpenVINO environment')
+    if os.environ.get('TIMESTRAL_CONVERSION_TEST_WORKER')=='1':return False
+    import timestral
+    original=tmp_path/'original';(original/'src').mkdir(parents=True)
+    shutil.copytree(Path(timestral.__file__).parent,original/'src/timestral')
+    patched=tmp_path/'conversion'
+    load('rewrites').patch_source(original,patched)
+    subprocess.run([sys.executable,'-P','-m','pytest',str(request.node.path)+'::'+request.node.name,'-q'],
+        env=dict(os.environ,TIMESTRAL_CONVERSION_TEST_WORKER='1',
+                 PYTHONPATH=str(patched/'src')+os.pathsep+os.environ.get('PYTHONPATH','')),check=True)
+    return True
+
+
 @pytest.mark.parametrize('covariates',[False,True])
-def test_dynamic_block_preserves_shapes_groups_roles_and_future(covariates):
+def test_dynamic_block_preserves_shapes_groups_roles_and_future(covariates,native_openvino):
+    if native_openvino:return
     import torch
     import openvino as ov
     from timestral.config import TimestralConfig
@@ -76,6 +95,48 @@ def test_dynamic_block_preserves_shapes_groups_roles_and_future(covariates):
             values.update(role_ids=roles.numpy(),known_future_mask=future_mask.numpy())
         with torch.inference_mode():
             expected=model.predict_block(context,observed,groups,h,**kwargs).numpy()
+        data=context if not covariates else torch.cat([context,future],dim=-1)
+        mask=observed if not covariates else torch.cat([observed,future_mask],dim=-1)
+        scaled,loc,scale=model.scale(data,mask)
+        if covariates:scaled,loc,scale=model._known_cov_scaling(data,mask,scaled,loc,scale,roles==2)
+        values.update(context=scaled.numpy(),observed=mask.numpy(),loc=loc.numpy(),scale=scale.numpy())
+        values.pop('known_future_mask',None)
         actual=compiled(values)[compiled.output(0)]
         assert actual.shape==(rows,h*32,21)
         np.testing.assert_allclose(actual,expected,rtol=1e-4,atol=1e-4)
+
+
+def test_complete_default_forecasts_preserve_grouping_and_covariates(tmp_path,native_openvino):
+    if native_openvino:return
+    import torch
+    import openvino as ov
+    from timestral.config import TimestralConfig
+    from timestral.model import TimestralModel
+    from timestral.forecaster import TimestralForecaster
+    torch.manual_seed(173);torch.set_num_threads(2)
+    config=TimestralConfig(patch_size=32,d_model=16,num_heads=2,mlp_hidden_dim=32,
+        block_schedule=('time_variate','time_variate'),block_size=32,context_length=1024,
+        quantile_knots=(.01,.05,.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95,.99))
+    model=TimestralModel(config).eval();config.save(tmp_path/'config.json')
+    for name in ('context','covariates'):
+        ov.save_model(load('profiles').convert_block(model,covariates=name=='covariates'),tmp_path/f'{name}.xml',compress_to_fp16=False)
+    spec=importlib.util.spec_from_file_location('parity_backend',ROOT.parent/'backend.py')
+    backend=importlib.util.module_from_spec(spec);spec.loader.exec_module(backend)
+    actual=backend.create_forecaster(tmp_path);reference=TimestralForecaster(model)
+    rng=np.random.default_rng(173)
+    for b,v,t,h,cov in [(2,2,289,321,False),(2,2,1103,33,True),(1,1,65,1024,False)]:
+        context=rng.normal(size=(b,v,t)).astype(np.float32)
+        mask=rng.random(context.shape)>.2
+        kwargs=dict(observation_mask=mask)
+        if cov:
+            for name in ('past_covariates','known_covariates','categorical_past_covariates','categorical_known_covariates'):
+                length=t+h if 'known' in name else t
+                a=rng.normal(size=(b,1,length)).astype(np.float32)
+                if name.startswith('categorical'):a=np.floor(a).astype(np.float64)+2**24
+                a[...,::7]=np.nan;kwargs[name]=a
+        for symmetric,clip in [(False,False),(True,True)]:
+            args=dict(kwargs,symmetric_averaging=symmetric,clip_nonnegative=clip)
+            expected=reference.forecast(context,h,**args).quantiles.numpy()
+            result=actual.forecast(context,h,**args).quantiles.numpy()
+            assert result.shape==(b,v,h,21)
+            np.testing.assert_allclose(result,expected,rtol=1e-4,atol=1e-4)

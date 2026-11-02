@@ -71,6 +71,13 @@ def test_wrong_loaded_revision_or_profile_stops_comparison():
         with pytest.raises(ValueError):compare.check_identity(r,identity|change)
 
 
+def test_default_profile_rejects_bounded_endpoint_and_accepts_actual_settings():
+    r=row()|dict(forecast_profile='upstream-default',max_context=32768,per_shot_horizon_patches=32)
+    identity={k:r[k] for k in ('backend','model_id','model_revision','forecast_profile','max_context','per_shot_horizon_patches')}
+    compare.check_identity(r,identity)
+    with pytest.raises(ValueError):compare.check_identity(r,identity|dict(forecast_profile='bounded-v1',max_context=256,per_shot_horizon_patches=5))
+
+
 def test_failed_case_is_retained_and_request_never_sees_truth(monkeypatch):
     calls=[]
     def forecast(config,history,horizon,request_id):

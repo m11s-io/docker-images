@@ -6,14 +6,14 @@ import pytest
 
 HTTP = os.environ.get('TIMESTRAL_TEST_HTTP_URL')
 GRPC = os.environ.get('TIMESTRAL_TEST_GRPC_URL')
-PREVIEW = os.environ.get('TIMESTRAL_TEST_PREVIEW') == '1'
+OPENVINO = os.environ.get('TIMESTRAL_TEST_BACKEND') == 'openvino'
 pytestmark = pytest.mark.skipif(not (HTTP and GRPC),reason='requires actual candidate image HTTP/gRPC endpoints')
 
 
 @pytest.fixture(scope='module')
 def reference(record_testsuite_property):
     from forecast_cases import forecast_tolerances
-    for name,value in forecast_tolerances(PREVIEW).items():
+    for name,value in forecast_tolerances(OPENVINO).items():
         record_testsuite_property('forecast_'+name,str(value))
     record_testsuite_property('model_id',os.environ['MODEL_ID'])
     record_testsuite_property('model_revision',os.environ['MODEL_REVISION'])
@@ -32,7 +32,7 @@ def reference(record_testsuite_property):
     torch.set_num_threads(2)
     return TimestralForecaster.from_pretrained(
         os.environ['MODEL_ID'],revision=os.environ['MODEL_REVISION'],device='cpu',
-        **({'max_context':256,'per_shot_horizon_patches':5} if PREVIEW or os.environ.get('TIMESTRAL_FORECAST_PROFILE')=='bounded-v1' else {}))
+        **({'max_context':256,'per_shot_horizon_patches':5} if os.environ.get('TIMESTRAL_FORECAST_PROFILE')=='bounded-v1' else {}))
 
 
 @pytest.mark.parametrize('transport',['http-json','http-binary','grpc'])
@@ -78,12 +78,6 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
         else: inp.set_data_from_numpy(a)
         inputs.append(inp)
     request_id = str(uuid.uuid4())
-    if PREVIEW and ((b,v)!=(1,1) or t>256 or h>320 or case=='covariates'):
-        from tritonclient.utils import InferenceServerException
-        with client, pytest.raises(InferenceServerException) as error:
-            client.infer('timestral',inputs,request_id=request_id,headers={'content-type':'application/json'} if transport=='http-json' else None)
-        assert error.value.status() == ('400' if transport.startswith('http') else 'StatusCode.INVALID_ARGUMENT')
-        return
     if hasattr(reference, 'root'):
         with np.load(reference.root/f'{case}.npz') as arrays:
             expected_q = arrays['quantiles']
@@ -102,7 +96,7 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     def parameter_value(value):
         return getattr(value,value.WhichOneof('parameter_choice')) if hasattr(value,'WhichOneof') else value
     parameters=response.get('parameters',{}) if isinstance(response,dict) else response.parameters
-    expected_profile=os.environ.get('TIMESTRAL_FORECAST_PROFILE','bounded-v1' if PREVIEW else 'upstream-default')
+    expected_profile=os.environ.get('TIMESTRAL_FORECAST_PROFILE','upstream-default')
     assert parameter_value(parameters['forecast_profile'])==expected_profile
     assert parameter_value(parameters['max_context'])==reference.max_context
     assert parameter_value(parameters['per_shot_horizon_patches'])==reference.per_shot_horizon_patches
@@ -113,8 +107,8 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     assert q.shape == (b,v,h,21)
     assert median.shape == (b,v,h)
     assert levels.shape == (21,)
-    np.testing.assert_allclose(q,expected_q,**forecast_tolerances(PREVIEW))
-    np.testing.assert_allclose(median,expected_median,**forecast_tolerances(PREVIEW))
+    np.testing.assert_allclose(q,expected_q,**forecast_tolerances(OPENVINO))
+    np.testing.assert_allclose(median,expected_median,**forecast_tolerances(OPENVINO))
     np.testing.assert_allclose(levels,expected_levels,rtol=1e-6,atol=1e-7)
 
 

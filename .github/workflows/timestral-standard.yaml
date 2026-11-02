@@ -158,7 +158,7 @@ jobs:
       MODEL_REVISION: ${{ matrix.revision }}
       TIMESTRAL_TEST_HTTP_URL: localhost:18080
       TIMESTRAL_TEST_GRPC_URL: localhost:18081
-      TIMESTRAL_TEST_PREVIEW: "1"
+      TIMESTRAL_TEST_BACKEND: openvino
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
@@ -208,7 +208,7 @@ jobs:
             sleep 2
           done
           exit 1
-      - name: Verify shared REST/gRPC inference and unsupported capability errors
+      - name: Verify CPU-equivalent REST/gRPC inference and invalid request errors
         run: |
           uv run --frozen --project timestral/openvino python -m pytest \
             timestral/tests/integration/test_triton_client.py -q \

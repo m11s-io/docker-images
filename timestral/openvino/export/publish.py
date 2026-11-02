@@ -39,7 +39,7 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-STANDARD_PATTERN=re.compile(r'standard-v1/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|block-[1-5]\.(?:xml|bin))|evidence/(?:parity\.json|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt))')
+STANDARD_PATTERN=re.compile(r'(?:standard-v1/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|block-[1-5]\.(?:xml|bin))|evidence/(?:parity\.json|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt))|standard-v2/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|(?:context|covariates)\.(?:xml|bin))|evidence/(?:parity\.json|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt)))')
 
 
 def is_standard_file(name):
@@ -84,10 +84,8 @@ def verify_bundle(bundle):
     manifest=verify_profiles(bundle/'profiles',manifest_sha,model_id,MODEL_REVISIONS.get(model_id))
     parity_path=bundle/'evidence/parity.json'
     parity=json.loads(parity_path.read_text())
-    expected_cases={f'{name}-s{symmetric}-c{clip}'
-        for name in ('short','fixed','nonaligned','long-context','five-patches','four-patches',
-                     'maximum-horizon','missing','multi-block','nonnegative')
-        for symmetric in (0,1) for clip in (0,1)}
+    from profiles import cases,case_options
+    expected_cases={f'{name}-s{int(s)}-c{int(c)}' for name in cases() for s,c in case_options(name)}
     if (digest(parity_path)!=manifest['parity_report_sha256'] or
         parity.get('passed') is not True or set(parity.get('cases',{}))!=expected_cases or
         parity.get('neural_backend')!='openvino' or
@@ -114,7 +112,7 @@ def publish(bundle):
     if not info.private: raise ValueError('experimental repository must remain private')
     before=set(api.list_repo_files(DESTINATION,revision=info.sha))
     validate_remote_inventory(before)
-    prefix='standard-v1/'+manifest_sha
+    prefix='standard-v2/'+manifest_sha
     names={*(f'profiles/{name}' for name in profile_files),*(f'evidence/{name}' for name in EVIDENCE)}
     expected={prefix+'/'+name for name in names}
     existing={name for name in before if name.startswith(prefix+'/')}
@@ -133,7 +131,7 @@ def publish(bundle):
             if inventory(release)!=names:raise ValueError('unexpected staged release files')
             result=api.upload_folder(repo_id=DESTINATION,folder_path=str(release),path_in_repo=prefix,
                 allow_patterns=sorted(names),parent_commit=info.sha,
-                commit_message='Validated standard-v1 preview '+os.environ['GITHUB_SHA'][:12])
+                commit_message='Validated standard-v2 CPU-parity '+os.environ['GITHUB_SHA'][:12])
             revision=result.oid
     after=set(api.list_repo_files(DESTINATION,revision=revision))
     if after!=before|expected:raise ValueError('unexpected remote release inventory')
@@ -141,7 +139,7 @@ def publish(bundle):
         remote=Path(hf_hub_download(DESTINATION,filename=prefix+'/'+name,revision=revision))
         if digest(remote)!=digest(bundle/name):raise ValueError('remote release checksum mismatch: '+name)
     receipt=dict(repository=DESTINATION,revision=revision,path=prefix,manifest_sha256=manifest_sha,
-                 source=os.environ['GITHUB_SHA'],run=os.environ['GITHUB_RUN_ID'],status='experimental-preview')
+                 source=os.environ['GITHUB_SHA'],run=os.environ['GITHUB_RUN_ID'],status='validated-cpu-parity')
     print(json.dumps(receipt,indent=2))
     Path('standard-publication.json').write_text(json.dumps(receipt,indent=2)+'\n')
     if os.environ.get('GITHUB_STEP_SUMMARY'):

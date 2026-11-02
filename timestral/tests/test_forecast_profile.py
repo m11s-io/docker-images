@@ -6,10 +6,10 @@ from serving.upstream import Settings, UpstreamForecaster
 REVISION='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f'
 
 
-def test_default_resolution_is_backend_specific_and_incompatible_preview_fails():
+def test_default_resolution_matches_cpu_for_openvino():
     assert Settings(model_revision=REVISION).resolved_profile=='upstream-default'
-    assert Settings(model_revision=REVISION,backend='openvino').resolved_profile=='bounded-v1'
-    with pytest.raises(ValueError):Settings(model_revision=REVISION,backend='openvino',forecast_profile='upstream-default')
+    assert Settings(model_revision=REVISION,backend='openvino').resolved_profile=='upstream-default'
+    assert Settings(model_revision=REVISION,backend='openvino',forecast_profile='upstream-default').resolved_profile=='upstream-default'
     with pytest.raises(ValueError):Settings(model_revision=REVISION,forecast_profile='custom')
 
 

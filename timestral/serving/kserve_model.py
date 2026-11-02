@@ -112,7 +112,6 @@ class TimestralModel(Model):
                 value=getattr(forecaster,key,None)
                 if value is not None: response.parameters[key]=int(value)
         if self.settings.backend == 'openvino':
-            response.parameters.update(experimental=True,max_context=256,per_shot_horizon_patches=5)
             digest = getattr(self._backend,'artifact_manifest_sha256',None)
             if digest is not None:
                 response.parameters['artifact_manifest_sha256'] = digest
