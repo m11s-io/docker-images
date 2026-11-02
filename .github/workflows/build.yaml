@@ -13,7 +13,7 @@ on:
       - "deepseek-harness/**"
       - "chromium-cdp/**"
       - ".github/workflows/build.yaml"
-      - "caddy-cloudflare/**"
+      - "caddy/**"
       - "vllm-openai-orjson/**"
       - "timestral/**"
       - "scripts/image_tags.py"
@@ -48,7 +48,7 @@ on:
           - comfy-mcp
           - deepseek-harness
           - chromium-cdp
-          - caddy-cloudflare
+          - caddy
           - vllm-openai-orjson
           - timestral-cpu
           - timestral-cuda
@@ -97,7 +97,7 @@ jobs:
       comfy-mcp: ${{ steps.filter.outputs.comfy-mcp }}
       deepseek-harness: ${{ steps.filter.outputs.deepseek-harness }}
       chromium-cdp: ${{ steps.filter.outputs.chromium-cdp }}
-      caddy-cloudflare: ${{ steps.filter.outputs.caddy-cloudflare }}
+      caddy: ${{ steps.filter.outputs.caddy }}
       vllm-openai-orjson: ${{ steps.filter.outputs.vllm-openai-orjson }}
       timestral-cpu: ${{ steps.filter.outputs.timestral-cpu }}
       timestral-cuda: ${{ steps.filter.outputs.timestral-cuda }}
@@ -203,9 +203,9 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
-            caddy-cloudflare:
+            caddy:
               - 'scripts/image_tags.py'
-              - 'caddy-cloudflare/**'
+              - 'caddy/**'
               - '!**/compose*.yaml'
               - '!**/compose*.yml'
               - '!**/docker-compose*.yaml'
@@ -320,7 +320,7 @@ jobs:
             tag_suffix: -rocm
             latest: latest-rocm
             cache_mode: min
-          - context: caddy-cloudflare
+          - context: caddy
             repository: m11s/caddy
             description: Caddy with the Cloudflare DNS-01 provider module.
             version_source: base-arg

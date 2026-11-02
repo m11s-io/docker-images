@@ -1,4 +1,4 @@
-# caddy-cloudflare
+# caddy
 
 Caddy 2 with the [`caddy-dns/cloudflare`](https://github.com/caddy-dns/cloudflare)
 DNS provider module built in, so Caddy can complete Let's Encrypt DNS-01
