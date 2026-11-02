@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.28.0@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
+# droast global ignore=DF011 reason="The Next.js standalone output is built before this runtime image."
 #
 # Pre-built image: build the app locally first, then run this Dockerfile.
 #
@@ -31,3 +32,6 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 CMD ["node", "apps/web/server.js"]
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["node", "-e", "fetch('http://127.0.0.1:' + (process.env.PORT || '3000') + '/', {redirect: 'manual', signal: AbortSignal.timeout(5000)}).then(r => process.exit(r.status >= 200 && r.status < 400 ? 0 : 1)).catch(() => process.exit(1))"]

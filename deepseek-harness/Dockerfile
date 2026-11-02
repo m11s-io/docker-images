@@ -50,3 +50,7 @@ ENTRYPOINT ["/usr/local/bin/dsh-entrypoint"]
 
 # Validate the assembled runtime before either platform can be published.
 RUN --mount=type=bind,source=tests/smoke.mjs,target=/tmp/dsh-smoke.mjs node /tmp/dsh-smoke.mjs
+
+# Check HTTP availability without requiring an authenticated session.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["node", "-e", "fetch('http://127.0.0.1:3080/', {redirect: 'manual', signal: AbortSignal.timeout(5000)}).then(r => process.exit((r.status >= 200 && r.status < 400) || [401, 403].includes(r.status) ? 0 : 1)).catch(() => process.exit(1))"]

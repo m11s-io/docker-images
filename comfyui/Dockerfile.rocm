@@ -73,3 +73,7 @@ RUN python /app/verify_image.py && touch /tmp/comfyui-validated
 # Depend on validation without including its generated startup state.
 FROM runtime AS final
 COPY --from=validation /tmp/comfyui-validated /usr/local/share/comfyui/image-validated
+
+# Allow GPU initialization and custom-node imports to finish before failures count.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5m --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8188/system_stats', timeout=5).close()"]
