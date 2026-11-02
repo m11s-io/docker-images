@@ -3,11 +3,11 @@ name = "timestral-openvino-export"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "torch==2.6.0+cpu",
+  "torch==2.13.0",
   "openvino==2026.4.1",
   "numpy==2.5.4",
   "safetensors==0.8.0",
-  "huggingface-hub==2.3.0",
+  "huggingface-hub==2.2.0",
 ]
 
 [tool.uv]
