@@ -1,7 +1,7 @@
 """Run inside an immutable candidate image; no extra packages or host changes.
 
-CPU reference uses unchanged upstream forecasting in this same pinned framework
-build. Strict CPU CI tolerances are retained; failed cases are evidence, never a
+The reference invokes unchanged upstream on the selected device in the pinned
+framework build (bounded CPU for OpenVINO). Strict PyTorch tolerances are retained; failed cases are evidence, never a
 reason to silently widen tolerances. This is acceptance, not a performance test.
 """
 import json
@@ -16,7 +16,7 @@ import uuid
 import numpy as np
 
 
-def fixtures():
+def fixtures(backend='cpu'):
     for name, b, v, t, h in (
         ('short', 1, 1, 7, 3), ('nonaligned', 1, 1, 65, 35),
         ('long', 1, 1, 1103, 33), ('missing', 1, 1, 65, 35),
@@ -24,6 +24,13 @@ def fixtures():
         ('covariates', 1, 1, 65, 35), ('symmetry-off', 1, 1, 65, 35),
         ('clip-off', 1, 1, 65, 35), ('both-off', 1, 1, 65, 35),
     ):
+        if backend == 'openvino':
+            if name in ('grouped', 'covariates'):
+                continue
+            if name == 'long':
+                t = 256
+            if name == 'decode-blocks':
+                h = 320
         context = np.sin(np.arange(b*v*t, dtype=np.float32).reshape(b, v, t)/7)
         mask = np.ones(context.shape, dtype=bool)
         if name == 'missing':
@@ -88,7 +95,7 @@ def http_infer(values, request_id, binary=False):
         return InferResponse.from_rest(json.load(response))
 
 
-def compare(actual, expected):
+def compare(actual, expected, backend='cpu'):
     errors = {}
     assert set(actual) == set(expected)
     for key in expected:
@@ -97,8 +104,22 @@ def compare(actual, expected):
         assert a.shape == e.shape
         assert np.isfinite(a).all()
         errors[key] = float(np.max(np.abs(a-e)))
-        np.testing.assert_allclose(a, e, rtol=1e-5, atol=1e-5)
+        tolerance = 1e-4 if backend == 'openvino' else 1e-5
+        if key == 'quantile_levels':
+            np.testing.assert_allclose(a, e, rtol=1e-6, atol=1e-7)
+        else:
+            np.testing.assert_allclose(a, e, rtol=tolerance, atol=tolerance)
     return errors
+
+
+def parameter_value(value):
+    # KServe preserves InferParameter protobufs when decoding gRPC responses.
+    if hasattr(value, 'WhichOneof'):
+        field = value.WhichOneof('parameter_choice')
+        if field is None:
+            raise ValueError('empty response identity parameter')
+        return getattr(value, field)
+    return value
 
 
 def run(report):
@@ -110,27 +131,61 @@ def run(report):
     from timestral import TimestralForecaster
 
     settings = Settings.from_env()
-    device = _check_device(settings, torch)
-    props = torch.cuda.get_device_properties(device)
+    gpu = settings.backend in ('cuda', 'rocm')
+    device = _check_device(settings, torch) if gpu else torch.device('cpu')
+    props = torch.cuda.get_device_properties(device) if gpu else None
     report.update(backend=settings.backend, model=settings.model_id,
                   revision=settings.model_revision, torch=torch.__version__,
                   cuda=torch.version.cuda, hip=torch.version.hip,
-                  device=props.name, architecture=getattr(props, 'gcnArchName', None),
-                  compute_capability=[props.major, props.minor],
+                  device=props.name if props else 'cpu', architecture=getattr(props, 'gcnArchName', None),
+                  compute_capability=[props.major, props.minor] if props else None,
                   image=os.environ['ACCEPTANCE_IMAGE'], source=os.environ['ACCEPTANCE_SOURCE'],
                   probe_sha256=os.environ['ACCEPTANCE_PROBE_SHA256'],
                   tolerances=dict(rtol=1e-5, atol=1e-5), cases=[])
-    # Prove missing accelerator fails; no weights need to be loaded for this gate.
-    hidden = dict(os.environ, CUDA_VISIBLE_DEVICES='', HIP_VISIBLE_DEVICES='', ROCR_VISIBLE_DEVICES='')
-    result = subprocess.run([sys.executable, '-c',
-        'import torch; from serving.upstream import Settings, _check_device; '
-        '_check_device(Settings.from_env(), torch)'], env=hidden,
-        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=60)
-    assert result.returncode != 0 and b'requested accelerator is unavailable' in result.stderr
-    report['missing_device_rejected'] = True
+    if gpu:
+        hidden = dict(os.environ, CUDA_VISIBLE_DEVICES='', HIP_VISIBLE_DEVICES='', ROCR_VISIBLE_DEVICES='')
+        result = subprocess.run([sys.executable, '-c',
+            'import torch; from serving.upstream import Settings, _check_device; '
+            '_check_device(Settings.from_env(), torch)'], env=hidden,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=60)
+        assert result.returncode != 0 and b'requested accelerator is unavailable' in result.stderr
+        report['missing_device_rejected'] = True
     torch.set_num_threads(2)
+    if settings.backend == 'cuda':
+        torch.backends.fp32_precision = 'ieee'
+        torch.backends.cuda.matmul.fp32_precision = 'ieee'
+        torch.backends.cudnn.conv.fp32_precision = 'ieee'
+        torch.backends.cudnn.rnn.fp32_precision = 'ieee'
+    else:
+        torch.set_float32_matmul_precision('highest')
+    options = dict(max_context=256, per_shot_horizon_patches=5) if settings.backend == 'openvino' else {}
     reference = TimestralForecaster.from_pretrained(settings.model_id,
-        revision=settings.model_revision, device='cpu', cache_dir=settings.hf_home)
+        revision=settings.model_revision, device=device, cache_dir=settings.hf_home, **options)
+    parameters = list(reference.model.parameters())
+    assert parameters and all(p.device == device and p.dtype == torch.float32 for p in parameters)
+    report['reference_device'] = str(device)
+    report['reference_parameters_verified'] = True
+    report['forecast_options'] = options
+    report['comparison_scope'] = 'conversion' if settings.backend == 'openvino' else 'same-device-upstream'
+    report['cross_device_compatibility'] = 'unaccepted' if gpu else 'not-tested'
+    tolerance = 1e-4 if settings.backend == 'openvino' else 1e-5
+    report['tolerances'] = dict(rtol=tolerance, atol=tolerance)
+    if settings.backend == 'openvino':
+        from serving.artifacts import verify_profiles
+        artifact = json.loads(os.environ['ACCEPTANCE_ARTIFACT'])
+        manifest = verify_profiles(os.environ['TIMESTRAL_FORECAST_ARTIFACTS'],
+            artifact['manifest_sha256'], settings.model_id, settings.model_revision)
+        report['artifact'] = artifact
+        report['verified_manifest'] = manifest
+        # A bundle for the other model must fail in the production loader before Ready.
+        other_id, other_revision = next((k,v) for k,v in __import__('serving.artifacts', fromlist=['MODEL_REVISIONS']).MODEL_REVISIONS.items() if k != settings.model_id)
+        negative = subprocess.run([sys.executable, '-c',
+            'from serving.upstream import Settings, UpstreamForecaster; '
+            'UpstreamForecaster.load(Settings.from_env())'],
+            env=dict(os.environ, MODEL_ID=other_id, MODEL_REVISION=other_revision),
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=60)
+        assert negative.returncode != 0 and b'unsupported artifact identity' in negative.stderr
+        report['mismatched_bundle_rejected_before_ready'] = True
     # This separate process owns one GPU model and checks all parameter residency
     # and FP32 invariants in the production loader before the server can be Ready.
     server = subprocess.Popen([sys.executable, '-m', 'serving', '--workers', '1',
@@ -153,7 +208,31 @@ def run(report):
         with grpc.insecure_channel('127.0.0.1:8081', options=[
                 ('grpc.max_receive_message_length', 16*1024*1024)]) as channel:
             stub = rpc.GRPCInferenceServiceStub(channel)
-            for name, values, h, kwargs in fixtures():
+            if settings.backend == 'openvino':
+                from serving.artifacts import validate_preview_request
+                from serving.contract import parse_forecast
+                from kserve.errors import InvalidInput
+                rejected = []
+                for name, values, _, _ in fixtures():
+                    try:
+                        validate_preview_request(parse_forecast(request(values, 'capability-check')))
+                    except InvalidInput:
+                        for transport in ('http-json', 'http-binary', 'grpc'):
+                            try:
+                                if transport == 'grpc':
+                                    stub.ModelInfer(request(values, 'capability-check').to_grpc(), timeout=30)
+                                else:
+                                    http_infer(values, 'capability-check', transport == 'http-binary')
+                            except urllib.error.HTTPError as error:
+                                assert error.code == 400
+                            except grpc.RpcError as error:
+                                assert error.code() == grpc.StatusCode.INVALID_ARGUMENT
+                            else:
+                                raise AssertionError('unsupported preview request was accepted')
+                            rejected.append(dict(case=name, transport=transport))
+                assert rejected
+                report['capability_rejections'] = rejected
+            for name, values, h, kwargs in fixtures(settings.backend):
                 result = reference.forecast(values['context'], h, **kwargs)
                 expected = dict(quantiles=result.quantiles.cpu().numpy(),
                     median=result.median.cpu().numpy(),
@@ -167,10 +246,15 @@ def run(report):
                     else:
                         response = http_infer(values, identity, transport == 'http-binary')
                     assert response.id == identity and response.model_name == 'timestral'
+                    assert response.model_version == settings.model_revision
+                    assert parameter_value(response.parameters['model_id']) == settings.model_id
+                    assert parameter_value(response.parameters['backend']) == settings.backend
+                    if settings.backend == 'openvino':
+                        assert parameter_value(response.parameters['artifact_manifest_sha256']) == artifact['manifest_sha256']
                     actual = {out.name: out.as_numpy() for out in response.outputs}
                     passed = True
                     try:
-                        error = compare(actual, expected)
+                        error = compare(actual, expected, settings.backend)
                     except AssertionError:
                         # Preserve the failure while collecting the remaining
                         # cases; never make one mismatch hide later coverage.
@@ -190,7 +274,7 @@ def run(report):
             server.kill()
             server.wait()
     if report.get('failed_cases'):
-        raise AssertionError('GPU forecasts exceed the unchanged CPU parity threshold')
+        raise AssertionError('service forecasts exceed the scoped upstream correctness threshold')
     report['result'] = 'passed'
 
 

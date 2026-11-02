@@ -72,3 +72,10 @@ CPU 5M/209M reference and protocol checks passed. GPU serving matches unchanged
 upstream on the same GPU, but full cross-device equivalence remains unaccepted:
 [independent validation](docs/verification/2026-11-01-independent-device-budgets.md)
 rejected the provisional numerical budget. No new CPU/GPU tolerance is enabled.
+
+For explicitly matched comparisons, `TIMESTRAL_FORECAST_PROFILE=bounded-v1`
+selects upstream max_context=256/per_shot_horizon_patches=5. PyTorch defaults
+remain unchanged; OpenVINO accepts only its bounded profile. Resolved settings
+are reported in V2 response parameters. See the [standard benchmark](benchmarks/README.md)
+and [numerical policy](docs/numerical-acceptance.md); neither enables stable
+promotion or client cutover. Earlier published images do not include this new preset.

@@ -81,3 +81,8 @@ Forced TF32 environment overrides are rejected; device forecasts still need
 measured parity on the actual target before acceptance.
 
 Current publication receipts: [four image digests and both OpenVINO bundle revisions](verification/2026-11-01-published-candidates.json). Cross-device policy remains unaccepted after [independent validation](verification/2026-11-01-independent-device-budgets.md). The hardware audit and initial candidate-history sections above are historical observations, not current deployment status.
+
+Published CPU/OpenVINO/ROCm 5M and 209M inputs were revalidated on selected
+targets; CUDA remains pending verified VRAM headroom. See the separate
+[target validation report](verification/2026-11-01-published-target-validation.md).
+This does not adopt CPU/GPU equivalence or promote any candidate.
