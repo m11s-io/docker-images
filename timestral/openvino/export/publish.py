@@ -61,7 +61,7 @@ EVIDENCE={'parity.json','protocol-parity.xml','provenance.json','manifest-sha256
 def verify_protocol(path,model_id=None,model_revision=None):
     root=ET.parse(path).getroot()
     suites=[root] if root.tag=='testsuite' else list(root.findall('testsuite'))
-    if not suites or sum(int(s.get('tests','0')) for s in suites)<38:
+    if not suites or sum(int(s.get('tests','0')) for s in suites)<39:
         raise ValueError('complete actual-image protocol evidence is required')
     if any(int(s.get(key,'0')) for s in suites for key in ('failures','errors','skipped')):
         raise ValueError('protocol evidence must pass without skipped tests')

@@ -140,3 +140,12 @@ def test_actual_image_redacts_malformed_transport(case):
     assert response.status_code==400
     assert private not in response.text
     assert '1234567.875' not in response.text
+
+
+def test_actual_image_grpc_invalid_input_status_is_standard():
+    from tritonclient.grpc import InferenceServerClient
+    from tritonclient.utils import InferenceServerException
+    with InferenceServerClient(GRPC) as client:
+        with pytest.raises(InferenceServerException) as error:
+            client.infer('timestral',[],request_id='invalid')
+    assert error.value.status()=='StatusCode.INVALID_ARGUMENT'

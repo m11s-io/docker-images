@@ -54,7 +54,7 @@ class VariantRoutingTest(unittest.TestCase):
         return selected
 
     def test_shared_contract_context_and_fixtures_validate_every_consumer(self):
-        for path in ('timestral/serving/contract.py','timestral/.dockerignore','timestral/tests/fixtures/forecast-v1.json'):
+        for path in ('.github/workflows/build.yaml','timestral/serving/contract.py','timestral/.dockerignore','timestral/tests/fixtures/forecast-v1.json'):
             with self.subTest(path=path): self.assertEqual(self.selected(path),{'cpu','cuda','rocm','openvino'})
 
     def test_backend_locks_dockerfiles_and_export_profiles_select_their_consumer(self):

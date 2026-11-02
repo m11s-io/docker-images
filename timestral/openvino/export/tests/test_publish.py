@@ -30,10 +30,10 @@ class StandardPublishTest(unittest.TestCase):
         p=self.module()
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'protocol.xml'
-            for invalid in ('<testsuites/>','<testsuite tests="38" failures="1"/>','<testsuite tests="38" errors="1"/>','<testsuite tests="38" skipped="1"/>'):
+            for invalid in ('<testsuites/>','<testsuite tests="39" failures="1"/>','<testsuite tests="39" errors="1"/>','<testsuite tests="39" skipped="1"/>'):
                 path.write_text(invalid)
                 with self.assertRaises(ValueError):p.verify_protocol(path)
-            path.write_text('<testsuites><testsuite tests="38" failures="0" errors="0" skipped="0"><properties><property name="forecast_rtol" value="0.0001"/><property name="forecast_atol" value="0.0001"/></properties></testsuite></testsuites>')
+            path.write_text('<testsuites><testsuite tests="39" failures="0" errors="0" skipped="0"><properties><property name="forecast_rtol" value="0.0001"/><property name="forecast_atol" value="0.0001"/></properties></testsuite></testsuites>')
             p.verify_protocol(path)
 
     def test_model_specific_bundle_requires_exact_parity_and_run_provenance(self):
@@ -55,7 +55,7 @@ class StandardPublishTest(unittest.TestCase):
                 (profiles/'manifest.json').write_text(json.dumps(manifest))
                 expected=p.digest(profiles/'manifest.json')
                 (evidence/'manifest-sha256.txt').write_text(expected)
-                (evidence/'protocol-parity.xml').write_text(f'<testsuite tests="38" failures="0" errors="0" skipped="0"><properties><property name="forecast_rtol" value="0.0001"/><property name="forecast_atol" value="0.0001"/><property name="model_id" value="{model_id}"/><property name="model_revision" value="{revision}"/></properties></testsuite>')
+                (evidence/'protocol-parity.xml').write_text(f'<testsuite tests="39" failures="0" errors="0" skipped="0"><properties><property name="forecast_rtol" value="0.0001"/><property name="forecast_atol" value="0.0001"/><property name="model_id" value="{model_id}"/><property name="model_revision" value="{revision}"/></properties></testsuite>')
                 (evidence/'provenance.json').write_text(json.dumps(dict(source='a'*40,run='42')))
                 with patch.dict(os.environ,dict(GITHUB_SHA='a'*40,GITHUB_RUN_ID='42')):
                     self.assertEqual(p.verify_bundle(root)[0],expected)
