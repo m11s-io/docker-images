@@ -22,6 +22,14 @@ The old wrapper and reference tests remain until an authorized client cutover.
 [Legacy API documentation](docs/legacy-api.md) describes the preserved historical
 contract, not the new Dockerfiles.
 
+## Published candidates
+
+Use the [published tags and immutable digests](docs/verification/2026-11-01-published-candidates.json)
+for CPU, CUDA, ROCm and OpenVINO, plus the matching model/artifact revisions.
+`candidate-standard-v1-*` names are local CI build labels, not published release
+aliases. These images remain experimental candidates; legacy `latest-cpu` and
+`latest-cuda` retain the old `/forecast` contract.
+
 ## Configuration
 
 Set `MODEL_ID` explicitly when selecting a model other than the preserved default

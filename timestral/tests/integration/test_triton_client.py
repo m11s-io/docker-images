@@ -99,7 +99,8 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     response = result.get_response()
     actual_id = response['id'] if isinstance(response,dict) else response.id
     assert actual_id == request_id
-    from benchmarks.v2 import parameter_value
+    def parameter_value(value):
+        return getattr(value,value.WhichOneof('parameter_choice')) if hasattr(value,'WhichOneof') else value
     parameters=response.get('parameters',{}) if isinstance(response,dict) else response.parameters
     expected_profile=os.environ.get('TIMESTRAL_FORECAST_PROFILE','bounded-v1' if PREVIEW else 'upstream-default')
     assert parameter_value(parameters['forecast_profile'])==expected_profile

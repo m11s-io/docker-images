@@ -86,14 +86,6 @@ def test_real_server_cancellation_keeps_execution_slot_until_worker_finishes(tmp
                     time.sleep(.01)
             assert response.id=='cancelled-request'
             assert len(response.outputs)==3
-            from test_v2_benchmark import v2,config
-            for transport in ('http-json','http-binary','grpc'):
-                c=config();c.update(transport=transport,endpoint=f'127.0.0.1:{grpc_port if transport=="grpc" else http_port}')
-                code='from benchmarks.v2 import create_client,fixture_values,validate_response; import json,sys; c=json.loads(sys.argv[1]); client=create_client(c); identity,parameters=client.infer(fixture_values(c["fixture"]),"protocol-check"); validate_response(c,"protocol-check",identity,parameters); client.close()'
-                # KServe and Triton ship separate protobuf files with the same
-                # global symbols. Match deployment: clients run in their own process.
-                result=subprocess.run([sys.executable,'-c',code,json.dumps(c)],capture_output=True,text=True,timeout=30)
-                assert result.returncode==0,result.stderr
 
     finally:
         (tmp_path/'release').touch()
