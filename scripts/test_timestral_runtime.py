@@ -26,6 +26,8 @@ class TimestralRuntimeTest(unittest.TestCase):
         acceptance=(ROOT/'.github/workflows/timestral-standard.yaml').read_text()
         self.assertIn('python-version: "3.13"',acceptance)
         self.assertNotIn('  pull_request:',acceptance)
+        # A reusable run must not cancel another caller's required acceptance.
+        self.assertNotIn('\nconcurrency:',acceptance)
         self.assertNotIn('tests/test_api.py',job)
         self.assertIn('--project timestral/dependencies/cpu',acceptance)
         for variant in ('cpu','cuda','rocm','openvino'):

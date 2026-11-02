@@ -7,10 +7,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: timestral-standard-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   unit:
     runs-on: ubuntu-26.04
