@@ -36,6 +36,7 @@ RUN apt-get update \
 
 COPY --from=build --chown=dsh:dsh /opt/deepseek-harness /opt/deepseek-harness
 COPY --chown=dsh:dsh entrypoint.sh /usr/local/bin/dsh-entrypoint
+COPY --chown=dsh:dsh bind-host.mjs healthcheck.mjs /usr/local/lib/dsh/
 # The profile resolver exposes the CLI dependency closure, not root devDependencies.
 # These plugins are already installed and built from the pinned workspace.
 RUN node --input-type=module -e 'import fs from "node:fs"; const path = "/opt/deepseek-harness/apps/cli/package.json"; const pkg = JSON.parse(fs.readFileSync(path, "utf8")); for (const name of ["@deepseek-ai/dsh-browser-use", "@deepseek-ai/dsh-experimental-browser-use-playwright-mcp"]) pkg.dependencies[name] = "workspace:*"; fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");' \
@@ -49,8 +50,11 @@ EXPOSE 3080
 ENTRYPOINT ["/usr/local/bin/dsh-entrypoint"]
 
 # Validate the assembled runtime before either platform can be published.
-RUN --mount=type=bind,source=tests/smoke.mjs,target=/tmp/dsh-smoke.mjs node /tmp/dsh-smoke.mjs
+RUN --mount=type=bind,source=tests/smoke.mjs,target=/tmp/dsh-smoke.mjs \
+    --mount=type=bind,source=tests/bind-host.test.mjs,target=/usr/local/lib/dsh/tests/bind-host.test.mjs \
+    node --test /usr/local/lib/dsh/tests/bind-host.test.mjs \
+    && node /tmp/dsh-smoke.mjs
 
 # Check HTTP availability without requiring an authenticated session.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD ["node", "-e", "fetch('http://127.0.0.1:3080/', {redirect: 'manual', signal: AbortSignal.timeout(5000)}).then(r => process.exit((r.status >= 200 && r.status < 400) || [401, 403].includes(r.status) ? 0 : 1)).catch(() => process.exit(1))"]
+    CMD ["node", "/usr/local/lib/dsh/healthcheck.mjs"]
