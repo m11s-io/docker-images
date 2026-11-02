@@ -22,6 +22,17 @@ class ImageTagsTest(unittest.TestCase):
                 capture_output=True, text=True,
             )
 
+    def test_chromium_tag_tracks_installed_debian_package(self):
+        result = self.resolve("--deb-package", "chromium", "--suffix=-cdp",
+                              "--latest=latest-cdp", dockerfile=(
+            "FROM debian:bookworm-slim\n"
+            "RUN apt-get install -y chromium=156.0.8078.73-1~deb12u1 chromium-sandbox=156.0.8078.73-1~deb12u1\n"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), [
+            "m11s/example:156.0.8078.73-cdp", "m11s/example:latest-cdp",
+            "m11s/example:sha-494d7fbb6b32-cdp",
+        ])
+
     def test_release_version_and_commit_tag(self):
         result = self.resolve("--version", "0.5.5")
         self.assertEqual(result.returncode, 0, result.stderr)
