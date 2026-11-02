@@ -2,9 +2,9 @@
 
 One HTTP client script compares **5M and 209M on CPU, CUDA, ROCm and OpenVINO**.
 All eight rows use the same frozen 150 M4 series, last up-to-256 observed training
-values, official future test targets, no covariates, FP32 and bounded-v1 (256/5).
+values, official future test targets, no covariates, FP32 and upstream-default forecasting (checkpoint context and decode settings).
 These are public benchmark cases, not guaranteed-unseen pretraining data or a
-production-domain quality claim. All eight rows are complete: see the [measured comparison](../docs/verification/2026-11-02-speed-accuracy.md).
+production-domain quality claim. The [previous bounded comparison](../docs/verification/2026-11-02-speed-accuracy.md) is historical; new default-profile rows require fresh measurements.
 
 Prepare the fixed dataset before any model run:
 

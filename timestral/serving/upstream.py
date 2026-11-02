@@ -29,8 +29,6 @@ class Settings:
             raise ValueError('unsupported backend')
         if self.forecast_profile not in ('default','upstream-default','bounded-v1'):
             raise ValueError('unsupported forecast profile')
-        if self.backend == 'openvino' and self.resolved_profile != 'bounded-v1':
-            raise ValueError('OpenVINO requires bounded-v1 forecast profile')
         if self.torch_num_threads < 1 or not self.hf_home:
             raise ValueError('invalid thread count or model cache')
         if self.backend in ('cpu','openvino'):
@@ -41,7 +39,7 @@ class Settings:
     @property
     def resolved_profile(self):
         if self.forecast_profile == 'default':
-            return 'bounded-v1' if self.backend == 'openvino' else 'upstream-default'
+            return 'upstream-default'
         return self.forecast_profile
 
     @classmethod
@@ -107,12 +105,7 @@ class UpstreamForecaster:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             torch.set_num_threads(settings.torch_num_threads)
-            from .artifacts import validate_preview_request
-            class PreviewForecaster(cls):
-                def forecast(self, inputs):
-                    validate_preview_request(inputs)
-                    return super().forecast(inputs)
-            backend = PreviewForecaster(module.create_forecaster(root))
+            backend = cls(module.create_forecaster(root,forecast_profile=settings.resolved_profile))
             backend.artifact_manifest_sha256 = os.environ['TIMESTRAL_ARTIFACT_MANIFEST_SHA256']
             return backend
         device = _check_device(settings, torch)

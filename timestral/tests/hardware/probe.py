@@ -24,13 +24,6 @@ def fixtures(backend='cpu'):
         ('covariates', 1, 1, 65, 35), ('symmetry-off', 1, 1, 65, 35),
         ('clip-off', 1, 1, 65, 35), ('both-off', 1, 1, 65, 35),
     ):
-        if backend == 'openvino':
-            if name in ('grouped', 'covariates'):
-                continue
-            if name == 'long':
-                t = 256
-            if name == 'decode-blocks':
-                h = 320
         context = np.sin(np.arange(b*v*t, dtype=np.float32).reshape(b, v, t)/7)
         mask = np.ones(context.shape, dtype=bool)
         if name == 'missing':
@@ -158,7 +151,7 @@ def run(report):
         torch.backends.cudnn.rnn.fp32_precision = 'ieee'
     else:
         torch.set_float32_matmul_precision('highest')
-    options = dict(max_context=256, per_shot_horizon_patches=5) if settings.backend == 'openvino' else {}
+    options = dict(max_context=256, per_shot_horizon_patches=5) if settings.resolved_profile == 'bounded-v1' else {}
     reference = TimestralForecaster.from_pretrained(settings.model_id,
         revision=settings.model_revision, device=device, cache_dir=settings.hf_home, **options)
     parameters = list(reference.model.parameters())
@@ -208,30 +201,6 @@ def run(report):
         with grpc.insecure_channel('127.0.0.1:8081', options=[
                 ('grpc.max_receive_message_length', 16*1024*1024)]) as channel:
             stub = rpc.GRPCInferenceServiceStub(channel)
-            if settings.backend == 'openvino':
-                from serving.artifacts import validate_preview_request
-                from serving.contract import parse_forecast
-                from kserve.errors import InvalidInput
-                rejected = []
-                for name, values, _, _ in fixtures():
-                    try:
-                        validate_preview_request(parse_forecast(request(values, 'capability-check')))
-                    except InvalidInput:
-                        for transport in ('http-json', 'http-binary', 'grpc'):
-                            try:
-                                if transport == 'grpc':
-                                    stub.ModelInfer(request(values, 'capability-check').to_grpc(), timeout=30)
-                                else:
-                                    http_infer(values, 'capability-check', transport == 'http-binary')
-                            except urllib.error.HTTPError as error:
-                                assert error.code == 400
-                            except grpc.RpcError as error:
-                                assert error.code() == grpc.StatusCode.INVALID_ARGUMENT
-                            else:
-                                raise AssertionError('unsupported preview request was accepted')
-                            rejected.append(dict(case=name, transport=transport))
-                assert rejected
-                report['capability_rejections'] = rejected
             for name, values, h, kwargs in fixtures(settings.backend):
                 result = reference.forecast(values['context'], h, **kwargs)
                 expected = dict(quantiles=result.quantiles.cpu().numpy(),
@@ -254,7 +223,16 @@ def run(report):
                     actual = {out.name: out.as_numpy() for out in response.outputs}
                     passed = True
                     try:
-                        error = compare(actual, expected, settings.backend)
+                        if settings.backend=='openvino':
+                            from serving.divergence import assess
+                            drift=assess(actual['quantiles'],expected['quantiles'],model_id=settings.model_id,case=name)
+                            print('OPENVINO_DIVERGENCE',name,transport,json.dumps(drift),flush=True)
+                            assert drift['accepted'],drift
+                            error=compare({k:v for k,v in actual.items() if k!='quantiles'},
+                                          {k:v for k,v in expected.items() if k!='quantiles'},settings.backend)
+                            error['quantiles']=drift['max_absolute_error']
+                        else:
+                            error = compare(actual, expected, settings.backend)
                     except AssertionError:
                         # Preserve the failure while collecting the remaining
                         # cases; never make one mismatch hide later coverage.

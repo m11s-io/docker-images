@@ -15,11 +15,12 @@ class StandardPublishTest(unittest.TestCase):
 
     def test_allowlist_preserves_legacy_and_rejects_arbitrary_remote_files(self):
         p=self.module()
-        good='standard-v1/'+'a'*64+'/profiles/block-1.bin'
+        good='standard-v2/'+'a'*64+'/profiles/context.bin'
         self.assertTrue(p.is_standard_file(good))
-        for bad in ('standard-v1/current/profiles/block-1.bin',
-                    'standard-v1/'+'a'*64+'/profiles/token.txt',
-                    'standard-v1/'+'a'*64+'/profiles/../secret'):
+        self.assertTrue(p.is_standard_file('standard-v1/'+'a'*64+'/profiles/block-1.bin'))
+        for bad in ('standard-v2/current/profiles/context.bin',
+                    'standard-v2/'+'a'*64+'/profiles/token.txt',
+                    'standard-v2/'+'a'*64+'/profiles/../secret'):
             self.assertFalse(p.is_standard_file(bad))
         p.validate_remote_inventory(['.gitattributes','model/1/model.bin',good])
         with self.assertRaises(ValueError):p.validate_remote_inventory(['secret.txt'])
@@ -46,10 +47,11 @@ class StandardPublishTest(unittest.TestCase):
                 root=Path(tmp);profiles=root/'profiles';evidence=root/'evidence'
                 profiles.mkdir();evidence.mkdir()
                 for name in PROFILE_FILES:(profiles/name).write_bytes(b'fixture')
-                keys={f'{name}-s{s}-c{c}' for name in ('short','fixed','nonaligned','long-context','five-patches','four-patches','maximum-horizon','missing','multi-block','nonnegative') for s in (0,1) for c in (0,1)}
-                parity=dict(passed=True,cases={k:dict(rtol=1e-4,atol=1e-4,max_absolute_error=0) for k in keys},neural_backend='openvino',reference_weights_loaded_in_runtime_worker=False,github_run='42')
+                from profiles import cases,case_options
+                keys={f'{name}-s{int(s)}-c{int(c)}' for name in cases() for s,c in case_options(name)}
+                parity=dict(passed=True,cases={k:dict(rtol=1e-4,atol=1e-4,max_absolute_error=0,strict_passed=True,accepted=True) for k in keys},neural_backend='openvino',reference_weights_loaded_in_runtime_worker=False,github_run='42')
                 (evidence/'parity.json').write_text(json.dumps(parity))
-                manifest=dict(format='timestral-openvino-profiles-v1',model_id=model_id,model_revision=revision,source_revision=SOURCE_REVISION,precision='FP32',max_context=256,per_shot_horizon_patches=5,parity_report_sha256=p.digest(evidence/'parity.json'),files={name:p.digest(profiles/name) for name in PROFILE_FILES})
+                manifest=dict(format='timestral-openvino-profiles-v2',model_id=model_id,model_revision=revision,source_revision=SOURCE_REVISION,precision='FP32',parity_report_sha256=p.digest(evidence/'parity.json'),files={name:p.digest(profiles/name) for name in PROFILE_FILES})
                 (profiles/'manifest.json').write_text(json.dumps(manifest))
                 expected=p.digest(profiles/'manifest.json')
                 (evidence/'manifest-sha256.txt').write_text(expected)
@@ -90,14 +92,14 @@ class StandardPublishTest(unittest.TestCase):
                 self.assertEqual(result['revision'],'verified-commit')
                 self.assertEqual(api.uploads[0]['parent_commit'],'parent')
                 self.assertEqual(api.files['model/1/model.bin'],b'legacy')
-                self.assertEqual(set(downloads),{'standard-v1/'+'b'*64+'/'+name for name in names})
+                self.assertEqual(set(downloads),{'standard-v2/'+'b'*64+'/'+name for name in names})
                 # A retry verifies an existing complete release without upload;
                 # changing any published byte must never silently overwrite it.
                 api.model_info=lambda repo:types.SimpleNamespace(private=True,sha='verified-commit')
-                api.files['standard-v1/'+'b'*64+'/profiles/manifest.json']=b'corrupt'
+                api.files['standard-v2/'+'b'*64+'/profiles/manifest.json']=b'corrupt'
                 with self.assertRaisesRegex(ValueError,'checksum mismatch'):p.publish(bundle)
                 self.assertEqual(len(api.uploads),1)
-                api.files.pop('standard-v1/'+'b'*64+'/profiles/manifest.json')
+                api.files.pop('standard-v2/'+'b'*64+'/profiles/manifest.json')
                 with self.assertRaisesRegex(ValueError,'incomplete'):p.publish(bundle)
                 self.assertEqual(len(api.uploads),1)
                 api.files['secret.txt']=b'never upload'

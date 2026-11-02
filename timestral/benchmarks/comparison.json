@@ -178,79 +178,91 @@
       "backend": "cpu",
       "model_id": "mistralai/Timestral-5M",
       "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
       "hardware": null,
-      "endpoint": null
+      "endpoint": null,
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     },
     {
       "id": "cpu-209M",
       "backend": "cpu",
       "model_id": "mistralai/Timestral-209M",
       "model_revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
       "hardware": null,
-      "endpoint": null
+      "endpoint": null,
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     },
     {
       "id": "cuda-5M",
       "backend": "cuda",
       "model_id": "mistralai/Timestral-5M",
       "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
       "hardware": null,
-      "endpoint": null
+      "endpoint": null,
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     },
     {
       "id": "cuda-209M",
       "backend": "cuda",
       "model_id": "mistralai/Timestral-209M",
       "model_revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
       "hardware": null,
-      "endpoint": null
+      "endpoint": null,
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     },
     {
       "id": "rocm-5M",
       "backend": "rocm",
       "model_id": "mistralai/Timestral-5M",
       "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
       "hardware": null,
-      "endpoint": null
+      "endpoint": null,
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     },
     {
       "id": "rocm-209M",
       "backend": "rocm",
       "model_id": "mistralai/Timestral-209M",
       "model_revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
       "hardware": null,
-      "endpoint": null
+      "endpoint": null,
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     },
     {
       "id": "openvino-5M",
       "backend": "openvino",
       "model_id": "mistralai/Timestral-5M",
       "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
@@ -264,14 +276,16 @@
         "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
         "run": "41328090420",
         "status": "experimental-preview"
-      }
+      },
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     },
     {
       "id": "openvino-209M",
       "backend": "openvino",
       "model_id": "mistralai/Timestral-209M",
       "model_revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
-      "forecast_profile": "bounded-v1",
+      "forecast_profile": "upstream-default",
       "image": null,
       "actual_image_id": null,
       "source": null,
@@ -285,7 +299,9 @@
         "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
         "run": "41328090420",
         "status": "experimental-preview"
-      }
+      },
+      "max_context": 32768,
+      "per_shot_horizon_patches": 32
     }
   ]
 }
