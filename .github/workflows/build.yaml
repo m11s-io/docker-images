@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "rclone-inotify/**"
+      - "rclone/**"
       - "decap-cms/**"
       - "s3-upload-proxy/**"
       - "redis-http-proxy/**"
       - "comfyui/**"
       - "comfy-mcp/**"
       - "deepseek-harness/**"
-      - "chromium-cdp/**"
+      - "chromium/**"
       - ".github/workflows/build.yaml"
       - "caddy/**"
       - "vllm-openai/**"
@@ -40,14 +40,14 @@ on:
         options:
           - all
           - decap-cms
-          - rclone-inotify
+          - rclone
           - s3-upload-proxy
           - redis-http-proxy
           - comfyui-cuda
           - comfyui-rocm
           - comfy-mcp
           - deepseek-harness
-          - chromium-cdp
+          - chromium
           - caddy
           - vllm-openai
           - timestral-cpu
@@ -88,7 +88,7 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      rclone-inotify: ${{ steps.filter.outputs.rclone-inotify }}
+      rclone: ${{ steps.filter.outputs.rclone }}
       decap-cms: ${{ steps.filter.outputs.decap-cms }}
       s3-upload-proxy: ${{ steps.filter.outputs.s3-upload-proxy }}
       redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
@@ -96,7 +96,7 @@ jobs:
       comfyui-cuda: ${{ steps.filter.outputs.comfyui-cuda }}
       comfy-mcp: ${{ steps.filter.outputs.comfy-mcp }}
       deepseek-harness: ${{ steps.filter.outputs.deepseek-harness }}
-      chromium-cdp: ${{ steps.filter.outputs.chromium-cdp }}
+      chromium: ${{ steps.filter.outputs.chromium }}
       caddy: ${{ steps.filter.outputs.caddy }}
       vllm-openai: ${{ steps.filter.outputs.vllm-openai }}
       timestral-cpu: ${{ steps.filter.outputs.timestral-cpu }}
@@ -119,9 +119,9 @@ jobs:
           # Keep OR matching for shared scripts while honoring exclusions.
           predicate-quantifier: some-with-excludes
           filters: |
-            rclone-inotify:
+            rclone:
               - 'scripts/image_tags.py'
-              - 'rclone-inotify/**'
+              - 'rclone/**'
               - '!**/compose*.yaml'
               - '!**/compose*.yml'
               - '!**/docker-compose*.yaml'
@@ -193,10 +193,10 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
-            chromium-cdp:
+            chromium:
               - 'scripts/native_image_matrix.py'
               - 'scripts/image_tags.py'
-              - 'chromium-cdp/**'
+              - 'chromium/**'
               - '!**/compose*.yaml'
               - '!**/compose*.yml'
               - '!**/docker-compose*.yaml'
@@ -264,7 +264,7 @@ jobs:
               - 'timestral/Dockerfile.openvino'
               - 'timestral/openvino/**'
 
-  # Preserve legacy latest-cpu/latest-cuda: Timestral candidates never publish here.
+  # Publish each runtime with version, flavor, and source commit tags.
   build:
     needs: [changes]
     if: ${{ !failure() && !cancelled() }}
@@ -274,7 +274,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - context: rclone-inotify
+          - context: rclone
             repository: m11s/rclone
             description: rclone with inotify-tools for filesystem event monitoring.
             version_source: base-image
@@ -284,7 +284,8 @@ jobs:
           - context: decap-cms
             repository: m11s/decap-cms
             description: Decap CMS with an S3-compatible media library.
-            version: 0.2.11-s3
+            version: 0.2.11
+            tag_suffix: -s3
             latest: latest-s3
           - context: s3-upload-proxy
             repository: m11s/s3-upload-proxy
@@ -341,42 +342,42 @@ jobs:
             dockerfile: timestral/Dockerfile.cpu
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral standard V2 cpu candidate; acceptance pending.
+            description: Timestral forecasting server with the cpu runtime.
             version_source: version-arg
-            version_ref: SERVING_VERSION
+            version_ref: TIMESTRAL_VERSION
             tag_suffix: -cpu
-            latest: candidate-standard-v1-cpu
+            latest: latest-cpu
           - context: timestral-cuda
             build_context: timestral
             dockerfile: timestral/Dockerfile.cuda
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral standard V2 cuda candidate; acceptance pending.
+            description: Timestral forecasting server with the cuda runtime.
             version_source: version-arg
-            version_ref: SERVING_VERSION
+            version_ref: TIMESTRAL_VERSION
             tag_suffix: -cuda
-            latest: candidate-standard-v1-cuda
+            latest: latest-cuda
           - context: timestral-rocm
             build_context: timestral
             dockerfile: timestral/Dockerfile.rocm
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral standard V2 rocm candidate; acceptance pending.
+            description: Timestral forecasting server with the rocm runtime.
             version_source: version-arg
-            version_ref: SERVING_VERSION
+            version_ref: TIMESTRAL_VERSION
             tag_suffix: -rocm
-            latest: candidate-standard-v1-rocm
+            latest: latest-rocm
             cache_mode: min
           - context: timestral-openvino
             build_context: timestral
             dockerfile: timestral/Dockerfile.openvino
             readme_file: timestral/README.md
             repository: m11s/timestral
-            description: Timestral standard V2 openvino candidate; acceptance pending.
+            description: Timestral forecasting server with the openvino runtime.
             version_source: version-arg
-            version_ref: SERVING_VERSION
+            version_ref: TIMESTRAL_VERSION
             tag_suffix: -openvino
-            latest: candidate-standard-v1-openvino
+            latest: latest-openvino
     steps:
       - name: Checkout
         id: checkout
@@ -416,7 +417,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Log in to Docker Hub
-        if: ${{ !startsWith(matrix.context, 'timestral-') && github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
         with:
           username: ${{ secrets.DOCKER_USER }}
@@ -439,13 +440,13 @@ jobs:
           context: ${{ matrix.build_context || matrix.context }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
-          push: ${{ !startsWith(matrix.context, 'timestral-') && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
+          push: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
           tags: ${{ steps.image-tags.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.context }}
           cache-to: type=gha,scope=${{ matrix.context }},mode=${{ matrix.cache_mode || 'max' }}
 
       - name: Update Docker Hub repository overview
-        if: ${{ !startsWith(matrix.context, 'timestral-') && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
+        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
         uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
         with:
           username: ${{ secrets.DOCKER_USER }}
@@ -478,15 +479,16 @@ jobs:
           SELECTED_IMAGE: ${{ inputs.image || 'all' }}
           CHANGED_IMAGES: |
             {"deepseek-harness":"${{ needs.changes.outputs.deepseek-harness }}",
-             "chromium-cdp":"${{ needs.changes.outputs.chromium-cdp }}",
+             "chromium":"${{ needs.changes.outputs.chromium }}",
              "comfy-mcp":"${{ needs.changes.outputs.comfy-mcp }}"}
           NATIVE_IMAGES: |
             [{"context":"deepseek-harness","repository":"m11s/deepseek-harness",
               "version_source":"version-arg","version_ref":"DSH_REF",
               "strip_prefix":"dsh-v","latest":"latest",
               "description":"DeepSeek Harness web runtime with an optional remote browser provider."},
-             {"context":"chromium-cdp","repository":"m11s/chromium-cdp",
-              "version":"bookworm-20261005","latest":"latest",
+             {"context":"chromium","repository":"m11s/chromium",
+              "version_source":"deb-package","version_ref":"chromium",
+              "tag_suffix":"-cdp","latest":"latest-cdp",
               "description":"Headless Chromium browser with a Chrome DevTools Protocol listener."},
              {"context":"comfy-mcp","repository":"m11s/comfy-mcp",
               "version_source":"version-arg","version_ref":"COMFY_MCP_REF",
