@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "rclone-inotify/**"
+      - "rclone/**"
       - "decap-cms/**"
       - "s3-upload-proxy/**"
       - "redis-http-proxy/**"
@@ -40,7 +40,7 @@ on:
         options:
           - all
           - decap-cms
-          - rclone-inotify
+          - rclone
           - s3-upload-proxy
           - redis-http-proxy
           - comfyui-cuda
@@ -88,7 +88,7 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      rclone-inotify: ${{ steps.filter.outputs.rclone-inotify }}
+      rclone: ${{ steps.filter.outputs.rclone }}
       decap-cms: ${{ steps.filter.outputs.decap-cms }}
       s3-upload-proxy: ${{ steps.filter.outputs.s3-upload-proxy }}
       redis-http-proxy: ${{ steps.filter.outputs.redis-http-proxy }}
@@ -119,9 +119,9 @@ jobs:
           # Keep OR matching for shared scripts while honoring exclusions.
           predicate-quantifier: some-with-excludes
           filters: |
-            rclone-inotify:
+            rclone:
               - 'scripts/image_tags.py'
-              - 'rclone-inotify/**'
+              - 'rclone/**'
               - '!**/compose*.yaml'
               - '!**/compose*.yml'
               - '!**/docker-compose*.yaml'
@@ -274,7 +274,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - context: rclone-inotify
+          - context: rclone
             repository: m11s/rclone
             description: rclone with inotify-tools for filesystem event monitoring.
             version_source: base-image
