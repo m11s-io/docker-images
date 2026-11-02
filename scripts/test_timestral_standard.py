@@ -19,7 +19,7 @@ class StandardImageTest(unittest.TestCase):
                 self.assertNotIn('COPY app',content)
                 self.assertNotIn('HF_TOKEN=',content)
                 self.assertNotIn('from_pretrained(',content)
-                self.assertRegex(content,r'python:3\.12\.\d+-slim-bookworm@sha256:[0-9a-f]{64}')
+                self.assertRegex(content,r'python:3\.13\.\d+-slim-bookworm@sha256:[0-9a-f]{64}')
                 self.assertIn(f'TIMESTRAL_BACKEND={variant}',content)
 
     def test_locks_bind_framework_to_correct_vendor_index(self):
@@ -33,7 +33,7 @@ class StandardImageTest(unittest.TestCase):
                 self.assertEqual(torch['source']['registry'],f'https://download.pytorch.org/whl/{suffix}')
                 kserve=next(p for p in lock['package'] if p['name']=='kserve')
                 self.assertIn('abc6c47ab4af588e40c67372b4835122234f6f74', kserve['source']['git'])
-                self.assertEqual(project['project']['requires-python'],'>=3.12,<3.13')
+                self.assertEqual(project['project']['requires-python'],'>=3.13,<3.14')
                 self.assertNotIn('override-dependencies',project['tool']['uv'])
 
 if __name__ == '__main__': unittest.main()

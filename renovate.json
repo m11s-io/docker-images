@@ -134,6 +134,12 @@
       ],
       "groupName": "ComfyUI ROCm dependencies",
       "automerge": false
+    },
+    {
+      "description": "Keep standard Timestral serving on KServe-supported Python 3.13",
+      "matchPackageNames": ["python"],
+      "matchFileNames": ["timestral/Dockerfile.*", "timestral/dependencies/**", "timestral/openvino/**"],
+      "allowedVersions": "/^3\\.13\\./"
     }
   ],
   "digest": {

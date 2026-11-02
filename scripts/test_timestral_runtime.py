@@ -13,12 +13,12 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class TimestralRuntimeTest(unittest.TestCase):
-    def test_legacy_python_is_preserved_while_candidate_images_use_312(self):
+    def test_legacy_python_is_preserved_while_candidate_images_use_313(self):
         project = tomllib.loads((ROOT / "timestral/pyproject.toml").read_text())
         self.assertEqual(project["project"]["requires-python"], ">=3.15,<3.16")
         for variant in ("cpu", "cuda"):
             dockerfile = (ROOT / f"timestral/Dockerfile.{variant}").read_text()
-            self.assertRegex(dockerfile, r"ARG PYTHON_BASE=python:3\.12\.\d+-slim-bookworm@sha256:[a-f0-9]{64}")
+            self.assertRegex(dockerfile, r"ARG PYTHON_BASE=python:3\.13\.\d+-slim-bookworm@sha256:[a-f0-9]{64}")
         workflow = (ROOT / ".github/workflows/build.yaml").read_text()
         job = workflow.split("  timestral-tests:", 1)[1].split("\n  changes:", 1)[0]
         self.assertIn('python-version: "3.15"', job)
