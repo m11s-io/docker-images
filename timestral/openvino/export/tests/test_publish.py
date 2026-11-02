@@ -9,7 +9,7 @@ sys.path.insert(0,str(ROOT))
 
 class StandardPublishTest(unittest.TestCase):
     def module(self):
-        spec=importlib.util.spec_from_file_location('standard_publish',ROOT/'publish_standard.py')
+        spec=importlib.util.spec_from_file_location('standard_publish',ROOT/'publish.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         return module
 
@@ -38,7 +38,7 @@ class StandardPublishTest(unittest.TestCase):
     def test_model_specific_bundle_requires_exact_parity_and_run_provenance(self):
         import hashlib,json,tempfile,os
         from unittest.mock import patch
-        sys.path.insert(0,str(ROOT.parent/'timestral'))
+        sys.path.insert(0,str(ROOT.parents[1]))
         from serving.artifacts import PROFILE_FILES,MODEL_REVISIONS,SOURCE_REVISION
         p=self.module()
         for model_id,revision in MODEL_REVISIONS.items():

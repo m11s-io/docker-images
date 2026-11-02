@@ -32,12 +32,9 @@ ENABLE_CPU_PINNING=false. Validate properties and actual final forecasts in the
 pinned 2026.4.1 runtime image; previous OVMS timings are historical evidence,
 not direct-runtime performance evidence.
 
-PR #130's reusable direct backend is extracted here with stronger artifact/type
-checks. Its throwaway export proof and the old fixed 128->32 publication format
-are not promoted into this format. The isolated profile exporter and native CI acceptance job are implemented;
-their execution, same-configuration final parity, actual-image REST/gRPC evidence
-and publication must use their own complete validation gates. Keep the existing `timestral-openvino.yaml`
-workflow identity/trust unchanged until that new publication is validated.
+The isolated profile exporter and direct runtime use the standard-serving
+acceptance workflow for final-forecast parity and actual-image REST/gRPC checks.
+The legacy OVMS exporter and publication path have been removed.
 
 Run `profiles.py` in the frozen `openvino/export` environment on native amd64.
 Conversion-only rewrites occur in a fresh temporary source copy and fail on
@@ -45,8 +42,7 @@ source drift; reference and runtime workers import the unchanged source in
 separate processes. The exporter checks all 21 final quantiles, medians, levels,
 short/nonaligned/maximum contexts, missingness, multiple decode blocks and all
 four boolean-option combinations before writing a manifest. CI retains the
-report separately from runtime artifacts. This is a prepared validation path;
-no successful native export or image acceptance is claimed until CI runs.
+report separately from runtime artifacts. Each new revision must pass these checks before publication.
 
 Converted outputs may retain symbolic dimensions even though every accepted
 forecast has fixed row/horizon/quantile dimensions. Startup checks compatible
@@ -63,7 +59,8 @@ each size. Both 5M and 209M native export/final-forecast and actual-image protoc
 passed in publication run 41328090420. The image and model-specific bundles are
 published; see [immutable receipts](../docs/verification/2026-11-01-published-candidates.json).
 
-Manual `standard-v1` publication uses the existing OIDC workflow and appends
+Manual publication through `.github/workflows/timestral-openvino.yaml` validates
+the new structure and runs `export/publish.py`. It appends
 `standard-v1/<manifest-sha256>/profiles/` with validation evidence alongside it.
 The legacy HF files and revisions are preserved. Use the returned HF commit,
 subdirectory and manifest SHA256 together; never select a bundle by model name
