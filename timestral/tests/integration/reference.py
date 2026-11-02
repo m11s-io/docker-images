@@ -19,8 +19,11 @@ def main():
     torch.set_num_threads(2)
     torch.set_float32_matmul_precision('highest')
     model_id, revision = os.environ['MODEL_ID'], os.environ['MODEL_REVISION']
+    profile=os.environ.get('TIMESTRAL_FORECAST_PROFILE','upstream-default')
+    if profile not in ('upstream-default','bounded-v1'):raise ValueError('unknown forecast profile')
+    options=dict(max_context=256,per_shot_horizon_patches=5) if profile=='bounded-v1' else {}
     reference = TimestralForecaster.from_pretrained(model_id, revision=revision,
-        device='cpu', cache_dir=os.environ['HF_HOME'])
+        device='cpu', cache_dir=os.environ['HF_HOME'], **options)
     destination = Path('/reference')
     destination.mkdir(exist_ok=True)
     for case in CASES:
@@ -30,7 +33,8 @@ def main():
                  median=expected.median.cpu().numpy(),
                  quantile_levels=np.asarray(expected.quantile_levels,dtype=np.float32))
     (destination/'metadata.json').write_text(json.dumps(dict(model_id=model_id,
-        revision=revision, max_context=reference.max_context, torch=torch.__version__)))
+        revision=revision, max_context=reference.max_context,
+        per_shot_horizon_patches=reference.per_shot_horizon_patches,forecast_profile=profile,torch=torch.__version__)))
 
 
 if __name__ == '__main__':

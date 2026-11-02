@@ -19,7 +19,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | DeepSeek Harness web runtime; connects to a separately deployed browser provider when browser automation is needed | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness/latest?label=) |
 | [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium browser exposing the Chrome DevTools Protocol for a colocated DeepSeek Harness runtime | ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Fchromium-cdp%2Ftags%3Fname%3Dbookworm-%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=&color=blue) |
 | [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM's official OpenAI-compatible server image with orjson for faster JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson/latest-x86_64?label=) |
-| [m11s/timestral](timestral/README.md) | Standard V2 serving candidates: CPU, CUDA, ROCm and direct OpenVINO; see variant acceptance and artifact requirements | `candidate-standard-v1-{cpu,cuda,rocm,openvino}` |
+| [m11s/timestral](timestral/README.md) | Standard KServe V2 candidates: CPU, CUDA, ROCm and OpenVINO | [Published tags and digests](timestral/docs/verification/2026-11-01-published-candidates.json) |
 
 ## Quick Start
 
@@ -34,10 +34,10 @@ docker pull m11s/comfy-mcp:latest
 docker pull m11s/deepseek-harness:latest
 docker pull m11s/chromium-cdp:latest
 docker pull m11s/vllm-openai-orjson:latest-x86_64
-docker pull m11s/timestral:candidate-standard-v1-cpu
-docker pull m11s/timestral:candidate-standard-v1-cuda
-docker pull m11s/timestral:candidate-standard-v1-rocm
-docker pull m11s/timestral:candidate-standard-v1-openvino
+docker pull m11s/timestral@sha256:74fc93989f8b71bc97e41cd61122114326de21e0779180f05b27dfc463ce56a1 # cpu
+docker pull m11s/timestral@sha256:ad9d5a3d65e1895cc03b22c28c3290b0230773d522f54041da94eed1a180ba67 # cuda
+docker pull m11s/timestral@sha256:0d30377978d0191831e1b2d146decb37feb0c791210207b588d919f351f58291 # rocm
+docker pull m11s/timestral@sha256:5719f642b6f750dd9d26585776c0949667d7aca2788ad460dc13416c0bbcb494 # openvino
 ```
 
 ## Publishing
@@ -50,7 +50,8 @@ version sources, tags, and build platforms, and the
 Image-specific configuration and usage are documented in each image's directory.
 
 To request a rebuild, use **Run workflow** in the build workflow and select an
-image or `all`.
+image or `all`. Timestral is validated there but published separately through
+[`timestral-candidates.yaml`](.github/workflows/timestral-candidates.yaml).
 
 Run the tag resolver checks with
 `python3 -m unittest discover -s scripts -p 'test_*.py'`.

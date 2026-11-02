@@ -45,3 +45,37 @@ def test_request_roundtrips_official_grpc_names_types_and_identity():
     assert decoded.model_name == 'timestral'
     for tensor in decoded.inputs:
         np.testing.assert_array_equal(tensor.as_numpy(), values[tensor.name])
+
+
+def test_openvino_fixtures_include_boundaries_and_omit_unsupported_shapes():
+    cases = list(probe.fixtures('openvino'))
+    assert any(v['context'].shape == (1,1,256) for _,v,_,_ in cases)
+    assert any(h == 320 for _,_,h,_ in cases)
+    assert all(v['context'].shape[:2] == (1,1) and v['context'].shape[-1] <= 256 and h <= 320 for _,v,h,_ in cases)
+    assert not any('covariates' in k for _,v,_,_ in cases for k in v)
+
+
+def test_openvino_conversion_policy_does_not_relax_pytorch_comparison():
+    expected = {'quantiles': np.ones((1,1,3,21), dtype=np.float32)}
+    actual = {'quantiles': expected['quantiles'] + np.float32(5e-5)}
+    probe.compare(actual, expected, 'openvino')
+    for backend in ('cpu','cuda','rocm'):
+        with pytest.raises(AssertionError):
+            probe.compare(actual, expected, backend)
+
+
+def test_identity_checks_decode_official_grpc_parameter_values():
+    from kserve import InferResponse
+    revision = 'a'*40
+    response = InferResponse('id', 'timestral', [], model_version=revision,
+                            parameters={'model_id':'mistralai/Timestral-5M', 'backend':'cpu'})
+    decoded = InferResponse.from_grpc(response.to_grpc())
+    assert probe.parameter_value(decoded.parameters['model_id']) == 'mistralai/Timestral-5M'
+    assert probe.parameter_value('cpu') == 'cpu'
+
+
+def test_conversion_tolerance_does_not_relax_quantile_level_identity():
+    expected = {'quantile_levels': np.full(21, .5, dtype=np.float32)}
+    actual = {'quantile_levels': expected['quantile_levels'] + np.float32(5e-6)}
+    with pytest.raises(AssertionError):
+        probe.compare(actual, expected, 'openvino')
