@@ -14,7 +14,7 @@ on:
       - "chromium-cdp/**"
       - ".github/workflows/build.yaml"
       - "caddy/**"
-      - "vllm-openai-orjson/**"
+      - "vllm-openai/**"
       - "timestral/**"
       - "scripts/image_tags.py"
       - "scripts/native_image_matrix.py"
@@ -49,7 +49,7 @@ on:
           - deepseek-harness
           - chromium-cdp
           - caddy
-          - vllm-openai-orjson
+          - vllm-openai
           - timestral-cpu
           - timestral-cuda
           - timestral-rocm
@@ -98,7 +98,7 @@ jobs:
       deepseek-harness: ${{ steps.filter.outputs.deepseek-harness }}
       chromium-cdp: ${{ steps.filter.outputs.chromium-cdp }}
       caddy: ${{ steps.filter.outputs.caddy }}
-      vllm-openai-orjson: ${{ steps.filter.outputs.vllm-openai-orjson }}
+      vllm-openai: ${{ steps.filter.outputs.vllm-openai }}
       timestral-cpu: ${{ steps.filter.outputs.timestral-cpu }}
       timestral-cuda: ${{ steps.filter.outputs.timestral-cuda }}
       timestral-rocm: ${{ steps.filter.outputs.timestral-rocm }}
@@ -212,9 +212,9 @@ jobs:
               - '!**/docker-compose*.yml'
               - '!**/*.md'
               - '!**/docs/**'
-            vllm-openai-orjson:
+            vllm-openai:
               - 'scripts/image_tags.py'
-              - 'vllm-openai-orjson/**'
+              - 'vllm-openai/**'
               - '!**/compose*.yaml'
               - '!**/compose*.yml'
               - '!**/docker-compose*.yaml'
@@ -328,13 +328,14 @@ jobs:
             strip_suffix: -alpine
             tag_suffix: -cloudflare
             latest: latest-cloudflare
-          - context: vllm-openai-orjson
-            repository: m11s/vllm-openai-orjson
+          - context: vllm-openai
+            repository: m11s/vllm-openai
             description: vLLM OpenAI server image with faster orjson serialization.
             version_source: base-arg
             version_ref: VLLM_BASE_IMAGE
             strip_suffix: -x86_64
-            latest: latest
+            tag_suffix: -orjson
+            latest: latest-orjson
           - context: timestral-cpu
             build_context: timestral
             dockerfile: timestral/Dockerfile.cpu
