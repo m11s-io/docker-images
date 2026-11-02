@@ -38,7 +38,7 @@ jobs:
           done
       - name: Artifact publication guard tests
         run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s timestral/openvino/export/tests
-      - name: Unit and legacy regression tests
+      - name: Shared KServe regression tests
         env:
           PYTHONPATH: timestral
         run: uv run --frozen --project timestral/dependencies/cpu python -m pytest timestral/tests timestral/openvino/tests -q -o asyncio_default_fixture_loop_scope=function

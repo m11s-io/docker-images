@@ -33,7 +33,7 @@
       "description": "Discover stable CUDA variants from the aggregate official PyTorch index",
       "matchDatasources": ["pypi"],
       "matchPackageNames": ["torch", "torchvision"],
-      "matchFileNames": ["comfyui/requirements-cuda.txt", "timestral/requirements-cuda.txt"],
+      "matchFileNames": ["comfyui/requirements-cuda.txt"],
       "allowedVersions": "/^\\d+\\.\\d+\\.\\d+\\+cu\\d+$/",
       "ignoreUnstable": true,
       "registryUrls": ["https://download.pytorch.org/whl"],
@@ -54,28 +54,15 @@
       "separateMinorPatch": false
     },
     {
-      "description": "Keep Timestral's default PyTorch distribution CPU-only",
-      "matchDatasources": ["pypi"],
-      "matchPackageNames": ["torch"],
-      "matchFileNames": ["timestral/pyproject.toml"],
-      "allowedVersions": "/\\+cpu$/"
-    },
-    {
       "description": "Allow a longer release interval for the maintained Docker Hub description action",
       "matchDatasources": ["github-actions"],
       "matchPackageNames": ["peter-evans/dockerhub-description"],
       "abandonmentThreshold": "2 years"
     },
     {
-      "description": "Keep Timestral on its validated Python 3.15 runtime",
-      "matchPackageNames": ["python"],
-      "matchFileNames": ["timestral/**"],
-      "allowedVersions": "/^3\\.15\\./"
-    },
-    {
       "description": "CUDA pins use the numeric CUDA-aware manager instead of PEP 440 local-version ranges",
       "matchManagers": ["pip_requirements"],
-      "matchFileNames": ["comfyui/requirements-cuda.txt", "timestral/requirements-cuda.txt"],
+      "matchFileNames": ["comfyui/requirements-cuda.txt"],
       "enabled": false
     },
     {
@@ -165,7 +152,7 @@
     {
       "customType": "regex",
       "description": "Track exact CUDA wheel pins and compare the CUDA suffix as a numeric build",
-      "managerFilePatterns": ["/^(comfyui|timestral)\\/requirements-cuda\\.txt$/"],
+      "managerFilePatterns": ["/^comfyui\\/requirements-cuda\\.txt$/"],
       "matchStrings": ["(?<depName>torch(?:vision)?)==(?<currentValue>\\d+\\.\\d+\\.\\d+\\+cu\\d+)"],
       "datasourceTemplate": "pypi",
       "registryUrlTemplate": "https://download.pytorch.org/whl",

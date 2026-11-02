@@ -43,4 +43,4 @@ a different identity/cohort/script requires a new output directory. Use
 `--retry-incomplete --only <row>` after a failure; the prior failed JSON is
 preserved before retry. Do not rank rows on
 different surviving subsets. This is request latency on the fixed workload, not
-a sustained-throughput SLO. Keep historical `benchmark.py` results separate.
+a sustained-throughput SLO.

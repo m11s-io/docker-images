@@ -1,9 +1,9 @@
 # Standard V2 migration
 
-The standard-serving work is a candidate until real-image REST/gRPC, unchanged
-upstream final-forecast parity and device acceptance have passed. Existing
-`latest-cpu`/`latest-cuda` and `/forecast` remain the legacy contract. Do not
-publish an incompatible serving change to these aliases.
+The repository contains only the shared KServe V2 implementation. The custom
+`/forecast` wrapper, its dependency roots and tests have been removed at the
+user's request. Current release/flavor tags serve KServe V2. Older deployed
+images remain separate operational resources until a deliberate client cutover.
 
 ## Preserved rollback
 
@@ -41,8 +41,8 @@ preview is never evidence for a 209M cutover.
    client. Roll gradually only after acceptance and explicit cutover approval.
    Revert the caller endpoint/configuration to the preserved service on parity,
    readiness, error or latency regressions.
-8. Retire the old service and remove its wrapper only when unused and explicitly
-   authorized. Stable aliases follow accepted clients and hardware, not builds.
+8. Retire any remaining old deployment only after an authorized caller cutover.
+   Source cleanup alone does not change cluster services.
 
 No rollout, client cutover, artifact publication, stable-tag update or old-service
 retirement is authorized by the implementation plan alone. Candidate build code
@@ -53,10 +53,11 @@ inference, metadata and readiness only; extensions require separate evidence.
 
 A read-only scan of managed product, platform and registry sources found the
 legacy service documentation but no configured product caller of this endpoint.
-The wrapper's own tests and benchmark are reference callers. This does not prove
+The removed wrapper previously had reference callers in its tests. This does not prove
 that unmanaged or external callers are absent. Obtain the endpoint owner's
 complete caller inventory and traffic evidence before cutover or retirement.
-No legacy wrapper, dependency or reference test has been removed.
+Legacy wrapper code, dependencies and tests have been removed. Historical image
+digests and verification receipts remain for provenance and rollback.
 
 ## Hardware validation images
 
