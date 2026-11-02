@@ -1,16 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>m11s-io/.github:renovate-config"],
-  "minimumReleaseAge": "14 days",
-  "vulnerabilityAlerts": {
-    "minimumReleaseAge": "14 days"
-  },
   "packageRules": [
-    {
-      "description": "Apply the same 14-day cooldown to every dependency, including inherited exceptions",
-      "matchPackageNames": ["*"],
-      "minimumReleaseAge": "14 days"
-    },
     {
       "description": "Auto-merge Docker digest updates after checks pass",
       "matchDatasources": ["docker"],
