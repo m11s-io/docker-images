@@ -16,6 +16,39 @@ import sys
 import tempfile
 
 
+def convert_block(model, *, covariates=False):
+    """Convert a neural branch; horizon comes from a dynamic future dimension."""
+    import torch
+    import openvino as ov
+    ps=model.config.patch_size
+
+    class ContextBlock(torch.nn.Module):
+        def __init__(self): super().__init__(); self.model=model
+        def forward(self,context,observed,group_ids,known_future):
+            return self.model.predict_block(context,observed,group_ids,known_future.shape[1]//ps)
+
+    class CovariateBlock(torch.nn.Module):
+        def __init__(self): super().__init__(); self.model=model
+        def forward(self,context,observed,group_ids,known_future,role_ids,known_future_mask):
+            return self.model._predict_window(torch.cat([context,known_future],dim=-1),
+                torch.cat([observed,known_future_mask],dim=-1),group_ids,
+                known_future.shape[1]//ps,role_ids)
+
+    examples=[torch.zeros(4,ps*4),torch.ones(4,ps*4,dtype=torch.bool),
+              torch.tensor([0,0,1,1]),torch.zeros(4,ps*2)]
+    inputs=[('context',[-1,-1],ov.Type.f32),('observed',[-1,-1],ov.Type.boolean),
+            ('group_ids',[-1],ov.Type.i64),('known_future',[-1,-1],ov.Type.f32)]
+    if covariates:
+        examples += [torch.tensor([0,2,0,2]),torch.ones(4,ps*2,dtype=torch.bool)]
+        inputs += [('role_ids',[-1],ov.Type.i64),('known_future_mask',[-1,-1],ov.Type.boolean)]
+    with torch.inference_mode():
+        graph=ov.convert_model((CovariateBlock() if covariates else ContextBlock()).eval(),
+                              example_input=tuple(examples),input=inputs)
+    for port,(name,_,_) in zip(graph.inputs,inputs):port.get_tensor().set_names({name})
+    graph.output(0).get_tensor().set_names({'quantiles'})
+    return graph
+
+
 def cases():
     import numpy as np
     rng=np.random.default_rng(20261030)
