@@ -49,7 +49,7 @@ class StandardPublishTest(unittest.TestCase):
                 for name in PROFILE_FILES:(profiles/name).write_bytes(b'fixture')
                 from profiles import cases,case_options
                 keys={f'{name}-s{int(s)}-c{int(c)}' for name in cases() for s,c in case_options(name)}
-                parity=dict(passed=True,cases={k:dict(rtol=1e-4,atol=1e-4,max_absolute_error=0) for k in keys},neural_backend='openvino',reference_weights_loaded_in_runtime_worker=False,github_run='42')
+                parity=dict(passed=True,cases={k:dict(rtol=1e-4,atol=1e-4,max_absolute_error=0,strict_passed=True,accepted=True) for k in keys},neural_backend='openvino',reference_weights_loaded_in_runtime_worker=False,github_run='42')
                 (evidence/'parity.json').write_text(json.dumps(parity))
                 manifest=dict(format='timestral-openvino-profiles-v2',model_id=model_id,model_revision=revision,source_revision=SOURCE_REVISION,precision='FP32',parity_report_sha256=p.digest(evidence/'parity.json'),files={name:p.digest(profiles/name) for name in PROFILE_FILES})
                 (profiles/'manifest.json').write_text(json.dumps(manifest))

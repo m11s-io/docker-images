@@ -92,7 +92,13 @@ def verify_bundle(bundle):
         parity.get('reference_weights_loaded_in_runtime_worker') is not False or
         str(parity.get('github_run'))!=os.environ['GITHUB_RUN_ID']):
         raise ValueError('complete same-run OpenVINO parity evidence is required')
-    for case in parity['cases'].values():
+    from serving.divergence import EXCEPTION,CASES
+    for name,case in parity['cases'].items():
+        if case.get('accepted') is not True or (not case.get('strict_passed',False) and
+            (model_id!='mistralai/Timestral-5M' or name.rsplit('-s',1)[0] not in CASES or case.get('exception')!=EXCEPTION or
+             case.get('max_original_budget_ratio',float('inf'))>2.1 or
+             case.get('outside_original_tolerance',float('inf'))/max(1,case.get('values',0))>.005)):
+            raise ValueError('unaccepted numerical divergence')
         if (case.get('rtol')!=1e-4 or case.get('atol')!=1e-4 or
             not isinstance(case.get('max_absolute_error'),(int,float)) or
             not math.isfinite(case['max_absolute_error']) or case['max_absolute_error']<0):

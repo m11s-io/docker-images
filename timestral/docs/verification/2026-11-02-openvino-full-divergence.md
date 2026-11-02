@@ -27,3 +27,13 @@ Both models completed the full existing expanded export matrix (78 option/case c
 Divergence is concentrated in a small fraction of 5M long-horizon quantile values on these inputs; all tested median forecasts remained inside the original tolerance. These synthetic-reference comparisons measure numerical agreement, not forecast accuracy against future truth. They do not establish a production error bound or full-domain equivalence. The old bounded M4 accuracy report remains historical; no new accuracy result is inferred here.
 
 The implementation assessed is PR #163’s normalized-neural graph approach (commit c13973c plus a readiness-only malformed-graph check). The uncommitted output-transform experiment was discarded before this assessment. Upstream FP64 preprocessing remains unchanged; learned neural layers execute in OpenVINO. Full per-request reports and raw quantile predictions are retained at `/Users/al/Work/repo/m11s/.superpowers/evidence/timestral-openvino-cpu-parity/divergence`; their checksums and exact artifact/model identities are in the JSON. No output was discarded because it exceeded tolerance.
+
+## Acceptance decision
+
+The user accepted the documented small 5M tail divergence after reviewing the
+full untuned assessment. The original strict rtol/atol and violation counts remain
+reported. A separately named exception accepts only reviewed 5M 1024-step cases,
+with no more than 0.5% tail values outside the original budget and a maximum
+original-budget ratio of 2.1 (measured maximum 2.08457). Median values must still
+meet the original budget. Other models/cases and invalid outputs receive no
+exception. This is numerical acceptance, not a forecast-accuracy claim.

@@ -223,7 +223,16 @@ def run(report):
                     actual = {out.name: out.as_numpy() for out in response.outputs}
                     passed = True
                     try:
-                        error = compare(actual, expected, settings.backend)
+                        if settings.backend=='openvino':
+                            from serving.divergence import assess
+                            drift=assess(actual['quantiles'],expected['quantiles'],model_id=settings.model_id,case=name)
+                            print('OPENVINO_DIVERGENCE',name,transport,json.dumps(drift),flush=True)
+                            assert drift['accepted'],drift
+                            error=compare({k:v for k,v in actual.items() if k!='quantiles'},
+                                          {k:v for k,v in expected.items() if k!='quantiles'},settings.backend)
+                            error['quantiles']=drift['max_absolute_error']
+                        else:
+                            error = compare(actual, expected, settings.backend)
                     except AssertionError:
                         # Preserve the failure while collecting the remaining
                         # cases; never make one mismatch hide later coverage.

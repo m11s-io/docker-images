@@ -142,17 +142,19 @@ def worker(args):
                 arrays[key]=q
                 arrays['levels']=levels
             else:
-                results[key]=validate_outputs(reference[key],q,h)
+                from serving.divergence import assess
+                results[key]=assess(q,reference[key],model_id='mistralai/Timestral-'+args.model_size,case=name)
                 np.testing.assert_array_equal(levels,reference['levels'])
                 np.testing.assert_allclose(forecast.median.numpy(),reference[key][...,10],rtol=1e-4,atol=1e-4)
     if reference is None:
         np.savez(evidence/'reference.npz',**arrays)
     else:
-        report={'passed':True,'cases':results,'neural_backend':'openvino',
+        report={'passed':all(r['accepted'] for r in results.values()),'cases':results,'neural_backend':'openvino',
                 'reference_weights_loaded_in_runtime_worker':False,
                 'packages':{p:importlib.metadata.version(p) for p in ('torch','openvino','numpy')},
                 'architecture':platform.machine(),'github_run':os.environ.get('GITHUB_RUN_ID')}
         (evidence/'parity.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+        if not report['passed']:raise AssertionError('forecast divergence exceeds accepted evidence')
 
 
 def export(output,model_size='5M'):
@@ -176,7 +178,7 @@ def export(output,model_size='5M'):
         card=Path(__file__).with_name('model-card.md').read_text()
         (output/'profiles/README.md').write_text(card+'\n\nModel: '+model_id+'\nRevision: '+model_revision+'\n')
         for mode,src in [('reference',source),('convert',patched),('runtime',source)]:
-            subprocess.run([sys.executable,str(Path(__file__).resolve()),'--worker',mode,
+            subprocess.run([sys.executable,str(Path(__file__).resolve()),'--worker',mode,'--model-size',model_size,
                             '--source',str(src),'--checkpoint',str(checkpoint),'--output',str(output.resolve())],check=True)
     # Only a fully passing run reaches a versioned manifest. Publication remains
     # independent; CI evidence is retained alongside, outside the runtime bundle.
