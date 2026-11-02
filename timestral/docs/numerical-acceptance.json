@@ -1,0 +1,138 @@
+{
+  "status": "experimental",
+  "decision": "device-native-no-cpu-equivalence",
+  "scope": [
+    {
+      "backend": "cpu",
+      "image": "m11s/timestral@sha256:74fc93989f8b71bc97e41cd61122114326de21e0779180f05b27dfc463ce56a1",
+      "model_id": "mistralai/Timestral-209M",
+      "model_revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
+      "device": "cpu",
+      "architecture": null,
+      "comparison_scope": "same-device-upstream",
+      "probe_sha256": "8355eee2d42361b02799c855bba938390d656f769f8ef8268e3a01e99c624889",
+      "artifact": null
+    },
+    {
+      "backend": "cpu",
+      "image": "m11s/timestral@sha256:74fc93989f8b71bc97e41cd61122114326de21e0779180f05b27dfc463ce56a1",
+      "model_id": "mistralai/Timestral-5M",
+      "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
+      "device": "cpu",
+      "architecture": null,
+      "comparison_scope": "same-device-upstream",
+      "probe_sha256": "8355eee2d42361b02799c855bba938390d656f769f8ef8268e3a01e99c624889",
+      "artifact": null
+    },
+    {
+      "backend": "openvino",
+      "image": "m11s/timestral@sha256:5719f642b6f750dd9d26585776c0949667d7aca2788ad460dc13416c0bbcb494",
+      "model_id": "mistralai/Timestral-209M",
+      "model_revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
+      "device": "cpu",
+      "architecture": null,
+      "comparison_scope": "conversion",
+      "probe_sha256": "36f9a64b2d77cf52936db876939ee349a6690b2cf146befcd045cf476aa42e45",
+      "artifact": {
+        "manifest_sha256": "9203e3c04af76fab1ffde055a9358b1417519c56d87f399d7a232afa57921ba1",
+        "path": "standard-v1/9203e3c04af76fab1ffde055a9358b1417519c56d87f399d7a232afa57921ba1",
+        "repository": "m11s-org/Timestral-5M-OpenVINO-experimental",
+        "revision": "0ed8d879c4b52b7e138b66cc98f8d91a45136b8c",
+        "run": "41328090420",
+        "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+        "status": "experimental-preview"
+      }
+    },
+    {
+      "backend": "openvino",
+      "image": "m11s/timestral@sha256:5719f642b6f750dd9d26585776c0949667d7aca2788ad460dc13416c0bbcb494",
+      "model_id": "mistralai/Timestral-5M",
+      "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
+      "device": "cpu",
+      "architecture": null,
+      "comparison_scope": "conversion",
+      "probe_sha256": "36f9a64b2d77cf52936db876939ee349a6690b2cf146befcd045cf476aa42e45",
+      "artifact": {
+        "manifest_sha256": "2365ee36bb28855be4417de39ad79fac73892fe2d0a98fb7e31e4f4352fdd2b1",
+        "path": "standard-v1/2365ee36bb28855be4417de39ad79fac73892fe2d0a98fb7e31e4f4352fdd2b1",
+        "repository": "m11s-org/Timestral-5M-OpenVINO-experimental",
+        "revision": "4ef5a7e934791901667df7c69f3b902c025e290a",
+        "run": "41328090420",
+        "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
+        "status": "experimental-preview"
+      }
+    },
+    {
+      "backend": "rocm",
+      "image": "m11s/timestral@sha256:0d30377978d0191831e1b2d146decb37feb0c791210207b588d919f351f58291",
+      "model_id": "mistralai/Timestral-209M",
+      "model_revision": "9874d252ab0aae16f7f7c999f98f98d6ad7d8365",
+      "device": "AMD Radeon Graphics",
+      "architecture": "gfx1201",
+      "comparison_scope": "same-device-upstream",
+      "probe_sha256": "36f9a64b2d77cf52936db876939ee349a6690b2cf146befcd045cf476aa42e45",
+      "artifact": null
+    },
+    {
+      "backend": "rocm",
+      "image": "m11s/timestral@sha256:0d30377978d0191831e1b2d146decb37feb0c791210207b588d919f351f58291",
+      "model_id": "mistralai/Timestral-5M",
+      "model_revision": "bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f",
+      "device": "AMD Radeon Graphics",
+      "architecture": "gfx1201",
+      "comparison_scope": "same-device-upstream",
+      "probe_sha256": "36f9a64b2d77cf52936db876939ee349a6690b2cf146befcd045cf476aa42e45",
+      "artifact": null
+    }
+  ],
+  "metric": {
+    "same_device": "elementwise abs(actual-reference) <= atol + rtol*abs(reference)",
+    "cross_device": null,
+    "aggregation": "every element, output and case must pass; no averaging"
+  },
+  "threshold": {
+    "pytorch": {
+      "quantiles": {
+        "rtol": 1e-05,
+        "atol": 1e-05
+      },
+      "median": {
+        "rtol": 1e-05,
+        "atol": 1e-05
+      }
+    },
+    "openvino_bounded": {
+      "quantiles": {
+        "rtol": 0.0001,
+        "atol": 0.0001
+      },
+      "median": {
+        "rtol": 0.0001,
+        "atol": 0.0001
+      }
+    },
+    "quantile_levels": {
+      "rtol": 1e-06,
+      "atol": 1e-07
+    },
+    "cross_device": null
+  },
+  "evidence": [
+    "verification/2026-11-01-published-target-validation.json",
+    "verification/2026-11-01-upstream-device-drift.json",
+    "verification/2026-11-01-hardware-acceptance.json",
+    "verification/2026-11-01-independent-device-budgets.json"
+  ],
+  "exclusions": [
+    "CPU/GPU equivalence",
+    "unknown image/model/revision/hardware/options",
+    "latest published CUDA digest: target validation pending",
+    "OpenVINO full-default behavior or covariates",
+    "other AMD architectures or host stacks",
+    "business forecast-quality acceptance",
+    "stable promotion, rollout and client cutover"
+  ],
+  "unknown_scope_status": "unaccepted",
+  "cross_device_status": "unaccepted",
+  "stable_promotion": false
+}

@@ -102,7 +102,15 @@ class TimestralModel(Model):
             raise RuntimeError('forecast inference failed') from None
         response.parameters.update(model_id=self.settings.model_id,
                                    model_revision=self.settings.model_revision,
-                                   backend=self.settings.backend)
+                                   backend=self.settings.backend,
+                                   forecast_profile=self.settings.resolved_profile)
+        if self.settings.resolved_profile == 'bounded-v1':
+            response.parameters.update(max_context=256,per_shot_horizon_patches=5)
+        else:
+            forecaster=getattr(self._backend,'forecaster',None)
+            for key in ('max_context','per_shot_horizon_patches'):
+                value=getattr(forecaster,key,None)
+                if value is not None: response.parameters[key]=int(value)
         if self.settings.backend == 'openvino':
             response.parameters.update(experimental=True,max_context=256,per_shot_horizon_patches=5)
             digest = getattr(self._backend,'artifact_manifest_sha256',None)
