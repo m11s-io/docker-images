@@ -36,11 +36,12 @@ def profiles(root,bad=None):
         future=ports[list(types).index('known_future')]
         target=ops.concat([ops.shape_of(future,'i64'),ops.constant([20 if bad=='output-shape' else 21])],0)
         out=ops.broadcast(ops.constant(np.float16(0) if bad=='output-type' else np.float32(0)),target)
+        if bad=='fixed-output':out=ops.constant(np.zeros((4,32,21),np.float32))
         out.output(0).get_tensor().set_names({'wrong' if bad=='output-name' else 'quantiles'})
         ov.save_model(ov.Model([out],ports),root/f'{name}.xml',compress_to_fp16=False)
 
 
-@pytest.mark.parametrize('bad',['input-type','input-name','fixed-shape','output-shape','output-type','output-name'])
+@pytest.mark.parametrize('bad',['input-type','input-name','fixed-shape','output-shape','output-type','output-name','fixed-output'])
 def test_bad_ir_contract_fails_before_ready(tmp_path,bad):
     profiles(tmp_path,bad)
     with pytest.raises(ValueError):module().OpenVINOBlocks(tmp_path)

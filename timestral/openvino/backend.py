@@ -30,17 +30,20 @@ class OpenVINOBlocks:
                 raise ValueError('IR must return one quantile tensor')
             port=model.output(0);shape=port.get_partial_shape()
             if (port.get_any_name()!='quantiles' or port.get_element_type()!=ov.Type.f32 or
-                shape.rank!=3 or not shape[2].compatible(ov.Dimension(self.config.num_quantiles))):
+                shape.rank!=3 or shape[0].is_static or shape[1].is_static or
+                not shape[2].compatible(ov.Dimension(self.config.num_quantiles))):
                 raise ValueError('invalid IR output contract')
             compiled=core.compile_model(model,'CPU',{'INFERENCE_PRECISION_HINT':'f32',
                 'INFERENCE_NUM_THREADS':2,'NUM_STREAMS':1,'ENABLE_CPU_PINNING':False})
             self.compiled[branch]=compiled
-            r,t,h=4,self.config.patch_size*2,self.config.patch_size
-            values=dict(context=np.zeros((r,t),np.float32),observed=np.ones((r,t),bool),
-                        group_ids=np.array([0,0,1,1],np.int64),known_future=np.zeros((r,h),np.float32),
-                        loc=np.zeros((r,t),np.float32),scale=np.ones((r,t),np.float32))
-            if branch=='covariates':values.update(role_ids=np.array([0,1,0,2],np.int64))
-            self._execute(compiled,values,r,h)
+            for r,t,h in [(1,self.config.patch_size*3,self.config.patch_size),
+                          (4,self.config.patch_size*5,self.config.patch_size*min(2,self.config.block_size))]:
+                values=dict(context=np.zeros((r,t),np.float32),observed=np.ones((r,t),bool),
+                            group_ids=np.arange(r,dtype=np.int64)//2,known_future=np.zeros((r,h),np.float32),
+                            loc=np.zeros((r,t),np.float32),scale=np.ones((r,t),np.float32))
+                if branch=='covariates':values.update(role_ids=np.arange(r,dtype=np.int64)%3)
+                self._execute(compiled,values,r,h)
+
 
     def eval(self):return self
 
