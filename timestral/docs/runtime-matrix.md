@@ -29,7 +29,7 @@ identified separately by repository and 40-character commit.
 | cpu | CPython 3.12.16 / bookworm | torch 2.14.1+cpu | explicit cpu | upstream config + safetensors | 5M/209M native forecasts/protocol passed; candidate published |
 | cuda | same | torch 2.14.1+cu130 | explicit cuda:N, NVIDIA | upstream config + safetensors | same-GPU upstream parity passed; CPU equivalence unaccepted |
 | rocm | same, wheel-supplied userspace | torch 2.14.1+rocm7.2 | explicit cuda:N, HIP gfx1201 | upstream config + safetensors | experimental; actual gfx1201 inference tested; CPU equivalence unaccepted |
-| openvino | same | OpenVINO 2026.4.1; torch 2.6.0+cpu for upstream algorithms | explicit CPU | verified versioned FP32 profile bundle | experimental; bounded 5M/209M native parity/protocol passed, image/profiles published |
+| openvino | same | OpenVINO 2026.4.1; torch 2.13.0+cpu for upstream algorithms | explicit CPU | verified versioned FP32 profile bundle | experimental; bounded 5M/209M native parity/protocol passed, image/profiles published |
 
 Immutable shared candidate base:
 `python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337`.

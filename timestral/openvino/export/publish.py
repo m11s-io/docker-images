@@ -1,5 +1,7 @@
-"""Append a validated standard-v1 profile release; preserve legacy HF contents."""
+"""Publish validated versioned profiles using job-scoped HF OIDC."""
 import argparse
+import hashlib
+import re
 import json
 import math
 import os
@@ -8,9 +10,50 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 
-from package import digest,inventory
-from publish import DESTINATION,validate_environment
-from publication_inventory import is_standard_file,validate_remote_inventory
+DESTINATION = "m11s-org/Timestral-5M-OpenVINO-experimental"
+
+
+def validate_environment() -> None:
+    expected = {"GITHUB_ACTIONS": "true", "GITHUB_REF": "refs/heads/main",
+                "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REPOSITORY": "m11s-io/docker-images",
+                "HF_OIDC_RESOURCE": DESTINATION}
+    for key, value in expected.items():
+        if os.environ.get(key) != value:
+            raise ValueError(f"publication requires the configured main dispatch: {key}")
+
+
+def inventory(root: Path) -> set:
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("bundle must be a real directory")
+    names = set()
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise ValueError("symlinks cannot be published")
+        if path.is_file(): names.add(path.relative_to(root).as_posix())
+        elif not path.is_dir(): raise ValueError("special files cannot be published")
+    return names
+
+
+def digest(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+STANDARD_PATTERN=re.compile(r'standard-v1/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|block-[1-5]\.(?:xml|bin))|evidence/(?:parity\.json|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt))')
+
+
+def is_standard_file(name):
+    return bool(STANDARD_PATTERN.fullmatch(name))
+
+
+def validate_remote_inventory(names):
+    # Historical remote artifacts remain immutable; no legacy publishing code remains.
+    allowed={'model/1/model.xml','model/1/model.bin','config.json','quantiles.json',
+             'LICENSE','README.md','validation.json','validation-fixtures.json',
+             'ovms-validation.json','SHA256SUMS','.gitattributes'}
+    if any(name not in allowed and not is_standard_file(name) for name in names):
+        raise ValueError('remote repository contains unexpected files; refusing to publish')
+
 
 EVIDENCE={'parity.json','protocol-parity.xml','provenance.json','manifest-sha256.txt'}
 
