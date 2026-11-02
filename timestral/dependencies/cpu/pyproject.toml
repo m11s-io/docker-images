@@ -1,7 +1,7 @@
 [project]
 name = "timestral-standard-cpu"
 version = "0.1.0"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.15,<3.16"
 dependencies = [
   "kserve @ git+https://github.com/kserve/kserve.git@abc6c47ab4af588e40c67372b4835122234f6f74#subdirectory=python/kserve",
   "timestral @ git+https://github.com/mistralai/timestral.git@a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff",
