@@ -19,7 +19,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | DeepSeek Harness web runtime; connects to a separately deployed browser provider when browser automation is needed | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness/latest?label=) |
 | [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium browser exposing the Chrome DevTools Protocol for a colocated DeepSeek Harness runtime | ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Fchromium-cdp%2Ftags%3Fname%3Dbookworm-%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=&color=blue) |
 | [m11s/vllm-openai-orjson](https://hub.docker.com/r/m11s/vllm-openai-orjson) | vLLM's official OpenAI-compatible server image with orjson for faster JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai-orjson/latest-x86_64?label=) |
-| [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Timestral forecasting API with CPU-only or NVIDIA CUDA PyTorch | ![CPU version](https://img.shields.io/docker/v/m11s/timestral/latest-cpu?label=CPU) ![CUDA version](https://img.shields.io/docker/v/m11s/timestral/latest-cuda?label=CUDA) |
+| [m11s/timestral](timestral/README.md) | Standard V2 serving candidates: CPU, CUDA, ROCm and direct OpenVINO; see variant acceptance and artifact requirements | `candidate-standard-v1-{cpu,cuda,rocm,openvino}` |
 
 ## Quick Start
 
@@ -34,8 +34,10 @@ docker pull m11s/comfy-mcp:latest
 docker pull m11s/deepseek-harness:latest
 docker pull m11s/chromium-cdp:latest
 docker pull m11s/vllm-openai-orjson:latest-x86_64
-docker pull m11s/timestral:latest-cpu
-docker pull m11s/timestral:latest-cuda
+docker pull m11s/timestral:candidate-standard-v1-cpu
+docker pull m11s/timestral:candidate-standard-v1-cuda
+docker pull m11s/timestral:candidate-standard-v1-rocm
+docker pull m11s/timestral:candidate-standard-v1-openvino
 ```
 
 ## Publishing

@@ -39,7 +39,8 @@ model inference slot are enforced; a cancelled caller cannot oversubscribe it.
 The OpenVINO preview selects `MODEL_ID=mistralai/Timestral-5M` or `mistralai/Timestral-209M`, its matching documented
 revision, `TIMESTRAL_FORECAST_ARTIFACTS` pointing to a read-only profile bundle and
 `TIMESTRAL_ARTIFACT_MANIFEST_SHA256` from its independently pinned publication.
-The old OVMS block artifact is not this new artifact format. See
+OpenVINO export and publication live under `openvino/export/`; the legacy
+OVMS exporter has been removed. Existing historical HF artifacts are preserved. See
 [OpenVINO preview](openvino/README.md) for strict capability limits.
 
 ## Protocol and validation
