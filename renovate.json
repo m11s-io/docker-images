@@ -143,7 +143,7 @@
     {
       "customType": "regex",
       "description": "Track application and plugin versions declared in Dockerfile arguments",
-      "managerFilePatterns": ["/^(caddy-cloudflare|s3-upload-proxy|comfyui|comfy-mcp)\\/Dockerfile(?:\\.rocm)?$/"],
+      "managerFilePatterns": ["/^(caddy|s3-upload-proxy|comfyui|comfy-mcp)\\/Dockerfile(?:\\.rocm)?$/"],
       "matchStrings": ["# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+=(?<currentValue>\\S+)"]
     },
     {

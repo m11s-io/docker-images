@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.28.0@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
+# droast global ignore=DF036 reason="The digest-pinned official Caddy base supplies the startup command."
 #
 # Caddy 2 with the caddy-dns/cloudflare DNS provider module built in, so
 # Caddy can complete Let's Encrypt DNS-01 challenges against Cloudflare
