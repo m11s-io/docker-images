@@ -13,7 +13,6 @@ dependencies = [
 dev = ["pydantic-settings==2.16.0", "pytest==9.1.1", "pytest-asyncio==1.4.0", "tritonclient[http,grpc]==2.73.0"]
 
 [tool.uv]
-exclude-newer = "14 days"
 package = false
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
 

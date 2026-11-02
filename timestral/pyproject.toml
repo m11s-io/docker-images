@@ -21,7 +21,6 @@ pythonpath = ["."]
 markers = ["cpu: downloads and runs a real CPU checkpoint", "cuda: requires a CUDA device"]
 
 [tool.uv]
-exclude-newer = "14 days"
 package = false
 
 [[tool.uv.index]]
