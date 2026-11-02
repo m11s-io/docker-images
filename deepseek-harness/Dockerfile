@@ -6,8 +6,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git=1:2.39.5-0+deb12u3 python3=3.11.2-1+b1 make=4.3-4.1 g++=4:12.2.0-3 musl-tools=1.2.3-1 ca-certificates=20250419~deb12u2 \
     && rm -rf /var/lib/apt/lists/*
 
-ARG DSH_REF=dsh-v0.2.0-rc.2
-ARG DSH_COMMIT=639ed015397290b3745d163aafe02ffee4aa3f84
+ARG DSH_REF=dsh-v0.2.1-rc.5
+ARG DSH_COMMIT=b830ec950faba0a46dda564be3e2d854afed94f1
 RUN git init /opt/deepseek-harness \
     && git -C /opt/deepseek-harness remote add origin https://github.com/deepseek-ai/deepseek-harness.git \
     && git -C /opt/deepseek-harness fetch --depth=1 origin "refs/tags/${DSH_REF}" \
