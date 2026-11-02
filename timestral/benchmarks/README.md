@@ -4,7 +4,7 @@ One HTTP client script compares **5M and 209M on CPU, CUDA, ROCm and OpenVINO**.
 All eight rows use the same frozen 150 M4 series, last up-to-256 observed training
 values, official future test targets, no covariates, FP32 and bounded-v1 (256/5).
 These are public benchmark cases, not guaranteed-unseen pretraining data or a
-production-domain quality claim. No speed/accuracy winner is measured yet.
+production-domain quality claim. All eight rows are complete: see the [measured comparison](../docs/verification/2026-11-02-speed-accuracy.md).
 
 Prepare the fixed dataset before any model run:
 
