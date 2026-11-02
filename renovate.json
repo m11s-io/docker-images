@@ -35,7 +35,6 @@
       "matchPackageNames": ["torch", "torchvision"],
       "matchFileNames": ["comfyui/requirements-cuda.txt", "timestral/requirements-cuda.txt"],
       "allowedVersions": "/^\\d+\\.\\d+\\.\\d+\\+cu\\d+$/",
-      "minimumReleaseAge": "0 days",
       "ignoreUnstable": true,
       "registryUrls": ["https://download.pytorch.org/whl"],
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+cu(?<build>\\d+)$"
@@ -59,8 +58,7 @@
       "matchDatasources": ["pypi"],
       "matchPackageNames": ["torch"],
       "matchFileNames": ["timestral/pyproject.toml"],
-      "allowedVersions": "/\\+cpu$/",
-      "minimumReleaseAge": "0 days"
+      "allowedVersions": "/\\+cpu$/"
     },
     {
       "description": "Allow a longer release interval for the maintained Docker Hub description action",
