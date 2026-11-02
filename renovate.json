@@ -109,7 +109,7 @@
       "matchFileNames": [
         "comfyui/Dockerfile",
         "comfy-mcp/Dockerfile",
-        "chromium-cdp/Dockerfile",
+        "chromium/Dockerfile",
         "deepseek-harness/Dockerfile"
       ],
       "registryUrls": [

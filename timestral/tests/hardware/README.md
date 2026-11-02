@@ -1,8 +1,8 @@
 # Isolated hardware acceptance
 
-Run `timestral-candidates.yaml` manually on `main`. Download the
-`timestral-acceptance-<variant>` identity artifacts. These are unpromoted test
-images; use their immutable digest and source commit, never a moving tag.
+Use the normal build workflow to publish the required Timestral flavor. Resolve
+its source tag (`sha-<commit>-<flavor>`) to an immutable digest and use that
+identity in validation jobs. The separate acceptance-tag workflow is retired.
 
 Check the target's actual GPU memory and utilization, existing reservations,
 device-plugin health, and container/device permissions before scheduling. A

@@ -17,7 +17,7 @@ Public Docker images published to [Docker Hub](https://hub.docker.com/u/m11s).
 | [m11s/comfyui](https://hub.docker.com/r/m11s/comfyui) | ComfyUI for NVIDIA and AMD GPUs | ![CUDA](https://img.shields.io/docker/v/m11s/comfyui/latest-cuda?label=CUDA) ![ROCm](https://img.shields.io/docker/v/m11s/comfyui/latest-rocm?label=ROCm) |
 | [m11s/comfy-mcp](https://hub.docker.com/r/m11s/comfy-mcp) | MCP server for controlling ComfyUI | ![Version](https://img.shields.io/docker/v/m11s/comfy-mcp/latest?label=) |
 | [m11s/deepseek-harness](https://hub.docker.com/r/m11s/deepseek-harness) | Web interface for DeepSeek Harness | ![Version](https://img.shields.io/docker/v/m11s/deepseek-harness/latest?label=) |
-| [m11s/chromium-cdp](https://hub.docker.com/r/m11s/chromium-cdp) | Headless Chromium for remote browser automation | ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fhub.docker.com%2Fv2%2Frepositories%2Fm11s%2Fchromium-cdp%2Ftags%3Fname%3Dbookworm-%26ordering%3Dlast_updated%26page_size%3D1&query=%24.results%5B0%5D.name&label=&color=blue) |
+| [m11s/chromium](https://hub.docker.com/r/m11s/chromium) | Headless Chromium for remote browser automation | ![Version](https://img.shields.io/docker/v/m11s/chromium/latest-cdp?label=) |
 | [m11s/vllm-openai](https://hub.docker.com/r/m11s/vllm-openai) | vLLM with orjson for JSON serialization | ![Version](https://img.shields.io/docker/v/m11s/vllm-openai/latest-orjson?label=) |
 | [m11s/timestral](https://hub.docker.com/r/m11s/timestral) | Time-series forecasting server | ![cpu](https://img.shields.io/docker/v/m11s/timestral/latest-cpu?label=CPU) <br> ![cuda](https://img.shields.io/docker/v/m11s/timestral/latest-cuda?label=CUDA) <br> ![rocm](https://img.shields.io/docker/v/m11s/timestral/latest-rocm?label=ROCm) <br> ![openvino](https://img.shields.io/docker/v/m11s/timestral/latest-openvino?label=OpenVINO) |
 
@@ -33,7 +33,7 @@ docker pull m11s/comfyui:latest-cuda
 docker pull m11s/comfyui:latest-rocm
 docker pull m11s/comfy-mcp:latest
 docker pull m11s/deepseek-harness:latest
-docker pull m11s/chromium-cdp:latest
+docker pull m11s/chromium:latest-cdp
 docker pull m11s/vllm-openai:latest-orjson
 ```
 
