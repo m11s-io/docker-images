@@ -33,11 +33,11 @@ jobs:
         run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s scripts -p 'test_*.py'
       - name: Verify all candidate frozen locks
         run: |
-          for project in timestral/dependencies/{cpu,cuda,rocm} timestral/openvino; do
+          for project in timestral/dependencies/{cpu,cuda,rocm} timestral/openvino timestral/openvino/export; do
             python3 scripts/check_uv_lock.py "$project"
           done
       - name: Artifact publication guard tests
-        run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s timestral-openvino/tests
+        run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s timestral/openvino/export/tests
       - name: Unit and legacy regression tests
         env:
           PYTHONPATH: timestral
