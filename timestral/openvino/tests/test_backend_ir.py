@@ -59,9 +59,7 @@ def test_direct_dynamic_execution_without_pytorch_neural_parameters(tmp_path):
             assert torch.count_nonzero(result)==0
 
 
-def test_openvino_forecaster_uses_cpu_defaults_and_explicit_profile(tmp_path):
+def test_openvino_forecaster_uses_cpu_defaults(tmp_path):
     profiles(tmp_path)
     backend=module();forecaster=backend.create_forecaster(tmp_path)
     assert forecaster.max_context==1024 and forecaster.per_shot_horizon_patches==32
-    bounded=backend.create_forecaster(tmp_path,forecast_profile='bounded-v1')
-    assert bounded.max_context==256 and bounded.per_shot_horizon_patches==5

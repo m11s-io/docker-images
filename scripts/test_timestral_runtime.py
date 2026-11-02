@@ -22,9 +22,16 @@ class TimestralRuntimeTest(unittest.TestCase):
             self.assertRegex(dockerfile,r'python:3\.13\.\d+-slim-bookworm@sha256:[a-f0-9]{64}')
         workflow=(ROOT/'.github/workflows/build.yaml').read_text()
         job=workflow.split('  timestral-tests:',1)[1].split('\n  changes:',1)[0]
-        self.assertIn('python-version: "3.13"',job)
+        self.assertIn('uses: ./.github/workflows/timestral-standard.yaml',job)
+        acceptance=(ROOT/'.github/workflows/timestral-standard.yaml').read_text()
+        self.assertIn('python-version: "3.13"',acceptance)
+        self.assertNotIn('  pull_request:',acceptance)
         self.assertNotIn('tests/test_api.py',job)
-        self.assertIn('--project timestral/dependencies/cpu',job)
+        self.assertIn('--project timestral/dependencies/cpu',acceptance)
+        for variant in ('cpu','cuda','rocm','openvino'):
+            self.assertIn('needs.changes.outputs.timestral-'+variant,job)
+        build=workflow.split('  build:',1)[1].split('  native-prepare:',1)[0]
+        self.assertIn('needs: [changes, timestral-tests]',build)
 
     def test_cpu_uses_frozen_lock_and_cuda_uses_same_torch_release(self):
         project = tomllib.loads((ROOT / "timestral/dependencies/cpu/pyproject.toml").read_text())

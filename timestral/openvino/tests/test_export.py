@@ -24,7 +24,7 @@ def test_guarded_rewrites_leave_reference_source_untouched(tmp_path):
     rewrites.patch_source(source,destination)
     assert (source/'src/timestral/scaler.py').read_text()==scaler
     assert (source/'src/timestral/masks.py').read_text()==masks
-    assert '.unfold(' not in (destination/'src/timestral/scaler.py').read_text()
+    assert (destination/'src/timestral/scaler.py').read_text()==scaler
     assert 'cumsum' in (destination/'src/timestral/masks.py').read_text()
 
 
@@ -32,7 +32,7 @@ def test_source_drift_fails_without_a_partial_copy(tmp_path):
     rewrites=load('rewrites')
     source=tmp_path/'original'; destination=tmp_path/'patched'
     (source/'src/timestral').mkdir(parents=True)
-    (source/'src/timestral/scaler.py').write_text('upstream changed')
+    (source/'src/timestral/masks.py').write_text('upstream changed')
     with pytest.raises(ValueError,match='source drift'): rewrites.patch_source(source,destination)
     assert not destination.exists()
 

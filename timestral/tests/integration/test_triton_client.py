@@ -25,14 +25,13 @@ def reference(record_testsuite_property):
         metadata = json.loads((root/'metadata.json').read_text())
         assert metadata['model_id'] == os.environ['MODEL_ID']
         assert metadata['revision'] == os.environ['MODEL_REVISION']
-        assert metadata['forecast_profile']==os.environ.get('TIMESTRAL_FORECAST_PROFILE','upstream-default')
+        assert metadata['forecast_profile']=='upstream-default'
         return SimpleNamespace(max_context=metadata['max_context'],per_shot_horizon_patches=metadata['per_shot_horizon_patches'],root=root)
     from timestral import TimestralForecaster
     import torch
     torch.set_num_threads(2)
     return TimestralForecaster.from_pretrained(
-        os.environ['MODEL_ID'],revision=os.environ['MODEL_REVISION'],device='cpu',
-        **({'max_context':256,'per_shot_horizon_patches':5} if os.environ.get('TIMESTRAL_FORECAST_PROFILE')=='bounded-v1' else {}))
+        os.environ['MODEL_ID'],revision=os.environ['MODEL_REVISION'],device='cpu')
 
 
 @pytest.mark.parametrize('transport',['http-json','http-binary','grpc'])
@@ -96,7 +95,7 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
     def parameter_value(value):
         return getattr(value,value.WhichOneof('parameter_choice')) if hasattr(value,'WhichOneof') else value
     parameters=response.get('parameters',{}) if isinstance(response,dict) else response.parameters
-    expected_profile=os.environ.get('TIMESTRAL_FORECAST_PROFILE','upstream-default')
+    expected_profile='upstream-default'
     assert parameter_value(parameters['forecast_profile'])==expected_profile
     assert parameter_value(parameters['max_context'])==reference.max_context
     assert parameter_value(parameters['per_shot_horizon_patches'])==reference.per_shot_horizon_patches

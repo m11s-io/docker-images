@@ -183,16 +183,6 @@ async def test_openvino_response_reports_actual_cpu_equivalent_defaults(tmp_path
 
 
 @pytest.mark.asyncio
-async def test_bounded_comparison_metadata_records_resolved_operation(tmp_path):
-    m=TimestralModel(Settings(model_revision=REVISION,hf_home=str(tmp_path),forecast_profile='bounded-v1'),loader=lambda _:BlockingBackend())
-    m.load()
-    response=await m.predict(request())
-    assert response.parameters['forecast_profile']=='bounded-v1'
-    assert response.parameters['max_context']==256
-    assert response.parameters['per_shot_horizon_patches']==5
-
-
-@pytest.mark.asyncio
 async def test_default_metadata_uses_the_loaded_upstream_configuration(tmp_path):
     backend=BlockingBackend()
     backend.forecaster=SimpleNamespace(max_context=32768,per_shot_horizon_patches=32)

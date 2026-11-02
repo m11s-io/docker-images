@@ -12,8 +12,7 @@ numeric/categorical past and known-future covariates and both forecast options
 are supported wherever the selected checkpoint supports them. The existing
 shared CPU API budgets still apply; see [protocol](../docs/protocol.md).
 Defaults come from the checkpoint (currently context 32768 and up to 32 horizon
-patches for both pinned models). `bounded-v1` remains an explicit comparison
-option, not the default or the supported-input boundary.
+patches for both pinned models). There is no bounded compatibility preset.
 
 ## Artifacts
 

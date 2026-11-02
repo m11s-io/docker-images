@@ -81,7 +81,7 @@ class ImageTagsTest(unittest.TestCase):
         self.assertIn("latest-cpu", workflow)
         self.assertIn("latest-cuda", workflow)
         self.assertIn("timestral-tests:", workflow)
-        self.assertIn("uv run --frozen --project timestral/dependencies/cpu python -m pytest timestral/tests -q", workflow)
+        self.assertIn("uses: ./.github/workflows/timestral-standard.yaml", workflow)
 
     def test_variant_tags_have_separate_commit_alias(self):
         result = self.resolve("--version", "0.5.5", "--suffix=-gguf")

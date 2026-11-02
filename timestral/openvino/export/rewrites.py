@@ -3,10 +3,6 @@ from pathlib import Path
 import shutil
 
 REWRITES = {
-    "src/timestral/scaler.py": [
-        ("means.unfold(-1, patch_size, patch_size)", "means.unflatten(-1, (-1, patch_size))"),
-        ("scales.unfold(-1, patch_size, patch_size)", "scales.unflatten(-1, (-1, patch_size))"),
-    ],
     "src/timestral/masks.py": [
         ("obs_per_patch.cummax(dim=-1).values", "(obs_per_patch.to(torch.int64).cumsum(dim=-1) > 0)"),
     ],

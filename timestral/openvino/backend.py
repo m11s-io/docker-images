@@ -88,8 +88,5 @@ class CPUForecaster(TimestralForecaster):
     def device(self):return torch.device('cpu')
 
 
-def create_forecaster(artifact_directory,*,forecast_profile='upstream-default'):
-    if forecast_profile not in ('upstream-default','bounded-v1'):
-        raise ValueError('unsupported forecast profile')
-    options=dict(max_context=256,per_shot_horizon_patches=5) if forecast_profile=='bounded-v1' else {}
-    return CPUForecaster(OpenVINOBlocks(artifact_directory),**options)
+def create_forecaster(artifact_directory):
+    return CPUForecaster(OpenVINOBlocks(artifact_directory))

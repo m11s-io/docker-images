@@ -20,9 +20,14 @@ def resources(variant, image, source, node, model, device_groups=(), artifact=No
     if not re.fullmatch(r'[a-z0-9][a-z0-9.-]*', node):
         raise ValueError('an explicit node is required')
     if variant == 'openvino':
-        trusted = json.loads((Path(__file__).parents[2]/'docs/verification/2026-11-01-published-candidates.json').read_text())['openvino_profiles'][model]
-        if artifact != trusted:
-            raise ValueError('a trusted model-specific publication receipt is required')
+        if (not isinstance(artifact,dict) or
+            artifact.get('repository')!='m11s-org/Timestral-5M-OpenVINO-experimental' or
+            artifact.get('model_id')!='mistralai/Timestral-'+model or
+            not re.fullmatch('[a-f0-9]{40}',artifact.get('revision','')) or
+            not re.fullmatch('[a-f0-9]{64}',artifact.get('manifest_sha256','')) or
+            artifact.get('path')!='standard-v2/'+artifact['manifest_sha256'] or
+            artifact.get('status')!='validated-cpu-parity'):
+            raise ValueError('a model-specific immutable v2 publication receipt is required')
     elif artifact is not None:
         raise ValueError('artifact override is only valid for OpenVINO')
     code = Path(__file__).with_name('probe.py').read_text()

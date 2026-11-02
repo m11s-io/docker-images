@@ -151,14 +151,13 @@ def run(report):
         torch.backends.cudnn.rnn.fp32_precision = 'ieee'
     else:
         torch.set_float32_matmul_precision('highest')
-    options = dict(max_context=256, per_shot_horizon_patches=5) if settings.resolved_profile == 'bounded-v1' else {}
     reference = TimestralForecaster.from_pretrained(settings.model_id,
-        revision=settings.model_revision, device=device, cache_dir=settings.hf_home, **options)
+        revision=settings.model_revision, device=device, cache_dir=settings.hf_home)
     parameters = list(reference.model.parameters())
     assert parameters and all(p.device == device and p.dtype == torch.float32 for p in parameters)
     report['reference_device'] = str(device)
     report['reference_parameters_verified'] = True
-    report['forecast_options'] = options
+    report['forecast_options'] = 'upstream-default'
     report['comparison_scope'] = 'conversion' if settings.backend == 'openvino' else 'same-device-upstream'
     report['cross_device_compatibility'] = 'unaccepted' if gpu else 'not-tested'
     tolerance = 1e-4 if settings.backend == 'openvino' else 1e-5

@@ -145,6 +145,7 @@ def publish(bundle):
         remote=Path(hf_hub_download(DESTINATION,filename=prefix+'/'+name,revision=revision))
         if digest(remote)!=digest(bundle/name):raise ValueError('remote release checksum mismatch: '+name)
     receipt=dict(repository=DESTINATION,revision=revision,path=prefix,manifest_sha256=manifest_sha,
+                 model_id=json.loads((bundle/'profiles/manifest.json').read_text())['model_id'],
                  source=os.environ['GITHUB_SHA'],run=os.environ['GITHUB_RUN_ID'],status='validated-cpu-parity')
     print(json.dumps(receipt,indent=2))
     Path('standard-publication.json').write_text(json.dumps(receipt,indent=2)+'\n')

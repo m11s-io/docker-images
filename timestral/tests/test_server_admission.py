@@ -34,7 +34,7 @@ class Blocking:
   levels=np.array([.01,.05,.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95,.99],dtype=np.float32)
   return ForecastResult(np.ones((*inputs.context.shape[:2],inputs.prediction_length,21),dtype=np.float32),levels)
 configure_transport_errors(model_server.app)
-m=TimestralModel(Settings(model_id='mistralai/Timestral-5M',model_revision='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f',forecast_profile='bounded-v1'),loader=lambda _:Blocking());m.load()
+m=TimestralModel(Settings(model_id='mistralai/Timestral-5M',model_revision='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f'),loader=lambda _:Blocking());m.load()
 ModelServer(http_port=http,grpc_port=grpc,workers=1).start([m])
 '''
 

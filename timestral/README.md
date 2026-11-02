@@ -38,12 +38,12 @@ Missing accelerators, wrong vendor/framework, unsupported architectures and devi
 mismatches fail startup. There is no automatic CPU fallback. One worker and one
 model inference slot are enforced; a cancelled caller cannot oversubscribe it.
 
-The OpenVINO preview selects `MODEL_ID=mistralai/Timestral-5M` or `mistralai/Timestral-209M`, its matching documented
+OpenVINO selects `MODEL_ID=mistralai/Timestral-5M` or `mistralai/Timestral-209M`, its matching documented
 revision, `TIMESTRAL_FORECAST_ARTIFACTS` pointing to a read-only profile bundle and
 `TIMESTRAL_ARTIFACT_MANIFEST_SHA256` from its independently pinned publication.
 OpenVINO export and publication live under `openvino/export/`; the legacy
 OVMS exporter has been removed. Existing historical HF artifacts are preserved. See
-[OpenVINO preview](openvino/README.md) for artifact and validation requirements.
+[OpenVINO runtime](openvino/README.md) for artifact and validation requirements.
 
 ## Protocol and validation
 
@@ -76,9 +76,7 @@ The previous bounded-image comparison is retained in the
 The expanded OpenVINO v2 runtime requires matching v2 bundles and new acceptance
 receipts; old bounded bundles do not initialize it.
 
-For explicitly matched comparisons, `TIMESTRAL_FORECAST_PROFILE=bounded-v1`
-selects upstream max_context=256/per_shot_horizon_patches=5. PyTorch defaults
-remain unchanged; OpenVINO now defaults to the same upstream settings as CPU; the preset is optional. Resolved settings
-are reported in V2 response parameters. See the [standard benchmark](benchmarks/README.md)
-and [numerical policy](docs/numerical-acceptance.md). Earlier acceptance builds
-do not include this preset.
+All backends use normal upstream forecasting defaults. There is no retained
+bounded compatibility preset. Historical comparisons identify their old source
+commit and settings; use the current [benchmark runbook](benchmarks/README.md)
+for fresh default-profile measurements.

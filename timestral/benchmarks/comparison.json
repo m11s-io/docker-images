@@ -268,15 +268,7 @@
       "source": null,
       "hardware": null,
       "endpoint": null,
-      "artifact": {
-        "repository": "m11s-org/Timestral-5M-OpenVINO-experimental",
-        "revision": "4ef5a7e934791901667df7c69f3b902c025e290a",
-        "path": "standard-v1/2365ee36bb28855be4417de39ad79fac73892fe2d0a98fb7e31e4f4352fdd2b1",
-        "manifest_sha256": "2365ee36bb28855be4417de39ad79fac73892fe2d0a98fb7e31e4f4352fdd2b1",
-        "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
-        "run": "41328090420",
-        "status": "experimental-preview"
-      },
+      "artifact": null,
       "max_context": 32768,
       "per_shot_horizon_patches": 32
     },
@@ -291,15 +283,7 @@
       "source": null,
       "hardware": null,
       "endpoint": null,
-      "artifact": {
-        "repository": "m11s-org/Timestral-5M-OpenVINO-experimental",
-        "revision": "0ed8d879c4b52b7e138b66cc98f8d91a45136b8c",
-        "path": "standard-v1/9203e3c04af76fab1ffde055a9358b1417519c56d87f399d7a232afa57921ba1",
-        "manifest_sha256": "9203e3c04af76fab1ffde055a9358b1417519c56d87f399d7a232afa57921ba1",
-        "source": "6d68b10c3a544693fbea1f6fb0d0bc5cd0bf6262",
-        "run": "41328090420",
-        "status": "experimental-preview"
-      },
+      "artifact": null,
       "max_context": 32768,
       "per_shot_horizon_patches": 32
     }

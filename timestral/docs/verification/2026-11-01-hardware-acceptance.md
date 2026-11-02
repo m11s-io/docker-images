@@ -10,7 +10,7 @@ CPU/GPU final-forecast parity at the full supported horizon remains a blocker.
 | ROCm / gfx1201 | 5M | 27 / 30 | horizon 1024, all transports |
 | ROCm / gfx1201 | 209M | 27 / 30 | horizon 1024, all transports |
 
-The [raw report](2026-11-01-hardware-acceptance.json) records immutable image,
+The [raw report](archived-details.md) records immutable image,
 source, model and probe identities, all measured errors, serial timings and
 failed cases. Timings are diagnostic, not a sustained performance benchmark.
 

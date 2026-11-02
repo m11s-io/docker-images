@@ -20,7 +20,7 @@ to change a frozen cohort. Never use future test values as request inputs.
 
 Fill each row's exact published image/source, actual Pod imageID, hardware and
 reachable endpoint after validation. OpenVINO additionally pins its model-specific
-artifact. The standard unversioned V2 route checks loaded revision/backend/profile
+artifact. The standard unversioned V2 route checks loaded revision/backend/default settings
 on every response. Client and server run separately; the client needs the existing
 frozen dev/Triton HTTP dependency environment, not model weights or KServe imports.
 
@@ -44,3 +44,7 @@ a different identity/cohort/script requires a new output directory. Use
 preserved before retry. Do not rank rows on
 different surviving subsets. This is request latency on the fixed workload, not
 a sustained-throughput SLO.
+
+Fill OpenVINO artifact pins from the matching v2 publication receipt before
+running. Null artifact pins intentionally prevent reuse of obsolete v1 bundles.
+Detailed historical results are in the [evidence archive](../docs/verification/archived-details.md).

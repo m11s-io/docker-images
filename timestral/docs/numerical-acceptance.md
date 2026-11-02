@@ -1,19 +1,25 @@
 # Numerical scope
 
-Serving correctness and forecast accuracy are different checks. PyTorch service
-outputs are checked against independent unchanged upstream on the same device
-with rtol=atol=1e-5. OpenVINO uses its established bounded conversion tolerance
-rtol=atol=1e-4 for quantiles/median. Quantile levels use rtol=1e-6/atol=1e-7.
+Serving correctness, forecast accuracy against future truth and endpoint speed
+are separate checks. All backends use normal upstream defaults and the shared
+KServe V2 request contract. OpenVINO has no additional request-shape or covariate
+restrictions; checkpoint capabilities and shared service budgets still apply.
 
-There is no general CPU/GPU equivalence promise: the earlier proposed error
-budgets failed independent validation. Keep raw results and explicit model,
-image, framework and hardware identities. Unknown/new images need validation;
-no tolerance is widened for promotion. OpenVINO is required for both model sizes,
-within its declared B=1/V=1, context<=256, horizon<=320, no-covariate bounds.
+PyTorch service outputs are compared with unchanged upstream on the same device
+at rtol=atol=1e-5. OpenVINO records strict quantile/median agreement at
+rtol=atol=1e-4; quantile levels use rtol=1e-6/atol=1e-7. There is no general
+CPU/GPU bitwise-equivalence promise.
 
-The [single comparison script](../benchmarks/README.md) scores real held-out
-future observations. Those quality scores and endpoint timings, not upstream
-parity alone, establish the measured model/backend tradeoff. See the historical
-[target evidence](verification/2026-11-01-published-target-validation.md) and
-[rejected cross-device budgets](verification/2026-11-01-independent-device-budgets.md).
-No stable promotion, rollout or client cutover follows from this document.
+The [full untuned assessment](verification/2026-11-02-openvino-full-divergence.md)
+records the user-accepted 5M 1024-step tail exception separately from strict
+results. Only reviewed cases qualify, within the measured envelope (<=0.5% of
+quantile values outside the original budget; maximum original-budget ratio2.1).
+Medians must still pass the original tolerance. No exception applies to209M,
+other cases, wrong shapes, nonfinite outputs or incorrect identities. Forecasts
+and the original tolerance remain unchanged; observed divergences stay visible.
+
+The [single comparison client](../benchmarks/README.md) measures speed and scores
+real held-out observations. Keep matching profiles, cohort and exact pins for
+comparisons. The earlier bounded report is historical; it does not establish
+performance for expanded/default execution. Numerical acceptance alone does not
+authorize deployment, client migration or retirement of old deployed resources.

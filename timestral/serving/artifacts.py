@@ -5,8 +5,8 @@ from pathlib import Path
 import re
 
 SOURCE_REVISION='a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff'
-PREVIEW_REVISION='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f'
-MODEL_REVISIONS={'mistralai/Timestral-5M':PREVIEW_REVISION,
+MODEL_5M_REVISION='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f'
+MODEL_REVISIONS={'mistralai/Timestral-5M':MODEL_5M_REVISION,
                  'mistralai/Timestral-209M':'9874d252ab0aae16f7f7c999f98f98d6ad7d8365'}
 PROFILE_FILES={'config.json','LICENSE','README.md',*(f'{branch}.{ext}' for branch in ('context','covariates') for ext in ('xml','bin'))}
 

@@ -63,7 +63,7 @@ class StandardPublishTest(unittest.TestCase):
                     with self.assertRaises(ValueError):p.verify_bundle(root)
 
     def test_publish_preserves_legacy_and_checks_uploaded_parent_inventory_and_bytes(self):
-        import contextlib,os,tempfile,types
+        import contextlib,os,tempfile,types,json
         from unittest.mock import patch
         p=self.module()
         class API:
@@ -79,7 +79,7 @@ class StandardPublishTest(unittest.TestCase):
             root=Path(tmp);bundle=root/'bundle'
             names={'profiles/manifest.json',*(f'evidence/{name}' for name in p.EVIDENCE)}
             for name in names:
-                path=bundle/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(name)
+                path=bundle/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps({'model_id':'mistralai/Timestral-5M'}) if name=='profiles/manifest.json' else name)
             api=API();downloads=[]
             def download(repo,filename,revision):
                 self.assertEqual(revision,'verified-commit')

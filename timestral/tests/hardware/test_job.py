@@ -37,8 +37,10 @@ def test_cpu_job_does_not_request_an_accelerator():
 
 
 def receipt(model='5M'):
-    receipts = __import__('json').loads((Path(__file__).parents[2]/'docs/verification/2026-11-01-published-candidates.json').read_text())
-    return receipts['openvino_profiles'][model]
+    digest='a'*64
+    return dict(repository='m11s-org/Timestral-5M-OpenVINO-experimental',revision='c'*40,
+        path='standard-v2/'+digest,manifest_sha256=digest,model_id='mistralai/Timestral-'+model,
+        source='b'*40,status='validated-cpu-parity')
 
 
 def test_openvino_job_pins_private_initialization_and_readonly_profiles():
@@ -85,3 +87,12 @@ def test_profile_copy_uses_owned_child_directory_not_volume_root():
     env = {e['name']:e.get('value') for e in pod['initContainers'][0]['env']}
     mount = next(m['mountPath'] for m in pod['initContainers'][0]['volumeMounts'] if m['name']=='profiles')
     assert env['TIMESTRAL_FORECAST_ARTIFACTS'].startswith(mount+'/')
+
+
+@pytest.mark.parametrize('field,value',[
+    ('repository','untrusted/repository'),('path','standard-v1/'+'a'*64),
+    ('model_id','mistralai/Timestral-209M'),('status','experimental-preview')])
+def test_v2_job_rejects_foreign_repository_old_format_or_wrong_model(field,value):
+    with pytest.raises(ValueError):
+        job.resources('openvino','m11s/timestral@sha256:'+'a'*64,
+            'b'*40,'cpu-test','5M',artifact=receipt()|{field:value})

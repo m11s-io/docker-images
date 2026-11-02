@@ -103,14 +103,11 @@ class TimestralModel(Model):
         response.parameters.update(model_id=self.settings.model_id,
                                    model_revision=self.settings.model_revision,
                                    backend=self.settings.backend,
-                                   forecast_profile=self.settings.resolved_profile)
-        if self.settings.resolved_profile == 'bounded-v1':
-            response.parameters.update(max_context=256,per_shot_horizon_patches=5)
-        else:
-            forecaster=getattr(self._backend,'forecaster',None)
-            for key in ('max_context','per_shot_horizon_patches'):
-                value=getattr(forecaster,key,None)
-                if value is not None: response.parameters[key]=int(value)
+                                   forecast_profile='upstream-default')
+        forecaster=getattr(self._backend,'forecaster',None)
+        for key in ('max_context','per_shot_horizon_patches'):
+            value=getattr(forecaster,key,None)
+            if value is not None:response.parameters[key]=int(value)
         if self.settings.backend == 'openvino':
             digest = getattr(self._backend,'artifact_manifest_sha256',None)
             if digest is not None:
