@@ -34,6 +34,9 @@ The user accepted the documented small 5M tail divergence after reviewing the
 full untuned assessment. The original strict rtol/atol and violation counts remain
 reported. A separately named exception accepts only reviewed 5M 1024-step cases,
 with no more than 0.5% tail values outside the original budget and a maximum
-original-budget ratio of 2.1 (measured maximum 2.08457). Median values must still
+original-budget ratio of 2.30 (initial native maximum 2.08457). On 2026-11-03 the
+user accepted the increased ceiling after repeated CI measured 88/21504 values
+outside tolerance, ratio2.2982514 and maximum absolute error0.300293 in the 5M
+1024-step blocks case across JSON, binary HTTP and gRPC. Median values must still
 meet the original budget. Other models/cases and invalid outputs receive no
 exception. This is numerical acceptance, not a forecast-accuracy claim.

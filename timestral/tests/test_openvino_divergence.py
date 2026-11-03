@@ -26,3 +26,12 @@ def test_exception_rejects_broad_drift_median_drift_and_invalid_outputs():
     assert not m.assess(a,e,model_id='mistralai/Timestral-5M',case='blocks')['accepted']
     for a in [e[...,0],e.astype(np.float16),e*np.nan]:
         with pytest.raises(ValueError):m.assess(a,e,model_id='mistralai/Timestral-5M',case='blocks')
+
+
+def test_reviewed_ci_tail_envelope():
+    e=np.ones((1,1,1024,21),np.float32)
+    for ratio,accepted in [(2.29825,True),(2.31,False)]:
+        a=e.copy();a.flat[0]+=np.float32(.0002*ratio)
+        r=m.assess(a,e,model_id='mistralai/Timestral-5M',case='blocks')
+        assert not r['strict_passed']
+        assert r['accepted']==accepted

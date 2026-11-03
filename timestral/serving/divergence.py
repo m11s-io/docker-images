@@ -15,9 +15,9 @@ def assess(actual,reference,*,model_id,case):
     outside=delta>budget;count=int(outside.sum());ratio=float(np.max(delta/budget))
     strict=count==0
     # Native evidence: <=104/21504 tails, <=2.08457 times the old combined
-    # budget; CI:2/21504,1.0687 times. Round only this reviewed envelope up.
+    # budget; reproduced CI:88/21504,2.2982514 times. User accepted 2.30.
     exception=(not strict and model_id=='mistralai/Timestral-5M' and case in CASES
-        and actual.shape[-2]==1024 and count/actual.size<=.005 and ratio<=2.1
+        and actual.shape[-2]==1024 and count/actual.size<=.005 and ratio<=2.30
         and not outside[...,10].any())
     return dict(strict_passed=strict,accepted=strict or exception,
         exception=EXCEPTION if exception else None,values=actual.size,

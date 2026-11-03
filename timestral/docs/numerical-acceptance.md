@@ -13,7 +13,10 @@ CPU/GPU bitwise-equivalence promise.
 The [full untuned assessment](verification/2026-11-02-openvino-full-divergence.md)
 records the user-accepted 5M 1024-step tail exception separately from strict
 results. Only reviewed cases qualify, within the measured envelope (<=0.5% of
-quantile values outside the original budget; maximum original-budget ratio2.1).
+quantile values outside the original budget; maximum original-budget ratio2.30).
+The user approved the increased ceiling on 2026-11-03 after repeated CI measured
+88/21504 values outside tolerance, ratio2.2982514 and maximum absolute error0.300293
+in the 5M 1024-step blocks case, identically across all three transports.
 Medians must still pass the original tolerance. No exception applies to209M,
 other cases, wrong shapes, nonfinite outputs or incorrect identities. Forecasts
 and the original tolerance remain unchanged; observed divergences stay visible.
