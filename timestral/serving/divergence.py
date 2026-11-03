@@ -3,6 +3,8 @@ import numpy as np
 
 EXCEPTION='5m-long-horizon-tails-2026-11-02'
 CASES={'maximum-horizon','blocks','decode-blocks','periodic-1024'}
+MAX_BUDGET_RATIO=2.30
+MAX_OUTSIDE_FRACTION=.005
 
 
 def assess(actual,reference,*,model_id,case):
@@ -17,7 +19,7 @@ def assess(actual,reference,*,model_id,case):
     # Native evidence: <=104/21504 tails, <=2.08457 times the old combined
     # budget; reproduced CI:88/21504,2.2982514 times. User accepted 2.30.
     exception=(not strict and model_id=='mistralai/Timestral-5M' and case in CASES
-        and actual.shape[-2]==1024 and count/actual.size<=.005 and ratio<=2.30
+        and actual.shape[-2]==1024 and count/actual.size<=MAX_OUTSIDE_FRACTION and ratio<=MAX_BUDGET_RATIO
         and not outside[...,10].any())
     return dict(strict_passed=strict,accepted=strict or exception,
         exception=EXCEPTION if exception else None,values=actual.size,

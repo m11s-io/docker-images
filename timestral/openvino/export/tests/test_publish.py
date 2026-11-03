@@ -50,6 +50,12 @@ class StandardPublishTest(unittest.TestCase):
                 from profiles import cases,case_options
                 keys={f'{name}-s{int(s)}-c{int(c)}' for name in cases() for s,c in case_options(name)}
                 parity=dict(passed=True,cases={k:dict(rtol=1e-4,atol=1e-4,max_absolute_error=0,strict_passed=True,accepted=True) for k in keys},neural_backend='openvino',reference_weights_loaded_in_runtime_worker=False,github_run='42')
+                if model_id=='mistralai/Timestral-5M':
+                    from serving.divergence import EXCEPTION
+                    parity['cases']['maximum-horizon-s0-c0'].update(
+                        strict_passed=False,exception=EXCEPTION,values=21504,
+                        outside_original_tolerance=88,max_original_budget_ratio=2.2982514,
+                        max_absolute_error=.300293)
                 (evidence/'parity.json').write_text(json.dumps(parity))
                 manifest=dict(format='timestral-openvino-profiles-v2',model_id=model_id,model_revision=revision,source_revision=SOURCE_REVISION,precision='FP32',parity_report_sha256=p.digest(evidence/'parity.json'),files={name:p.digest(profiles/name) for name in PROFILE_FILES})
                 (profiles/'manifest.json').write_text(json.dumps(manifest))

@@ -15,6 +15,11 @@ publication receipt from the v2 publication workflow: repository, immutable HF
 revision, model_id, `standard-v2/<manifest_sha256>` path, manifest_sha256 and
 `validated-cpu-parity` status. Old v1 receipts are incompatible. Expected hashes
 must come from trusted publication, not from an untrusted bundle itself.
+The supplied receipt must exactly match the model's `artifact` entry in the
+checked-in [comparison configuration](../../benchmarks/comparison.json).
+After v2 publication, verify its provenance and commit the reviewed receipt there
+before rendering jobs. An empty entry rejects all supplied receipts; v1 pins
+are not substitutes.
 The init container downloads only the pinned prefix, verifies every file/model
 identity using the runtime verifier, and mounts profiles read-only. It alone
 receives the existing HF token; the server/probe does not.
