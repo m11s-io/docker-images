@@ -15,6 +15,8 @@ dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "tritonclient[http,grpc]==2.73.
 [tool.uv]
 package = false
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+# The pinned KServe commit caps PyJWT below the security-fixed release.
+override-dependencies = ["pyjwt>=2.15.0"]
 
 [[tool.uv.index]]
 name = "pytorch-cuda"

@@ -74,7 +74,7 @@ class StandardPublishTest(unittest.TestCase):
         p=self.module()
         class API:
             def __init__(self):self.files={'.gitattributes':b'lfs','model/1/model.bin':b'legacy'};self.uploads=[]
-            def model_info(self,repo):return types.SimpleNamespace(private=True,sha='parent')
+            def model_info(self,repo):return types.SimpleNamespace(private=False,sha='parent')
             def list_repo_files(self,repo_id,revision):return list(self.files)
             def upload_folder(self,**kwargs):
                 self.uploads.append(kwargs)
@@ -101,7 +101,7 @@ class StandardPublishTest(unittest.TestCase):
                 self.assertEqual(set(downloads),{'standard-v2/'+'b'*64+'/'+name for name in names})
                 # A retry verifies an existing complete release without upload;
                 # changing any published byte must never silently overwrite it.
-                api.model_info=lambda repo:types.SimpleNamespace(private=True,sha='verified-commit')
+                api.model_info=lambda repo:types.SimpleNamespace(private=False,sha='verified-commit')
                 api.files['standard-v2/'+'b'*64+'/profiles/manifest.json']=b'corrupt'
                 with self.assertRaisesRegex(ValueError,'checksum mismatch'):p.publish(bundle)
                 self.assertEqual(len(api.uploads),1)

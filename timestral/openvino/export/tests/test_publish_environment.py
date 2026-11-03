@@ -12,7 +12,7 @@ class PublishTest(unittest.TestCase):
         if (ROOT/"publish.py").exists():spec.loader.exec_module(module)
         self.assertTrue(hasattr(module,"validate_environment"),"publish environment gate is missing")
         good={"GITHUB_ACTIONS":"true","GITHUB_REF":"refs/heads/main","GITHUB_EVENT_NAME":"workflow_dispatch",
-              "GITHUB_REPOSITORY":"m11s-io/docker-images","HF_OIDC_RESOURCE":"m11s-org/Timestral-5M-OpenVINO-experimental"}
+              "GITHUB_REPOSITORY":"m11s-io/docker-images","HF_OIDC_RESOURCE":"m11s-io/Timestral-OpenVINO"}
         with patch.dict(os.environ,good,clear=True):module.validate_environment()
         for key,value in [("GITHUB_REF","refs/heads/feature"),("GITHUB_EVENT_NAME","pull_request"),
                           ("HF_OIDC_RESOURCE","other/model"),("GITHUB_ACTIONS","false"),

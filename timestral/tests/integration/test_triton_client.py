@@ -111,9 +111,10 @@ def test_standard_inference_matches_unchanged_upstream(reference,transport,case)
         divergence=assess(q,expected_q,model_id=os.environ['MODEL_ID'],case=case)
         print('OPENVINO_DIVERGENCE',case,transport,divergence,flush=True)
         assert divergence['accepted'],divergence
+        np.testing.assert_array_equal(median,q[...,10])
     else:
         np.testing.assert_allclose(q,expected_q,**forecast_tolerances(False))
-    np.testing.assert_allclose(median,expected_median,**forecast_tolerances(OPENVINO))
+        np.testing.assert_allclose(median,expected_median,**forecast_tolerances(False))
     np.testing.assert_allclose(levels,expected_levels,rtol=1e-6,atol=1e-7)
 
 

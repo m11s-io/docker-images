@@ -13,7 +13,7 @@ SOURCE='a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff'
 
 
 def bundle(tmp_path):
-    files={'config.json':b'{}','LICENSE':b'Apache-2.0','README.md':b'Experimental preview'}
+    files={'config.json':b'{}','LICENSE':b'Apache-2.0','README.md':b'Timestral OpenVINO profiles'}
     for i in ('context','covariates'):
         files[f'{i}.xml']=b'IR'
         files[f'{i}.bin']=b'weights'

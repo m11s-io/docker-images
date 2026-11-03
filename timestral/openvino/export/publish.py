@@ -10,7 +10,7 @@ import shutil
 import tempfile
 import xml.etree.ElementTree as ET
 
-DESTINATION = "m11s-org/Timestral-5M-OpenVINO-experimental"
+DESTINATION = "m11s-io/Timestral-OpenVINO"
 
 
 def validate_environment() -> None:
@@ -115,7 +115,6 @@ def publish(bundle):
     manifest_sha,profile_files=verify_bundle(bundle)
     from huggingface_hub import HfApi,hf_hub_download
     api=HfApi();info=api.model_info(DESTINATION)
-    if not info.private: raise ValueError('experimental repository must remain private')
     before=set(api.list_repo_files(DESTINATION,revision=info.sha))
     validate_remote_inventory(before)
     prefix='standard-v2/'+manifest_sha

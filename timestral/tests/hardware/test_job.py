@@ -47,18 +47,17 @@ def test_cpu_job_does_not_request_an_accelerator():
 
 def receipt(model='5M'):
     digest='a'*64
-    return dict(repository='m11s-org/Timestral-5M-OpenVINO-experimental',revision='c'*40,
+    return dict(repository='m11s-io/Timestral-OpenVINO',revision='c'*40,
         path='standard-v2/'+digest,manifest_sha256=digest,model_id='mistralai/Timestral-'+model,
         source='b'*40,status='validated-cpu-parity')
 
 
-def test_openvino_job_pins_private_initialization_and_readonly_profiles():
+def test_openvino_job_pins_public_initialization_and_readonly_profiles():
     artifact = receipt()
     pod = job.resources('openvino', 'm11s/timestral@sha256:'+'a'*64,
                         'b'*40, 'cpu-test', '5M', artifact=artifact)[-1]['spec']['template']['spec']
     init = pod['initContainers'][0]
-    token = next(e for e in init['env'] if e['name'] == 'HF_TOKEN')
-    assert token['valueFrom']['secretKeyRef'] == {'name': 'timestral-openvino-hf-token', 'key': 'HF_TOKEN'}
+    assert 'HF_TOKEN' not in {e['name'] for e in init['env']}
     env = {e['name']: e['value'] for e in pod['containers'][0]['env']}
     assert env['TIMESTRAL_ARTIFACT_MANIFEST_SHA256'] == artifact['manifest_sha256']
     assert 'HF_TOKEN' not in env
@@ -100,7 +99,7 @@ def test_profile_copy_uses_owned_child_directory_not_volume_root():
 
 @pytest.mark.parametrize('field,value',[
     ('repository','untrusted/repository'),('path','standard-v1/'+'a'*64),
-    ('model_id','mistralai/Timestral-209M'),('status','experimental-preview')])
+    ('model_id','mistralai/Timestral-209M'),('status','unrecognized-status')])
 def test_v2_job_rejects_foreign_repository_old_format_or_wrong_model(field,value):
     with pytest.raises(ValueError):
         job.resources('openvino','m11s/timestral@sha256:'+'a'*64,

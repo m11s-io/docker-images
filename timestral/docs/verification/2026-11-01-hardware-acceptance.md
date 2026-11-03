@@ -33,7 +33,7 @@ Actual hardware testing exposed and fixed missing runtime dependencies:
 ROCm requires libatomic1; accelerator Triton JIT requires gcc/libc6-dev and
 writable compilation caches. Those fixes are merged in PR #138. The corrected
 candidate images were published by run 41243130854 from source
-`016f45ff0ccb8213c282606be102de5efaa7161c`. CPU 5M/209M and experimental bounded
+`016f45ff0ccb8213c282606be102de5efaa7161c`. CPU 5M/209M and bounded OpenVINO
 OpenVINO native acceptance passed independently in run 41241482093. The CPU
 transport reference uses direct upstream forecasting with exact saved inputs
 in the same image userland; the adapter and worker-thread diagnostic were

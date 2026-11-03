@@ -14,7 +14,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 docker network create "$network" >/dev/null
 docker run -d --name "$container" --network "$network" --network-alias chromium \
-  --security-opt seccomp=unconfined "$image" >/dev/null
+  "$image" >/dev/null
 if ! docker run --rm --network "$network" --entrypoint node \
   -v "$test_dir/cdp.mjs:/test/cdp.mjs:ro" "$client_image" /test/cdp.mjs; then
   docker logs "$container"

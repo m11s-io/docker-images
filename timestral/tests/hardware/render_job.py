@@ -23,7 +23,7 @@ def resources(variant, image, source, node, model, device_groups=(), artifact=No
         raise ValueError('an explicit node is required')
     if variant == 'openvino':
         if (not isinstance(artifact,dict) or
-            artifact.get('repository')!='m11s-org/Timestral-5M-OpenVINO-experimental' or
+            artifact.get('repository')!='m11s-io/Timestral-OpenVINO' or
             artifact.get('model_id')!='mistralai/Timestral-'+model or
             not re.fullmatch('[a-f0-9]{40}',artifact.get('revision','')) or
             not re.fullmatch('[a-f0-9]{64}',artifact.get('manifest_sha256','')) or
@@ -99,7 +99,6 @@ def resources(variant, image, source, node, model, device_groups=(), artifact=No
             'from serving.artifacts import verify_profiles; '
             'verify_profiles(os.environ[\"TIMESTRAL_FORECAST_ARTIFACTS\"],os.environ[\"TIMESTRAL_ARTIFACT_MANIFEST_SHA256\"],os.environ[\"MODEL_ID\"],os.environ[\"MODEL_REVISION\"])'])
         init['env'] = list(pod['containers'][0]['env']) + [dict(name='ARTIFACT_'+k.upper(), value=artifact[k.lower()]) for k in ('REPOSITORY','REVISION','PATH')]
-        init['env'].append(dict(name='HF_TOKEN', valueFrom={'secretKeyRef':{'name':'timestral-openvino-hf-token','key':'HF_TOKEN'}}))
         init['volumeMounts'] = [dict(name='profiles',mountPath='/profiles'),dict(name='tmp',mountPath='/tmp')]
         pod['initContainers'] = [init]
     if variant == 'cuda':

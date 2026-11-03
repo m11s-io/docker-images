@@ -145,7 +145,10 @@ def worker(args):
                 from serving.divergence import assess
                 results[key]=assess(q,reference[key],model_id='mistralai/Timestral-'+args.model_size,case=name)
                 np.testing.assert_array_equal(levels,reference['levels'])
-                np.testing.assert_allclose(forecast.median.numpy(),reference[key][...,10],rtol=1e-4,atol=1e-4)
+                # assess includes the median's reference parity limits. Verify
+                # the separate median output still matches its quantile exactly.
+                np.testing.assert_array_equal(forecast.median.numpy(),q[...,10])
+                print(key,json.dumps(results[key]),flush=True)
     if reference is None:
         np.savez(evidence/'reference.npz',**arrays)
     else:
@@ -198,7 +201,7 @@ def export(output,model_size='5M'):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--model-size',choices=['5M','209M'],default='5M')
+    parser.add_argument('--model-size',choices=['5M','28M','123M','209M'],default='5M')
     parser.add_argument('--worker',choices=['reference','convert','runtime'])
     parser.add_argument('--source'); parser.add_argument('--checkpoint')
     args=parser.parse_args()

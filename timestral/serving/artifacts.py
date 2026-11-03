@@ -7,6 +7,8 @@ import re
 SOURCE_REVISION='a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff'
 MODEL_5M_REVISION='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f'
 MODEL_REVISIONS={'mistralai/Timestral-5M':MODEL_5M_REVISION,
+                 'mistralai/Timestral-28M':'49b26409ac87b5935539a5d8ffe7f397b720db47',
+                 'mistralai/Timestral-123M':'5a147287addda85f6acd8da3fb8858fe9af7e8f7',
                  'mistralai/Timestral-209M':'9874d252ab0aae16f7f7c999f98f98d6ad7d8365'}
 PROFILE_FILES={'config.json','LICENSE','README.md',*(f'{branch}.{ext}' for branch in ('context','covariates') for ext in ('xml','bin'))}
 

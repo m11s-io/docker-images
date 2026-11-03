@@ -26,7 +26,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        model: [5M, 209M]
+        model: [5M, 28M, 123M, 209M]
     env:
       HF_OIDC_RESOURCE: ${{ vars.HF_TIMESTRAL_OPENVINO_REPO }}
       PYTHONPATH: timestral
