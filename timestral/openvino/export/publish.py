@@ -15,11 +15,14 @@ DESTINATION = "m11s-io/Timestral-OpenVINO"
 
 def validate_environment() -> None:
     expected = {"GITHUB_ACTIONS": "true", "GITHUB_REF": "refs/heads/main",
-                "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REPOSITORY": "m11s-io/docker-images",
+                "GITHUB_REPOSITORY": "m11s-io/docker-images",
                 "HF_OIDC_RESOURCE": DESTINATION}
     for key, value in expected.items():
         if os.environ.get(key) != value:
-            raise ValueError(f"publication requires the configured main dispatch: {key}")
+            raise ValueError(f"publication requires the configured main release: {key}")
+
+    if os.environ.get('GITHUB_EVENT_NAME') not in ('push','workflow_dispatch'):
+        raise ValueError('publication requires a main push or manual release')
 
 
 def inventory(root: Path) -> set:
@@ -92,12 +95,9 @@ def verify_bundle(bundle):
         parity.get('reference_weights_loaded_in_runtime_worker') is not False or
         str(parity.get('github_run'))!=os.environ['GITHUB_RUN_ID']):
         raise ValueError('complete same-run OpenVINO parity evidence is required')
-    from serving.divergence import EXCEPTION,CASES,MAX_BUDGET_RATIO,MAX_OUTSIDE_FRACTION
+    from serving.divergence import report_accepted
     for name,case in parity['cases'].items():
-        if case.get('accepted') is not True or (not case.get('strict_passed',False) and
-            (model_id!='mistralai/Timestral-5M' or name.rsplit('-s',1)[0] not in CASES or case.get('exception')!=EXCEPTION or
-             case.get('max_original_budget_ratio',float('inf'))>MAX_BUDGET_RATIO or
-             case.get('outside_original_tolerance',float('inf'))/max(1,case.get('values',0))>MAX_OUTSIDE_FRACTION)):
+        if not report_accepted(case,model_id=model_id,case=name.rsplit('-s',1)[0]):
             raise ValueError('unaccepted numerical divergence')
         if (case.get('rtol')!=1e-4 or case.get('atol')!=1e-4 or
             not isinstance(case.get('max_absolute_error'),(int,float)) or
@@ -112,6 +112,9 @@ def verify_bundle(bundle):
 
 def publish(bundle):
     validate_environment()
+    image=os.environ.get('TIMESTRAL_RELEASE_IMAGE','')
+    if not re.fullmatch(r'm11s/timestral@sha256:[0-9a-f]{64}',image):
+        raise ValueError('release requires the published immutable OpenVINO image digest')
     manifest_sha,profile_files=verify_bundle(bundle)
     from huggingface_hub import HfApi,hf_hub_download
     api=HfApi();info=api.model_info(DESTINATION)
@@ -143,9 +146,12 @@ def publish(bundle):
     for name in names:
         remote=Path(hf_hub_download(DESTINATION,filename=prefix+'/'+name,revision=revision))
         if digest(remote)!=digest(bundle/name):raise ValueError('remote release checksum mismatch: '+name)
-    receipt=dict(repository=DESTINATION,revision=revision,path=prefix,manifest_sha256=manifest_sha,
+    receipt=dict(image=image,repository=DESTINATION,revision=revision,path=prefix,manifest_sha256=manifest_sha,
                  model_id=json.loads((bundle/'profiles/manifest.json').read_text())['model_id'],
                  source=os.environ['GITHUB_SHA'],run=os.environ['GITHUB_RUN_ID'],status='validated-cpu-parity')
+    identity=json.loads((bundle/'profiles/manifest.json').read_text())
+    receipt['model_revision']=identity['model_revision']
+    receipt['profiles_path']=prefix+'/profiles'
     print(json.dumps(receipt,indent=2))
     Path('standard-publication.json').write_text(json.dumps(receipt,indent=2)+'\n')
     if os.environ.get('GITHUB_STEP_SUMMARY'):

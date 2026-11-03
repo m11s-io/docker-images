@@ -25,44 +25,67 @@ def assess(actual,reference,*,model_id,case):
     delta=np.abs(actual.astype(np.float64)-reference.astype(np.float64))
     budget=1e-4+1e-4*np.abs(reference.astype(np.float64))
     outside=delta>budget;count=int(outside.sum());ratio=float(np.max(delta/budget))
-    strict=count==0
-    # Native evidence: <=104/21504 tails, <=2.08457 times the old combined
-    # budget; reproduced CI:88/21504,2.2982514 times. User accepted 2.30.
-    exception=(not strict and model_id=='mistralai/Timestral-5M' and case in CASES
-        and actual.shape[-2]==1024 and count/actual.size<=MAX_OUTSIDE_FRACTION and ratio<=MAX_BUDGET_RATIO
-        and not outside[...,10].any())
-    exception_name=EXCEPTION if exception else None
-    # Run 41659716804: identical HTTP JSON/binary and gRPC results for
-    # sinusoidal 28M blocks: 996/21504 outside, ratio 46.79752;
-    # median 64/1024 outside, max error .18524170; max quantile error 1.71290.
-    # User accepted expanded envelope after run 41671193145: 1115/21504
-    # outside (5.185%), ratio 141.17811; retain existing absolute/median caps.
-    if not strict and model_id=='mistralai/Timestral-28M' and case=='blocks':
-        if (actual.shape[-2]==1024 and count/actual.size<=.055 and ratio<=150
-            and outside[...,10].mean()<=.0625 and delta[...,10].max()<=.2
-            and delta.max()<=1.8):
-            exception=True
-            exception_name='28m-protocol-blocks-2026-11-03'
-    if not strict and model_id in REVIEWED_HORIZON_LIMITS and case=='maximum-horizon':
-        max_ratio,max_fraction,name=REVIEWED_HORIZON_LIMITS[model_id]
-        median_ok=not outside[...,10].any()
-        # Run 41655342566: 11/1024 median values outside the original
-        # budget, max absolute error .00645828, max relative error .0001335.
-        if model_id=='mistralai/Timestral-28M':
-            median_delta=delta[...,10]
-            median_budget=1e-4+1.4e-4*np.abs(reference[...,10].astype(np.float64))
-            median_ok=(np.all(median_delta<=median_budget)
-                and np.max(np.where(outside[...,10],median_delta,0))<=.0065
-                and outside[...,10].mean()<=11/1024)
-        tails=outside.copy();tails[...,10]=False
-        if (actual.shape[-2]==1024 and tails.sum()/actual.size<=max_fraction
-            and ratio<=max_ratio and median_ok):
-            exception=True
-            exception_name=name
-    return dict(strict_passed=strict,accepted=strict or exception,
-        exception=exception_name,values=actual.size,
+    report=dict(strict_passed=count==0,accepted=False,exception=None,
+        horizon=actual.shape[-2],values=actual.size,
         outside_original_tolerance=count,max_original_budget_ratio=ratio,
         median_outside_original_tolerance=int(outside[...,10].sum()),
         max_median_absolute_error=float(delta[...,10].max()),
         max_median_violation_absolute_error=float(np.max(np.where(outside[...,10],delta[...,10],0))),
+        max_median_relaxed_budget_ratio=float(np.max(delta[...,10]/(1e-4+1.4e-4*np.abs(reference[...,10].astype(np.float64))))),
         max_absolute_error=float(delta.max()),rtol=1e-4,atol=1e-4)
+    report['exception']=_exception(report,model_id,case)
+    report['accepted']=report['strict_passed'] or report['exception'] is not None
+    return report
+
+
+def _exception(r,model_id,case):
+    if r['strict_passed'] or r['horizon']!=1024:
+        return None
+    count=r['outside_original_tolerance'];values=r['values']
+    ratio=r['max_original_budget_ratio'];median=r['median_outside_original_tolerance']
+    if (model_id=='mistralai/Timestral-5M' and case in CASES and median==0
+        and count/values<=MAX_OUTSIDE_FRACTION and ratio<=MAX_BUDGET_RATIO):
+        return EXCEPTION
+    # Run 41659716804 and reviewed expanded envelope from 41671193145.
+    if (model_id=='mistralai/Timestral-28M' and case=='blocks'
+        and count/values<=.055 and ratio<=150 and median/(values/21)<=.0625
+        and r['max_median_absolute_error']<=.2 and r['max_absolute_error']<=1.8):
+        return '28m-protocol-blocks-2026-11-03'
+    if model_id in REVIEWED_HORIZON_LIMITS and case=='maximum-horizon':
+        max_ratio,max_fraction,name=REVIEWED_HORIZON_LIMITS[model_id]
+        median_ok=median==0
+        if model_id=='mistralai/Timestral-28M':
+            median_ok=(r['max_median_relaxed_budget_ratio']<=1
+                and r['max_median_violation_absolute_error']<=.0065
+                and median/(values/21)<=11/1024)
+        if (count-median)/values<=max_fraction and ratio<=max_ratio and median_ok:
+            return name
+    return None
+
+
+def report_accepted(report,*,model_id,case):
+    """Recheck serialized evidence using exactly the runtime acceptance policy."""
+    import math
+    required=('horizon','values','outside_original_tolerance','max_original_budget_ratio',
+        'median_outside_original_tolerance','max_median_absolute_error',
+        'max_median_violation_absolute_error','max_median_relaxed_budget_ratio','max_absolute_error')
+    if any(type(report.get(k)) not in (int,float) or not math.isfinite(report[k])
+           or report[k]<0 for k in required):
+        return False
+    if any(type(report[k]) is not int for k in
+           ('horizon','values','outside_original_tolerance','median_outside_original_tolerance')):
+        return False
+    values=report['values'];count=report['outside_original_tolerance']
+    median=report['median_outside_original_tolerance']
+    if (values<=0 or values%21 or report['horizon']<=0
+        or not 0<=median<=min(count,values/21) or count>values
+        or report.get('rtol')!=1e-4 or report.get('atol')!=1e-4
+        or report.get('accepted') is not True):
+        return False
+    if (count==0)!=(report['max_original_budget_ratio']<=1):
+        return False
+    strict=count==0
+    if report.get('strict_passed') is not strict:
+        return False
+    exception=_exception(report,model_id,case)
+    return (strict or exception is not None) and report.get('exception')==exception
