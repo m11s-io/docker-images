@@ -19,12 +19,11 @@ Docker network and let only DSH consume the endpoint.
 
 ## Docker Desktop compatibility
 
-The supplied DeepSeek Harness Compose deployment must run its `chromium`
-service with Docker's `seccomp=unconfined` security option. Docker Desktop's
-default seccomp profile blocks the namespace syscalls Chromium needs for its
-own sandbox, causing Chromium to exit with status 133. This Docker setting
-does not disable Chromium's sandbox; it allows Chromium to create the
-namespaces that sandbox requires. The Compose example applies this setting.
+The supplied DeepSeek Harness Compose deployment uses Docker's default seccomp
+profile and runs Chromium as a non-root user with Chromium's own sandbox enabled.
+If Chromium cannot start on a particular Docker host, diagnose the blocked
+syscalls and adjust the profile narrowly; do not disable Docker seccomp with
+`seccomp=unconfined`.
 
 ## Verify the image
 
@@ -43,7 +42,6 @@ For an image-only diagnostic, run Chromium without publishing CDP:
 
 ```bash
 docker run --rm --detach --name chromium-diagnostic --network none \
-  --security-opt seccomp=unconfined \
   m11s/chromium:latest-cdp
 docker logs chromium-diagnostic
 docker rm --force chromium-diagnostic

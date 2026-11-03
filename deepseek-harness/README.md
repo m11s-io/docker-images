@@ -36,9 +36,9 @@ image locally. The companion Chromium image may still be built locally.
 
 The Compose example starts Chromium privately for browser features. It does
 not publish CDP port `9222`; DSH connects over the Compose network at
-`http://chromium:9222`. Chromium's own sandbox is retained. Its Compose
-service uses `seccomp=unconfined` so Docker Desktop permits Chromium's sandbox
-namespace setup.
+`http://chromium:9222`. Chromium runs non-root with its own sandbox and Docker's
+default seccomp profile. If it fails to start on a particular Docker host,
+diagnose the blocked syscalls instead of disabling Docker seccomp.
 
 ## Separate Chromium deployments
 

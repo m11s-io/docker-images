@@ -19,8 +19,6 @@ services:
     build: ../chromium
     image: m11s/chromium:local-cdp
     shm_size: 1gb
-    security_opt:
-      - seccomp=unconfined
     user: "10001:10001"
 
 volumes:
