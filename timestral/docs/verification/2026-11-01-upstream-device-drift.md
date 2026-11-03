@@ -22,7 +22,7 @@ Four model/device combinations (5M/209M on RTX 5060 Ti/gfx1201) were tested at
 horizons 32, 64, 128, 256, 320, 512, 768 and 1024. Each server result was compared
 with the independent same-GPU reference over JSON REST, binary REST and gRPC:
 96 comparisons, all bitwise equal. CPU and GPU repeatability comparisons were
-also bitwise equal. The [raw report](2026-11-01-upstream-device-drift.json)
+also bitwise equal. The [raw report](archived-details.md)
 contains exact identities and every metric.
 
 | Model/device | First tested horizon exceeding CPU threshold | Maximum scaled error over all tested horizons |

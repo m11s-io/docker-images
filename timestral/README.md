@@ -1,26 +1,28 @@
-# Timestral standard serving candidate
+# Timestral forecasting server
 
 One official KServe Python ModelServer and shared Timestral handler, with variant
 names `cpu`, `cuda`, `rocm`, `openvino`. The handler calls unchanged, pinned
 upstream forecasting. Images contain code and dependencies; weights and IR stay
 external and revision pinned. Standard ports: REST 8080, gRPC 8081.
 
-**Acceptance is pending.** Existing `/forecast` deployments and legacy
-`latest-cpu` / `latest-cuda` aliases must remain available during migration.
-No candidate is promoted merely because it builds. See the
-[runtime matrix](docs/runtime-matrix.md), [V2 contract](docs/protocol.md) and
-[migration/rollback gates](docs/migration.md).
+Four validated runtime flavors are published with the same naming scheme:
 
-| Variant | Execution | Current status |
+| Flavor | Version tag | Moving tag |
 | --- | --- | --- |
-| cpu | upstream PyTorch CPU | candidate; real-image numerical acceptance pending |
-| cuda | upstream NVIDIA CUDA 13.0 | candidate; actual target forecast acceptance pending |
-| rocm | upstream HIP/ROCm 7.2, gfx1201 only | experimental; host/device acceptance pending |
-| openvino | direct OpenVINO CPU neural profiles, upstream forecasting | published experimental 5M/209M preview; native parity/protocol passed |
+| CPU | `1.0.0-cpu` | `latest-cpu` |
+| CUDA | `1.0.0-cuda` | `latest-cuda` |
+| ROCm | `1.0.0-rocm` | `latest-rocm` |
+| OpenVINO | `1.0.0-openvino` | `latest-openvino` |
 
-The old wrapper and reference tests remain until an authorized client cutover.
-[Legacy API documentation](docs/legacy-api.md) describes the preserved historical
-contract, not the new Dockerfiles.
+Release tags follow `TIMESTRAL_VERSION`; source tags use `sha-<commit>-<flavor>`.
+Serving and dependency changes rebuild these aliases with a new digest. Pin a
+source tag or digest for an immutable deployment. The normal build workflow
+publishes all four flavors. Earlier acceptance-build receipts remain historical
+validation records.
+
+These images use KServe V2, replacing the old `/forecast` API. See the
+[V2 contract](docs/protocol.md), [runtime matrix](docs/runtime-matrix.md), and
+[validation results](benchmarks/README.md) for configuration and device behavior.
 
 ## Configuration
 
@@ -36,12 +38,12 @@ Missing accelerators, wrong vendor/framework, unsupported architectures and devi
 mismatches fail startup. There is no automatic CPU fallback. One worker and one
 model inference slot are enforced; a cancelled caller cannot oversubscribe it.
 
-The OpenVINO preview selects `MODEL_ID=mistralai/Timestral-5M` or `mistralai/Timestral-209M`, its matching documented
+OpenVINO selects `MODEL_ID=mistralai/Timestral-5M` or `mistralai/Timestral-209M`, its matching documented
 revision, `TIMESTRAL_FORECAST_ARTIFACTS` pointing to a read-only profile bundle and
 `TIMESTRAL_ARTIFACT_MANIFEST_SHA256` from its independently pinned publication.
 OpenVINO export and publication live under `openvino/export/`; the legacy
 OVMS exporter has been removed. Existing historical HF artifacts are preserved. See
-[OpenVINO preview](openvino/README.md) for strict capability limits.
+[OpenVINO runtime](openvino/README.md) for artifact and validation requirements.
 
 ## Protocol and validation
 
@@ -54,29 +56,27 @@ that bounds actual request bodies, including chunked uploads, to 8 MiB before
 SDK decoding.
 
 Native amd64 CI owns heavy builds and checkpoint tests. The integration suite
-uses pinned Triton HTTP/gRPC clients against the actual candidate image and an
+uses pinned Triton HTTP/gRPC clients against the actual image and an
 unchanged same-model upstream reference. CPU and device numerical evidence,
 image digests and hardware acceptance remain separate gates. Triton extensions
 beyond the tested standard inference operations are not promised.
 
 
-## Published candidates and validation
+## Validation records
 
-All four candidate image digests and the two model-specific OpenVINO HF bundle
+Earlier image digests and the two model-specific OpenVINO HF bundle
 revisions are recorded in [publication receipts](docs/verification/2026-11-01-published-candidates.json).
 The OpenVINO image supports either 5M or 209M with its matching verified bundle;
 both passed native export, final-forecast and JSON/binary REST/gRPC checks.
-The preview bounds remain B=V=1, context<=256, horizon<=320, no covariates.
-These are experimental publications, not stable aliases or a service cutover.
+Those v1 receipts describe the older bounded runtime; see the OpenVINO v2 documentation for the expanded implementation.
+These receipts describe earlier acceptance builds; current tags follow the release scheme above.
 
-CPU 5M/209M reference and protocol checks passed. GPU serving matches unchanged
-upstream on the same GPU, but full cross-device equivalence remains unaccepted:
-[independent validation](docs/verification/2026-11-01-independent-device-budgets.md)
-rejected the provisional numerical budget. No new CPU/GPU tolerance is enabled.
+The previous bounded-image comparison is retained in the
+[2026-11-02 report](docs/verification/2026-11-02-speed-accuracy.md).
+The expanded OpenVINO v2 runtime requires matching v2 bundles and new acceptance
+receipts; old bounded bundles do not initialize it.
 
-For explicitly matched comparisons, `TIMESTRAL_FORECAST_PROFILE=bounded-v1`
-selects upstream max_context=256/per_shot_horizon_patches=5. PyTorch defaults
-remain unchanged; OpenVINO accepts only its bounded profile. Resolved settings
-are reported in V2 response parameters. See the [standard benchmark](benchmarks/README.md)
-and [numerical policy](docs/numerical-acceptance.md); neither enables stable
-promotion or client cutover. Earlier published images do not include this new preset.
+All backends use normal upstream forecasting defaults. There is no retained
+bounded compatibility preset. Historical comparisons identify their old source
+commit and settings; use the current [benchmark runbook](benchmarks/README.md)
+for fresh default-profile measurements.

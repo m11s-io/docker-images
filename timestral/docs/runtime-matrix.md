@@ -1,88 +1,37 @@
-# Standard-serving runtime audit
+# Timestral runtime matrix
 
-Status: candidate, not promoted. Audited 2026-10-30. This matrix governs the
-new standard-serving dependencies; the existing `/forecast` images remain intact
-until client acceptance. No hardware variant is interchangeable by assertion.
+All four images run the official KServe ModelServer and the shared V2 model
+binding. There is no custom HTTP API, copied forecasting loop or CPU fallback.
 
-## Server and source selection
+| Flavor | Python/base | Neural execution | Model data |
+| --- | --- | --- | --- |
+| cpu | 3.13.18 / Debian bookworm | PyTorch 2.14.1+cpu | external upstream checkpoint |
+| cuda | same | PyTorch 2.14.1+cu130 | external upstream checkpoint |
+| rocm | same | PyTorch 2.14.1+rocm7.2 | external upstream checkpoint |
+| openvino | same | OpenVINO 2026.4.1 | external model-specific v2 graphs |
 
-Use official KServe source commit `abc6c47ab4af588e40c67372b4835122234f6f74`
-(`python/kserve`, declares 0.21.0), not the published 0.21.0 wheel. Inspection
-covered `model.py`, `model_server.py`, `protocol/infer_type.py` and
-`python/custom_model/model_grpc.py`. Use public InferRequest/InferResponse and
-ModelServer APIs. The built-in HuggingFaceTimeSeriesModel dispatches only TimesFM;
-it cannot serve Timestral at this commit.
+OpenVINO retains PyTorch 2.13.0+cpu for unchanged upstream normalization,
+categorical handling and refinement. It does not load PyTorch neural weights.
+Export tooling has a separate environment and is not included in runtime images.
+All five frozen environments are checked in CI. Installed dependency versions
+and hashes are recorded in their locks; image/model/artifact pins are independent.
 
-The [published metadata](https://pypi.org/pypi/kserve/0.21.0/json) differs
-materially: urllib3>=2.7.0 vs source>=2.8.0, aiohttp>=3.13.4 vs>=3.14.3,
-pyjwt>=2.13.0 vs>=2.14.0,<2.15.0, and missing source OpenTelemetry dependencies.
-Reject that wheel for this migration. Install the immutable official source,
-retain its bounds and resolve a frozen lock. Never apply dependency overrides.
-Both declare Python >=3.10,<3.14.
+KServe source: `abc6c47ab4af588e40c67372b4835122234f6f74` (`python/kserve`).
+Its metadata supports Python >=3.10,<3.14, lists Python3.13 and tests3.13 upstream.
+Use this official source pin rather than silently substituting a wheel with
+different dependency/security requirements. Timestral source remains
+`a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff` (1.0.0).
 
-Timestral source remains `a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff`, version
-1.0.0. The adapter invokes upstream forecast unchanged. Weights remain external,
-identified separately by repository and 40-character commit.
+GPU devices must match the packaged framework and native wheel architecture.
+CUDA requires the NVIDIA runtime/device plugin and framework support for the
+selected compute capability. The validated AMD target is gfx1201; ROCm requires
+its existing device plugin, KFD/render devices and host compatibility. Missing
+accelerators or architecture overrides fail startup. Host drivers are not installed
+inside these images.
 
-| Variant | Candidate Python/base | Framework | Device | Artifact | Acceptance |
-| --- | --- | --- | --- | --- | --- |
-| cpu | CPython 3.12.16 / bookworm | torch 2.14.1+cpu | explicit cpu | upstream config + safetensors | 5M/209M native forecasts/protocol passed; candidate published |
-| cuda | same | torch 2.14.1+cu130 | explicit cuda:N, NVIDIA | upstream config + safetensors | same-GPU upstream parity passed; CPU equivalence unaccepted |
-| rocm | same, wheel-supplied userspace | torch 2.14.1+rocm7.2 | explicit cuda:N, HIP gfx1201 | upstream config + safetensors | experimental; actual gfx1201 inference tested; CPU equivalence unaccepted |
-| openvino | same | OpenVINO 2026.4.1; torch 2.13.0+cpu for upstream algorithms | explicit CPU | verified versioned FP32 profile bundle | experimental; bounded 5M/209M native parity/protocol passed, image/profiles published |
-
-Immutable shared candidate base:
-`python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337`.
-Resolved from the official multi-platform index; runtime images target amd64.
-The CUDA cp312 amd64 wheel SHA256 is
-`5359b255ac68c0cabb8293952b38e00f0d1a570815cd87f19b61af702c071410`;
-ROCm is `fc35e48fd83329f5d60ab925951d138edb5a6fce84323600703637fbc693541c`.
-These prove availability, not execution. Frozen locks are the complete dependency
-inventory once resolved. Export dependencies stay separate from serving.
-
-## Hardware audit and prerequisites
-
-Read-only target inspection found NVIDIA GeForce RTX 5070 Ti, compute capability
-12.0, driver 595.91.07; the CUDA image must contain sm_120 support. Kubernetes
-advertises NVIDIA devices through its existing device plugin. Require NVIDIA
-container runtime and matched host driver; no driver installation in the image.
-
-AMD KFD topology reports gfx_target_version 120001 (gfx1201), PCI device 0x7551,
-two devices. The existing AMD device plugin advertises devices, but logs topology
-parsing errors. This is not acceptance. Initially allow only gfx1201; reject all
-other targets until separately validated. Require compatible amdgpu/KFD host
-module, /dev/kfd and assigned /dev/dri render nodes with correct permissions,
-AMD device plugin, and ROCm userspace/host compatibility. Talos host compatibility
-with this candidate is unproven. No HSA_OVERRIDE_GFX_VERSION or CPU fallback.
-See [AMD's versioned compatibility matrix](https://rocm.docs.amd.com/en/docs-7.2.0/compatibility/compatibility-matrix.html).
-A supported LLVM target alone does not establish support for an arbitrary host OS.
-
-## Existing candidate and evidence limits
-
-Checkout started at ce02f44 with unrelated local edits. Local main diverged from
-origin/main (1 ahead, 21 behind); no merge/reset was performed. PR #130 is open at
-c8b9f2229fe9459b6e89dc0d96d995978040be26. Its OVMS image validation failed;
-export validation and ordinary Timestral tests passed. That candidate is a
-bounded 5M experiment, not the completed architecture. No candidate was merged,
-published or deployed by this audit.
-
-Reusable candidate code: direct block execution, scaler binding, bounded final
-forecast parity and artifact verification. Exclude Python-node bindings,
-MediaPipe graph, pyovms and OVMS runtime. Preserve historical experiment evidence
-and the `timestral-openvino.yaml` OIDC workflow identity.
-
-ROCm resolution selected the official 7.2 wheel with Triton ROCm 3.8.0 from
-the same index. The proposed 7.14 wheel requires a separately distributed SDK
-graph; no dependency overrides were applied to force it through.
-
-CUDA execution explicitly selects IEEE FP32 through the
-[PyTorch 2.14 precision API](https://docs.pytorch.org/docs/2.14/notes/cuda.html).
-Forced TF32 environment overrides are rejected; device forecasts still need
-measured parity on the actual target before acceptance.
-
-Current publication receipts: [four image digests and both OpenVINO bundle revisions](verification/2026-11-01-published-candidates.json). Cross-device policy remains unaccepted after [independent validation](verification/2026-11-01-independent-device-budgets.md). The hardware audit and initial candidate-history sections above are historical observations, not current deployment status.
-
-Published CPU/OpenVINO/ROCm 5M and 209M inputs were revalidated on selected
-targets; CUDA remains pending verified VRAM headroom. See the separate
-[target validation report](verification/2026-11-01-published-target-validation.md).
-This does not adopt CPU/GPU equivalence or promote any candidate.
+Current code and runtime pins are distinct from historical validation pins.
+The [bounded comparison](verification/2026-11-02-speed-accuracy.md) and
+[full OpenVINO divergence assessment](verification/2026-11-02-openvino-full-divergence.md)
+state their exact scope. Python3.13 builds and the expanded OpenVINO v2 artifacts
+require their own native CI/publication evidence; earlier results are not proof
+for an untested new image. Deployment and caller migration are separate steps.

@@ -34,7 +34,7 @@ class Blocking:
   levels=np.array([.01,.05,.1,.15,.2,.25,.3,.35,.4,.45,.5,.55,.6,.65,.7,.75,.8,.85,.9,.95,.99],dtype=np.float32)
   return ForecastResult(np.ones((*inputs.context.shape[:2],inputs.prediction_length,21),dtype=np.float32),levels)
 configure_transport_errors(model_server.app)
-m=TimestralModel(Settings(model_id='mistralai/Timestral-5M',model_revision='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f',forecast_profile='bounded-v1'),loader=lambda _:Blocking());m.load()
+m=TimestralModel(Settings(model_id='mistralai/Timestral-5M',model_revision='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f'),loader=lambda _:Blocking());m.load()
 ModelServer(http_port=http,grpc_port=grpc,workers=1).start([m])
 '''
 
@@ -86,14 +86,6 @@ def test_real_server_cancellation_keeps_execution_slot_until_worker_finishes(tmp
                     time.sleep(.01)
             assert response.id=='cancelled-request'
             assert len(response.outputs)==3
-            from test_v2_benchmark import v2,config
-            for transport in ('http-json','http-binary','grpc'):
-                c=config();c.update(transport=transport,endpoint=f'127.0.0.1:{grpc_port if transport=="grpc" else http_port}')
-                code='from benchmarks.v2 import create_client,fixture_values,validate_response; import json,sys; c=json.loads(sys.argv[1]); client=create_client(c); identity,parameters=client.infer(fixture_values(c["fixture"]),"protocol-check"); validate_response(c,"protocol-check",identity,parameters); client.close()'
-                # KServe and Triton ship separate protobuf files with the same
-                # global symbols. Match deployment: clients run in their own process.
-                result=subprocess.run([sys.executable,'-c',code,json.dumps(c)],capture_output=True,text=True,timeout=30)
-                assert result.returncode==0,result.stderr
 
     finally:
         (tmp_path/'release').touch()

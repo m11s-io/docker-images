@@ -15,6 +15,7 @@ def main():
     source.add_argument("--base-image")
     source.add_argument("--base-arg")
     source.add_argument("--version-arg")
+    source.add_argument("--deb-package")
     parser.add_argument("--dockerfile", type=pathlib.Path)
     parser.add_argument("--suffix", default="")
     parser.add_argument("--strip-prefix", default="")
@@ -29,22 +30,27 @@ def main():
             content = args.dockerfile.read_text()
         except OSError as error:
             parser.error(str(error))
-        if args.base_arg or args.version_arg:
+        if args.deb_package:
+            pins = re.findall(rf"(?<![\w-]){re.escape(args.deb_package)}=([\w.+:~\-]+)", content)
+            if len(set(pins)) != 1:
+                parser.error("expected exactly one pinned Debian package version")
+            version = pins[0].split(":", 1)[-1].rsplit("-", 1)[0]
+        elif args.base_arg or args.version_arg:
             pattern = rf"^\s*ARG\s+{re.escape(args.base_arg or args.version_arg)}=(\S+)\s*(?:#.*)?$"
         else:
             pattern = rf"^\s*FROM\s+({re.escape(args.base_image)}(?=[:@\s])\S*)(?:\s+AS\s+\S+)?\s*$"
-        references = re.findall(pattern, content, flags=re.MULTILINE | re.IGNORECASE)
-        if len(references) != 1:
-            parser.error("expected exactly one matching Dockerfile base reference or version argument")
-        if args.version_arg:
-            version = references[0]
-        else:
-            # A registry's port is not an image tag; inspect only the final path segment.
-            reference = references[0].split("@", 1)[0]
-            if ":" not in reference.rsplit("/", 1)[-1]:
-                parser.error("base reference must have an explicit image tag")
-            version = reference.rsplit(":", 1)[1]
-
+        if not args.deb_package:
+            references = re.findall(pattern, content, flags=re.MULTILINE | re.IGNORECASE)
+            if len(references) != 1:
+                parser.error("expected exactly one matching Dockerfile base reference or version argument")
+            if args.version_arg:
+                version = references[0]
+            else:
+                # A registry's port is not an image tag; inspect only the final path segment.
+                reference = references[0].split("@", 1)[0]
+                if ":" not in reference.rsplit("/", 1)[-1]:
+                    parser.error("base reference must have an explicit image tag")
+                version = reference.rsplit(":", 1)[1]
     if not version.startswith(args.strip_prefix):
         parser.error("version does not start with the declared prefix")
     version = version[len(args.strip_prefix):]

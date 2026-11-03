@@ -1,11 +1,11 @@
-# m11s/chromium-cdp
+# m11s/chromium
 
 Headless Chromium with the Chrome DevTools Protocol (CDP) listener on port
 `9222`. It is intended for a colocated DSH container to reach at
 `http://chromium:9222` over a private Docker network.
 
 The base is pinned to the October 5, 2026 Bookworm slim image. Chromium and
-its sandbox package are installed from Debian's current repositories at build time.
+its sandbox package are installed at exact pinned Debian package versions.
 Nginx exposes CDP on port `9222` and forwards to Chromium on loopback port
 `9223`. Discovery responses advertise the external service authority so
 clients can connect to the browser WebSocket from another container.
@@ -29,8 +29,8 @@ namespaces that sandbox requires. The Compose example applies this setting.
 ## Verify the image
 
 ```sh
-docker build -t m11s/chromium-cdp:local chromium-cdp
-sh chromium-cdp/tests/smoke.sh m11s/chromium-cdp:local
+docker build -t m11s/chromium:local-cdp chromium
+sh chromium/tests/smoke.sh m11s/chromium:local-cdp
 ```
 
 The test uses a temporary private network and a separate Node 24 container
@@ -42,13 +42,19 @@ to verify HTTP discovery and a real CDP WebSocket command. Set
 For an image-only diagnostic, run Chromium without publishing CDP:
 
 ```bash
-docker run --rm --detach --name chromium-cdp-diagnostic --network none \
+docker run --rm --detach --name chromium-diagnostic --network none \
   --security-opt seccomp=unconfined \
-  m11s/chromium-cdp:latest
-docker logs chromium-cdp-diagnostic
-docker rm --force chromium-cdp-diagnostic
+  m11s/chromium:latest-cdp
+docker logs chromium-diagnostic
+docker rm --force chromium-diagnostic
 ```
 
 The diagnostic container has no network connectivity and does not make CDP
 available to the host. Use the DeepSeek Harness Compose deployment when DSH
 needs to connect to Chromium over its private network.
+
+## Tags
+
+`<chromium-version>-cdp` follows the pinned Chromium Debian package version,
+without the Debian packaging revision. `latest-cdp` tracks the current build;
+`sha-<commit>-cdp` identifies its source revision.

@@ -47,12 +47,13 @@ def test_request_roundtrips_official_grpc_names_types_and_identity():
         np.testing.assert_array_equal(tensor.as_numpy(), values[tensor.name])
 
 
-def test_openvino_fixtures_include_boundaries_and_omit_unsupported_shapes():
-    cases = list(probe.fixtures('openvino'))
-    assert any(v['context'].shape == (1,1,256) for _,v,_,_ in cases)
-    assert any(h == 320 for _,_,h,_ in cases)
-    assert all(v['context'].shape[:2] == (1,1) and v['context'].shape[-1] <= 256 and h <= 320 for _,v,h,_ in cases)
-    assert not any('covariates' in k for _,v,_,_ in cases for k in v)
+def test_openvino_fixtures_are_identical_to_normal_cpu():
+    cpu=list(probe.fixtures('cpu'));actual=list(probe.fixtures('openvino'))
+    assert [x[0] for x in actual]==[x[0] for x in cpu]
+    for (_,a,h,kwargs),(_,b,expected_h,_) in zip(actual,cpu):
+        assert h==expected_h
+        assert set(a)==set(b)
+        for key in a:np.testing.assert_array_equal(a[key],b[key])
 
 
 def test_openvino_conversion_policy_does_not_relax_pytorch_comparison():

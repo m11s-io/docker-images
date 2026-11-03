@@ -22,6 +22,17 @@ class ImageTagsTest(unittest.TestCase):
                 capture_output=True, text=True,
             )
 
+    def test_chromium_tag_tracks_installed_debian_package(self):
+        result = self.resolve("--deb-package", "chromium", "--suffix=-cdp",
+                              "--latest=latest-cdp", dockerfile=(
+            "FROM debian:bookworm-slim\n"
+            "RUN apt-get install -y chromium=156.0.8078.73-1~deb12u1 chromium-sandbox=156.0.8078.73-1~deb12u1\n"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), [
+            "m11s/example:156.0.8078.73-cdp", "m11s/example:latest-cdp",
+            "m11s/example:sha-494d7fbb6b32-cdp",
+        ])
+
     def test_release_version_and_commit_tag(self):
         result = self.resolve("--version", "0.5.5")
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -49,13 +60,13 @@ class ImageTagsTest(unittest.TestCase):
             with self.subTest(variant=variant):
                 dockerfile = (pathlib.Path(__file__).parents[1] / "timestral" /
                               f"Dockerfile.{variant}")
-                result = self.resolve("--version-arg", "SERVING_VERSION",
-                                      f"--suffix=-{variant}", f"--latest=candidate-standard-v1-{variant}",
+                result = self.resolve("--version-arg", "TIMESTRAL_VERSION",
+                                      f"--suffix=-{variant}", f"--latest=latest-{variant}",
                                       dockerfile=dockerfile.read_text())
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout.splitlines(), [
-                    f"m11s/example:standard-v1-0.1.0-{variant}",
-                    f"m11s/example:candidate-standard-v1-{variant}",
+                    f"m11s/example:1.0.0-{variant}",
+                    f"m11s/example:latest-{variant}",
                     f"m11s/example:sha-494d7fbb6b32-{variant}",
                 ])
 
@@ -70,7 +81,7 @@ class ImageTagsTest(unittest.TestCase):
         self.assertIn("latest-cpu", workflow)
         self.assertIn("latest-cuda", workflow)
         self.assertIn("timestral-tests:", workflow)
-        self.assertIn("uv run --frozen pytest tests/test_api.py -q", workflow)
+        self.assertIn("uses: ./.github/workflows/timestral-standard.yaml", workflow)
 
     def test_variant_tags_have_separate_commit_alias(self):
         result = self.resolve("--version", "0.5.5", "--suffix=-gguf")

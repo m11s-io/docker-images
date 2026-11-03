@@ -3,12 +3,12 @@
 DeepSeek Harness (DSH) web runtime, with an optional browser provider attached
 to a separate Chromium CDP container. The DSH image does not install Chromium.
 
-This image pins upstream `dsh-v0.2.0-rc.2` (a release candidate, not an alpha)
-at commit `639ed015397290b3745d163aafe02ffee4aa3f84`. Publish tags derive from
+This image pins upstream `dsh-v0.2.1-rc.5` (a release candidate, not an alpha)
+at commit `b830ec950faba0a46dda564be3e2d854afed94f1`. Publish tags derive from
 `DSH_REF` in the Dockerfile with the `dsh-v` prefix removed. Renovate updates
 the release and `DSH_COMMIT` together; the build verifies that the release tag
-resolves to the pinned commit. It uses Node 24
-Bookworm and the upstream pnpm `11.7.0` pin. The build includes the native
+resolves to the pinned commit. It uses Node 26
+Bookworm and the upstream pnpm `11.28.5` pin. The build includes the native
 Landlock launcher and system addon; sandbox availability still depends on
 the host kernel.
 
@@ -50,3 +50,11 @@ DSH_BROWSER_CDP_ENDPOINT=http://browser.internal:9222 docker compose up
 ```
 
 The browser provider is optional; DSH can be used without browser automation.
+
+## Listen address
+
+Upstream rejects wildcard bind addresses. The entrypoint binds port 3080 to the
+container’s non-loopback IPv4 address. If multiple IPv4 addresses are present,
+set `DSH_BIND_HOST` to the intended local IP; use `127.0.0.1` for a loopback-only
+deployment. Explicit IPv6 literals are also supported. The build smoke test and
+runtime health check use the same selected address.

@@ -26,7 +26,7 @@ measurement scales. It is not a production policy: `input_scale` here is the kno
 synthetic generator amplitude, not an estimator from arbitrary real requests.
 Even this alternative exceeded 0.05% for NVIDIA 5M grouped 1024-step forecasts.
 
-The [raw metrics](2026-11-01-independent-device-budgets.json) pin the script,
+The [raw metrics](archived-details.md) pin the script,
 image/model/source identities and every output error. The earlier result that the
 server is bitwise identical to unchanged upstream on the same device remains
 valid for that tested matrix. Cross-device numerical behavior is a separate

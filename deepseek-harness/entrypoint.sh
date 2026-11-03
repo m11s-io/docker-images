@@ -2,11 +2,13 @@
 set -eu
 
 : "${DSH_BROWSER_CDP_ENDPOINT:=http://chromium:9222}"
+DSH_BIND_HOST=$(node /usr/local/lib/dsh/bind-host.mjs)
+export DSH_BIND_HOST
 mkdir -p "$DSH_HOME"
 cat >"$DSH_HOME/cordis.patch.yml" <<EOF
 - id: webserver
   config:
-    host: 0.0.0.0
+    host: "${DSH_BIND_HOST}"
     port: 3080
 - insert:
     - name: '@deepseek-ai/dsh-browser-use'

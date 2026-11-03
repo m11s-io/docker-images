@@ -13,18 +13,16 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CUDA_FILES = ("comfyui/requirements-cuda.txt", "timestral/requirements-cuda.txt")
+CUDA_FILES = ("comfyui/requirements-cuda.txt",)
 GROUPS = {
     "comfyui/requirements-cuda.txt": "ComfyUI Dockerfile dependencies",
-    "timestral/requirements-cuda.txt": "Timestral PyTorch",
-    "timestral/pyproject.toml": "Timestral PyTorch",
 }
 
 
 def check_lookup(same_release: bool) -> None:
     with tempfile.TemporaryDirectory(prefix="cuda-renovate-") as directory:
         fixture = Path(directory)
-        for name in ("renovate.json", *CUDA_FILES, "timestral/pyproject.toml"):
+        for name in ("renovate.json", *CUDA_FILES):
             target = fixture / name
             target.parent.mkdir(parents=True, exist_ok=True)
             source = (ROOT / name).read_text()
@@ -50,11 +48,6 @@ def check_lookup(same_release: bool) -> None:
                     "matchFileNames": list(CUDA_FILES),
                     "allowedVersions": rf"/^{re.escape(release)}\+cu\d+$/",
                 })
-            config["packageRules"].append({
-                "matchPackageNames": ["torch"],
-                "matchFileNames": ["timestral/pyproject.toml"],
-                "allowedVersions": "/^2\\.14\\.1\\+cpu$/",
-            })
             config_file.write_text(json.dumps(config))
         subprocess.run(["git", "init", "-q"], cwd=fixture, check=True)
         subprocess.run(["git", "add", "."], cwd=fixture, check=True)
@@ -105,8 +98,7 @@ def check_lookup(same_release: bool) -> None:
                         else:
                             assert version.endswith("+cpu"), version
                     seen.add((filename, dep["depName"]))
-        assert seen == {(CUDA_FILES[0], "torch"), (CUDA_FILES[0], "torchvision"),
-                        (CUDA_FILES[1], "torch"), ("timestral/pyproject.toml", "torch")}, seen
+        assert seen == {(CUDA_FILES[0], "torch"), (CUDA_FILES[0], "torchvision")}, seen
 
         # This trace record comes from Renovate's branch generator, after
         # inherited presets and update-type rules have actually been applied.
@@ -132,7 +124,7 @@ def check_lookup(same_release: bool) -> None:
         expected = proposed
         assert checked == expected, (checked, expected)
         assert all(len(names) == 1 for names in branch_names.values()), branch_names
-        assert len(set.union(*branch_names.values())) == 2, branch_names
+        assert len(set.union(*branch_names.values())) == 1, branch_names
 
 
 if __name__ == "__main__":

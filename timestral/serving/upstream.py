@@ -107,12 +107,7 @@ class UpstreamForecaster:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             torch.set_num_threads(settings.torch_num_threads)
-            from .artifacts import validate_preview_request
-            class PreviewForecaster(cls):
-                def forecast(self, inputs):
-                    validate_preview_request(inputs)
-                    return super().forecast(inputs)
-            backend = PreviewForecaster(module.create_forecaster(root))
+            backend = cls(module.create_forecaster(root))
             backend.artifact_manifest_sha256 = os.environ['TIMESTRAL_ARTIFACT_MANIFEST_SHA256']
             return backend
         device = _check_device(settings, torch)
