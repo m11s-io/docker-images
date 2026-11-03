@@ -29,8 +29,7 @@ These images use KServe V2, replacing the old `/forecast` API. See the
 Use the [published tags and immutable digests](docs/verification/2026-11-01-published-candidates.json)
 for CPU, CUDA, ROCm and OpenVINO, plus the matching model/artifact revisions.
 `candidate-standard-v1-*` names are local CI build labels, not published release
-aliases. These images remain experimental candidates and use the KServe V2
-contract.
+aliases.
 
 ## Configuration
 
