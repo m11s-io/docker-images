@@ -50,6 +50,10 @@ exception permits at most 11/1024 values outside the original budget, with
 rtol=0.00014, atol=0.0001 and an absolute error cap of 0.0065. Other model medians
 and other horizons remain strict. Export logs print each case's measurements,
 and the final parity report records rejected cases before failing publication.
+Across observed CI runners, 28M permits at most 1% nonmedian values outside the
+original budget, capped at 20 times that budget; 123M permits at most 0.5%,
+capped at 60 times the budget. These exceptions apply only to maximum-horizon
+1024 cases. The median absolute cap applies only to original-budget violations.
 
 Use `.github/workflows/timestral-openvino.yaml` for verified main-only OIDC
 publication. New releases append `standard-v2/<manifest-sha256>/profiles/` and

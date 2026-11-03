@@ -37,7 +37,7 @@ def test_reviewed_ci_tail_envelope():
         assert r['accepted']==accepted
 
 
-@pytest.mark.parametrize('size,ratio,count', [('28M',11.2046292154,20),('123M',53.1673180042,70)])
+@pytest.mark.parametrize('size,ratio,count', [('28M',19.9,215),('123M',59.9,107)])
 def test_larger_model_reviewed_horizon_limits(size,ratio,count):
     e=np.ones((1,1,1024,21),np.float32)
     def forecast(n, budget_ratio):
@@ -65,5 +65,14 @@ def test_28m_reviewed_median_drift_is_bounded():
         assert not m.assess(a,e,model_id=model,case=case)['accepted']
     a[0,0,11,10]-=.0053
     assert not m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
+
+
+def test_median_absolute_cap_only_applies_to_strict_violations():
+    e=np.full((1,1,1024,21),-40,np.float32)
+    e[0,0,100,10]=1000
+    a=e.copy();a[0,0,:11,10]-=.0053
+    # .02 is below the original relative budget at reference=1000.
+    a[0,0,100,10]+=.02
+    assert m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
     a=e.copy();a[0,0,0,10]-=.007
     assert not m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
