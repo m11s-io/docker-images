@@ -63,23 +63,8 @@ on:
 jobs:
   timestral-tests:
     needs: [changes]
-    if: ${{ !failure() && !cancelled() && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || startsWith(inputs.image, 'timestral-'))) || needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true') }}
-    runs-on: ubuntu-26.04
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - name: Set up uv and Python 3.15
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e  # v10.3.2
-        with:
-          version: 0.13.6
-          python-version: "3.15"
-          enable-cache: true
-          cache-dependency-glob: timestral/uv.lock
-      - name: Run Timestral API unit tests
-        working-directory: timestral
-        run: uv run --frozen pytest tests/test_api.py -q
+    if: ${{ !failure() && !cancelled() && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || startsWith(inputs.image, 'timestral-'))) || needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true' || needs.changes.outputs.timestral-rocm == 'true' || needs.changes.outputs.timestral-openvino == 'true') }}
+    uses: ./.github/workflows/timestral-standard.yaml
 
   changes:
     if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
@@ -226,6 +211,7 @@ jobs:
               - 'scripts/image_tags.py'
               - 'scripts/test_timestral_standard.py'
               - '.github/workflows/timestral-standard.yaml'
+              - '.github/workflows/build.yaml'
               - 'timestral/serving/**'
               - 'timestral/tests/**'
               - 'timestral/.dockerignore'
@@ -237,6 +223,7 @@ jobs:
               - 'scripts/image_tags.py'
               - 'scripts/test_timestral_standard.py'
               - '.github/workflows/timestral-standard.yaml'
+              - '.github/workflows/build.yaml'
               - 'timestral/serving/**'
               - 'timestral/tests/**'
               - 'timestral/.dockerignore'
@@ -247,6 +234,7 @@ jobs:
               - 'scripts/image_tags.py'
               - 'scripts/test_timestral_standard.py'
               - '.github/workflows/timestral-standard.yaml'
+              - '.github/workflows/build.yaml'
               - 'timestral/serving/**'
               - 'timestral/tests/**'
               - 'timestral/.dockerignore'
@@ -257,6 +245,7 @@ jobs:
               - 'scripts/image_tags.py'
               - 'scripts/test_timestral_standard.py'
               - '.github/workflows/timestral-standard.yaml'
+              - '.github/workflows/build.yaml'
               - 'timestral/serving/**'
               - 'timestral/tests/**'
               - 'timestral/.dockerignore'
@@ -266,7 +255,7 @@ jobs:
 
   # Publish each runtime with version, flavor, and source commit tags.
   build:
-    needs: [changes]
+    needs: [changes, timestral-tests]
     if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-26.04
     permissions:
@@ -544,7 +533,7 @@ jobs:
           NATIVE_PREPARE_RESULT: ${{ needs.native-prepare.result }}
           NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
           HAS_NATIVE_IMAGES: ${{ needs.native-prepare.outputs.has-images }}
-          TIMESTRAL_REQUIRED: ${{ needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true' }}
+          TIMESTRAL_REQUIRED: ${{ needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true' || needs.changes.outputs.timestral-rocm == 'true' || needs.changes.outputs.timestral-openvino == 'true' }}
           TIMESTRAL_TESTS_RESULT: ${{ needs.timestral-tests.result }}
         run: |
           test "$CHANGES_RESULT" = success

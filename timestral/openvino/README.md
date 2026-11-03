@@ -1,68 +1,52 @@
-# Direct OpenVINO preview
+# Direct OpenVINO serving
 
-Experimental, not an interchangeable stable fourth variant. The same KServe
-ModelServer and shared handler use OpenVINO Core for neural execution, while
-inheriting upstream Timestral scaling, refinement, encoding and forecast loops.
-No OVMS process, Python node, MediaPipe graph or pyovms dependency is included.
-No reference neural weights or fake model parameters are allocated at runtime.
+Timestral-5M and Timestral-209M use the same KServe V2 API, supported requests
+and upstream-default forecasting configuration as the normal CPU image.
+OpenVINO executes the learned neural operations. Scaling (including FP64
+statistics), categorical encoding, refinement and forecast loops remain unchanged
+upstream CPU operations, without loading PyTorch neural weights or falling back.
 
-Candidate bundles select either Timestral-5M revision
-`bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f` or Timestral-209M revision
-`9874d252ab0aae16f7f7c999f98f98d6ad7d8365`, source
-`a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff`, FP32. It uses explicit
-max_context=256 and per_shot_horizon_patches=5. This differs from unrestricted
-upstream defaults; compare final forecasts against that exact configuration.
+There are no additional OpenVINO single-series, context-256, horizon-320 or
+no-covariate restrictions. Batches, grouped variables, missing observations,
+numeric/categorical past and known-future covariates and both forecast options
+are supported wherever the selected checkpoint supports them. The existing
+shared CPU API budgets still apply; see [protocol](../docs/protocol.md).
+Defaults come from the checkpoint (currently context 32768 and up to 32 horizon
+patches for both pinned models). There is no bounded compatibility preset.
 
-Capabilities: B=1, V=1, 1<=T<=256, 1<=H<=320, no covariates. Grouped rows,
-larger contexts/horizons, 28M/123M and all covariates fail explicitly.
-Both boolean options pass through upstream; their final-forecast acceptance
-remains required. No neural PyTorch fallback exists.
+## Artifacts
 
-New artifact format: `timestral-openvino-profiles-v1`, consisting of
-`manifest.json`, `config.json`, `LICENSE`, `README.md` and `block-{1..5}.{xml,bin}`. The manifest records
-model/source revisions, FP32, max_context, block size and SHA256 for every file.
-Runtime additionally requires its expected manifest SHA256 from trusted,
-revision-pinned external initialization. Reject extra/missing files, symlinks,
-checksum/revision/profile mismatches before compilation. IR inputs must be
-context f32[1,32..256] and observed boolean[1,32..256], with a quantiles
-f32[1,H*32,21] output. Only patch-aligned contexts reach those profiles.
+This runtime requires `timestral-openvino-profiles-v2`: `manifest.json`,
+`config.json`, `LICENSE`, `README.md`, `context.{xml,bin}` and
+`covariates.{xml,bin}`. Two dynamic graphs cover the context-only and covariate
+neural paths. Real group/role IDs, shapes and upstream normalization values
+are inputs; graph conversion must not specialize them to the example request.
 
-Compile settings: CPU, f32, two inference threads, one stream,
-ENABLE_CPU_PINNING=false. Validate properties and actual final forecasts in the
-pinned 2026.4.1 runtime image; previous OVMS timings are historical evidence,
-not direct-runtime performance evidence.
+Pin the expected manifest SHA256 and HF artifact commit independently of the
+image digest. All file hashes, model/source revisions and FP32 precision are
+checked before compilation. Graph signatures, representative execution and all
+subsequent output shapes/dtypes/finiteness are verified. A bundle for one model
+cannot serve the other. OpenVINO CPU compilation uses FP32, two threads, one
+stream and disabled CPU pinning.
 
-The isolated profile exporter and direct runtime use the standard-serving
-acceptance workflow for final-forecast parity and actual-image REST/gRPC checks.
-The legacy OVMS exporter and publication path have been removed.
+Old published v1 bundles and their bounded benchmark/acceptance receipts remain
+historical; they cannot initialize this v2 runtime. Use matching v2 publication
+receipts. No deployment or caller cutover follows from artifact publication.
 
-Run `profiles.py` in the frozen `openvino/export` environment on native amd64.
-Conversion-only rewrites occur in a fresh temporary source copy and fail on
-source drift; reference and runtime workers import the unchanged source in
-separate processes. The exporter checks all 21 final quantiles, medians, levels,
-short/nonaligned/maximum contexts, missingness, multiple decode blocks and all
-four boolean-option combinations before writing a manifest. CI retains the
-report separately from runtime artifacts. Each new revision must pass these checks before publication.
+## Validation and publication
 
-Converted outputs may retain symbolic dimensions even though every accepted
-forecast has fixed row/horizon/quantile dimensions. Startup checks compatible
-metadata, then executes every admitted patch-aligned context length (32 through
-256) for each of the five profiles and rejects incorrect shapes/dtypes/nonfinite
-results before Ready. Every subsequent neural result is checked again. CI retains
-both the versioned candidate profiles and their evidence for later publication.
+Run `export/profiles.py --model-size 5M|209M --output DIR` in the frozen
+`openvino/export` environment on native amd64. Conversion uses a fresh isolated
+source copy with guarded rewrites; independent reference/runtime workers import
+unchanged pinned upstream. Both models must pass full-default final forecasts,
+including batches, grouped variables, long contexts/horizons, numeric/categorical
+covariates, missingness and forecast options at the established conversion
+tolerance (rtol=atol=1e-4). Actual images must then pass HTTP JSON/binary and gRPC
+checks against the same CPU defaults. A passing bounded reference is insufficient.
 
-
-Each bundle is pinned to exactly one model identity; a 5M bundle cannot serve a
-209M request or vice versa. The exporter accepts `--model-size 5M|209M`, and native
-CI separately exports, compares final forecasts, and probes the shared image for
-each size. Both 5M and 209M native export/final-forecast and actual-image protocol checks
-passed in publication run 41328090420. The image and model-specific bundles are
-published; see [immutable receipts](../docs/verification/2026-11-01-published-candidates.json).
-
-Manual publication through `.github/workflows/timestral-openvino.yaml` validates
-the new structure and runs `export/publish.py`. It appends
-`standard-v1/<manifest-sha256>/profiles/` with validation evidence alongside it.
-The legacy HF files and revisions are preserved. Use the returned HF commit,
-subdirectory and manifest SHA256 together; never select a bundle by model name
-alone. The repository retains its historical 5M name for existing trust claims;
-model identity is explicit in each release manifest.
+Use `.github/workflows/timestral-openvino.yaml` for verified main-only OIDC
+publication. New releases append `standard-v2/<manifest-sha256>/profiles/` and
+matching evidence. Existing remote v1/legacy files are preserved. The historical
+HF repository name remains for trust compatibility; each manifest records its
+actual model identity. Refresh the speed/accuracy report for matching default
+settings; earlier bounded speedups are not promises for the expanded runtime.

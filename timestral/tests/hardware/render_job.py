@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 import re
 
+TRUSTED_COMPARISON=Path(__file__).resolve().parents[2]/'benchmarks/comparison.json'
+
 
 def resources(variant, image, source, node, model, device_groups=(), artifact=None):
     if variant not in ('cpu', 'cuda', 'rocm', 'openvino') or model not in ('5M', '209M'):
@@ -20,9 +22,18 @@ def resources(variant, image, source, node, model, device_groups=(), artifact=No
     if not re.fullmatch(r'[a-z0-9][a-z0-9.-]*', node):
         raise ValueError('an explicit node is required')
     if variant == 'openvino':
-        trusted = json.loads((Path(__file__).parents[2]/'docs/verification/2026-11-01-published-candidates.json').read_text())['openvino_profiles'][model]
-        if artifact != trusted:
-            raise ValueError('a trusted model-specific publication receipt is required')
+        if (not isinstance(artifact,dict) or
+            artifact.get('repository')!='m11s-org/Timestral-5M-OpenVINO-experimental' or
+            artifact.get('model_id')!='mistralai/Timestral-'+model or
+            not re.fullmatch('[a-f0-9]{40}',artifact.get('revision','')) or
+            not re.fullmatch('[a-f0-9]{64}',artifact.get('manifest_sha256','')) or
+            artifact.get('path')!='standard-v2/'+artifact['manifest_sha256'] or
+            artifact.get('status')!='validated-cpu-parity'):
+            raise ValueError('a model-specific immutable v2 publication receipt is required')
+        trusted=next((row.get('artifact') for row in json.loads(TRUSTED_COMPARISON.read_text())['rows']
+                      if row['id']=='openvino-'+model),None)
+        if not trusted or artifact!=trusted:
+            raise ValueError('receipt must match the trusted checked-in comparison publication pin')
     elif artifact is not None:
         raise ValueError('artifact override is only valid for OpenVINO')
     code = Path(__file__).with_name('probe.py').read_text()

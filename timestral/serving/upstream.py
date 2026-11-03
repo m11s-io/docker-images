@@ -18,7 +18,6 @@ class Settings:
     model_device: str = 'cpu'
     hf_home: str = '/models/huggingface'
     torch_num_threads: int = 2
-    forecast_profile: str = 'default'
 
     def __post_init__(self):
         if not re.fullmatch(r'[0-9a-f]{40}', self.model_revision):
@@ -27,22 +26,12 @@ class Settings:
             raise ValueError('unsupported MODEL_ID')
         if self.backend not in ('cpu','cuda','rocm','openvino'):
             raise ValueError('unsupported backend')
-        if self.forecast_profile not in ('default','upstream-default','bounded-v1'):
-            raise ValueError('unsupported forecast profile')
-        if self.backend == 'openvino' and self.resolved_profile != 'bounded-v1':
-            raise ValueError('OpenVINO requires bounded-v1 forecast profile')
         if self.torch_num_threads < 1 or not self.hf_home:
             raise ValueError('invalid thread count or model cache')
         if self.backend in ('cpu','openvino'):
             if self.model_device != 'cpu': raise ValueError('backend requires explicit cpu device')
         elif not re.fullmatch(r'cuda(?::[0-9]+)?',self.model_device):
             raise ValueError('accelerator backend requires explicit cuda device')
-
-    @property
-    def resolved_profile(self):
-        if self.forecast_profile == 'default':
-            return 'bounded-v1' if self.backend == 'openvino' else 'upstream-default'
-        return self.forecast_profile
 
     @classmethod
     def from_env(cls):
@@ -55,8 +44,7 @@ class Settings:
                    backend=backend,
                    model_device=os.environ.get('MODEL_DEVICE','cpu'),
                    hf_home=os.environ.get('HF_HOME','/models/huggingface'),
-                   torch_num_threads=int(os.environ.get('TORCH_NUM_THREADS','2')),
-                   forecast_profile=os.environ.get('TIMESTRAL_FORECAST_PROFILE','default'))
+                   torch_num_threads=int(os.environ.get('TORCH_NUM_THREADS','2')))
 
 
 def _check_device(settings, torch):
@@ -107,12 +95,7 @@ class UpstreamForecaster:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             torch.set_num_threads(settings.torch_num_threads)
-            from .artifacts import validate_preview_request
-            class PreviewForecaster(cls):
-                def forecast(self, inputs):
-                    validate_preview_request(inputs)
-                    return super().forecast(inputs)
-            backend = PreviewForecaster(module.create_forecaster(root))
+            backend = cls(module.create_forecaster(root))
             backend.artifact_manifest_sha256 = os.environ['TIMESTRAL_ARTIFACT_MANIFEST_SHA256']
             return backend
         device = _check_device(settings, torch)
@@ -134,10 +117,9 @@ class UpstreamForecaster:
             torch.backends.cudnn.rnn.fp32_precision = 'ieee'
         else:
             torch.set_float32_matmul_precision('highest')
-        profile_options = dict(max_context=256, per_shot_horizon_patches=5) if settings.resolved_profile == 'bounded-v1' else {}
         forecaster = TimestralForecaster.from_pretrained(
             settings.model_id, revision=settings.model_revision, device=device,
-            cache_dir=str(cache), token=os.environ.get('HF_TOKEN') or None, **profile_options)
+            cache_dir=str(cache), token=os.environ.get('HF_TOKEN') or None)
         parameters = list(forecaster.model.parameters())
         if not parameters or any(p.device != device or p.dtype != torch.float32 for p in parameters):
             raise RuntimeError('loaded model does not match requested device and FP32 precision')

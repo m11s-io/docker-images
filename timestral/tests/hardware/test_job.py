@@ -7,6 +7,15 @@ job = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(job)
 
 
+@pytest.fixture(autouse=True)
+def trusted_publications(tmp_path, monkeypatch):
+    import json
+    path=tmp_path/'comparison.json'
+    path.write_text(json.dumps({'rows':[{'id':'openvino-'+model,'artifact':receipt(model)}
+                                       for model in ('5M','209M')]}))
+    monkeypatch.setattr(job,'TRUSTED_COMPARISON',path,raising=False)
+
+
 def test_job_requires_immutable_image_and_stays_bounded_nonroot():
     for image in ('m11s/timestral:latest-cuda', 'm11s/timestral:acceptance-test'):
         with pytest.raises(ValueError):
@@ -37,8 +46,10 @@ def test_cpu_job_does_not_request_an_accelerator():
 
 
 def receipt(model='5M'):
-    receipts = __import__('json').loads((Path(__file__).parents[2]/'docs/verification/2026-11-01-published-candidates.json').read_text())
-    return receipts['openvino_profiles'][model]
+    digest='a'*64
+    return dict(repository='m11s-org/Timestral-5M-OpenVINO-experimental',revision='c'*40,
+        path='standard-v2/'+digest,manifest_sha256=digest,model_id='mistralai/Timestral-'+model,
+        source='b'*40,status='validated-cpu-parity')
 
 
 def test_openvino_job_pins_private_initialization_and_readonly_profiles():
@@ -85,3 +96,29 @@ def test_profile_copy_uses_owned_child_directory_not_volume_root():
     env = {e['name']:e.get('value') for e in pod['initContainers'][0]['env']}
     mount = next(m['mountPath'] for m in pod['initContainers'][0]['volumeMounts'] if m['name']=='profiles')
     assert env['TIMESTRAL_FORECAST_ARTIFACTS'].startswith(mount+'/')
+
+
+@pytest.mark.parametrize('field,value',[
+    ('repository','untrusted/repository'),('path','standard-v1/'+'a'*64),
+    ('model_id','mistralai/Timestral-209M'),('status','experimental-preview')])
+def test_v2_job_rejects_foreign_repository_old_format_or_wrong_model(field,value):
+    with pytest.raises(ValueError):
+        job.resources('openvino','m11s/timestral@sha256:'+'a'*64,
+            'b'*40,'cpu-test','5M',artifact=receipt()|{field:value})
+
+
+@pytest.mark.parametrize('artifact',[
+    receipt()|{'revision':'d'*40},
+    receipt()|{'manifest_sha256':'d'*64,'path':'standard-v2/'+'d'*64},
+])
+def test_rejects_self_attested_publication_pin(artifact):
+    with pytest.raises(ValueError,match='trusted'):
+        job.resources('openvino','m11s/timestral@sha256:'+'a'*64,
+            'b'*40,'cpu-test','5M',artifact=artifact)
+
+
+def test_unpublished_model_has_no_trusted_receipt():
+    job.TRUSTED_COMPARISON.write_text('{"rows":[{"id":"openvino-5M","artifact":null}]}')
+    with pytest.raises(ValueError,match='trusted'):
+        job.resources('openvino','m11s/timestral@sha256:'+'a'*64,
+            'b'*40,'cpu-test','5M',artifact=receipt())

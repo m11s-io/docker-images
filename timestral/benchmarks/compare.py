@@ -92,7 +92,7 @@ def prepare(config,directory):
 
 def check_identity(row,parameters):
     expected={k:row[k] for k in ('backend','model_id','model_revision','forecast_profile')}
-    expected.update(max_context=256,per_shot_horizon_patches=5)
+    expected.update(max_context=row['max_context'],per_shot_horizon_patches=row['per_shot_horizon_patches'])
     if row['backend']=='openvino':expected['artifact_manifest_sha256']=row['artifact']['manifest_sha256']
     if any(parameters.get(k)!=v for k,v in expected.items()):raise ValueError('loaded identity/profile mismatch')
 
@@ -120,8 +120,8 @@ def forecast(row,history,horizon,request_id):
 def evaluate(config,cases):
     row=dict(config['row']);records=[];first={}
     if (not re.fullmatch(r'm11s/timestral@sha256:[a-f0-9]{64}',row['image']) or
-        row['actual_image_id'].removeprefix('docker.io/')!=row['image'] or not re.fullmatch('[a-f0-9]{40}',row['source']) or row['forecast_profile']!='bounded-v1'):
-        raise ValueError('pinned image, actual Pod imageID, source and bounded profile required')
+        row['actual_image_id'].removeprefix('docker.io/')!=row['image'] or not re.fullmatch('[a-f0-9]{40}',row['source']) or row['forecast_profile']!='upstream-default'):
+        raise ValueError('pinned image, actual Pod imageID, source and known forecast profile required')
     try:
         for i in range(config['warmups']):
             case=cases[(i*len(cases)//max(1,config['warmups']))%len(cases)]

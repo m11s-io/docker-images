@@ -13,15 +13,27 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class TimestralRuntimeTest(unittest.TestCase):
-    def test_legacy_python_is_preserved_while_candidate_images_use_312(self):
-        project = tomllib.loads((ROOT / "timestral/pyproject.toml").read_text())
-        self.assertEqual(project["project"]["requires-python"], ">=3.15,<3.16")
-        for variant in ("cpu", "cuda"):
-            dockerfile = (ROOT / f"timestral/Dockerfile.{variant}").read_text()
-            self.assertRegex(dockerfile, r"ARG PYTHON_BASE=python:3\.12\.\d+-slim-bookworm@sha256:[a-f0-9]{64}")
-        workflow = (ROOT / ".github/workflows/build.yaml").read_text()
-        job = workflow.split("  timestral-tests:", 1)[1].split("\n  changes:", 1)[0]
-        self.assertIn('python-version: "3.15"', job)
+    def test_only_kserve_serving_and_dependency_roots_remain(self):
+        for name in ('app','pyproject.toml','uv.lock','requirements-cuda.txt'):
+            self.assertFalse((ROOT/'timestral'/name).exists(),name)
+        for variant in ('cpu','cuda','rocm','openvino'):
+            dockerfile=(ROOT/f'timestral/Dockerfile.{variant}').read_text()
+            self.assertIn('"-m", "serving"',dockerfile)
+            self.assertRegex(dockerfile,r'python:3\.13\.\d+-slim-bookworm@sha256:[a-f0-9]{64}')
+        workflow=(ROOT/'.github/workflows/build.yaml').read_text()
+        job=workflow.split('  timestral-tests:',1)[1].split('\n  changes:',1)[0]
+        self.assertIn('uses: ./.github/workflows/timestral-standard.yaml',job)
+        acceptance=(ROOT/'.github/workflows/timestral-standard.yaml').read_text()
+        self.assertIn('python-version: "3.13"',acceptance)
+        self.assertNotIn('  pull_request:',acceptance)
+        # A reusable run must not cancel another caller's required acceptance.
+        self.assertNotIn('\nconcurrency:',acceptance)
+        self.assertNotIn('tests/test_api.py',job)
+        self.assertIn('--project timestral/dependencies/cpu',acceptance)
+        for variant in ('cpu','cuda','rocm','openvino'):
+            self.assertIn('needs.changes.outputs.timestral-'+variant,job)
+        build=workflow.split('  build:',1)[1].split('  native-prepare:',1)[0]
+        self.assertIn('needs: [changes, timestral-tests]',build)
 
     def test_cpu_uses_frozen_lock_and_cuda_uses_same_torch_release(self):
         project = tomllib.loads((ROOT / "timestral/dependencies/cpu/pyproject.toml").read_text())
@@ -42,35 +54,6 @@ class TimestralRuntimeTest(unittest.TestCase):
                 self.assertIn("ARG TIMESTRAL_VERSION=1.0.0", dockerfile)
                 self.assertIn("check_version.py", dockerfile)
                 self.assertIn("TIMESTRAL_VERSION", dockerfile)
-
-    def test_torch_check_rejects_stale_installed_release(self):
-        checker = ROOT / "timestral/check_version.py"
-        for variant, suffix in (("cpu", "+cpu"), ("cuda", "+cu132")):
-            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as directory:
-                fixture = pathlib.Path(directory)
-                for name, installed in (("timestral", "1.0.0"), ("torch", "2.14.1" + suffix)):
-                    metadata = fixture / f"{name}-{installed}.dist-info"
-                    metadata.mkdir()
-                    (metadata / "METADATA").write_text(
-                        f"Metadata-Version: 2.1\nName: {name}\nVersion: {installed}\n\n"
-                    )
-                (fixture / "torch.py").write_text(
-                    "class version:\n    cuda = " + ("None" if variant == "cpu" else "'13.2'") + "\n"
-                )
-                if variant == "cpu":
-                    requirements = fixture / "pyproject.toml"
-                    requirements.write_text('[project]\ndependencies = ["torch==2.14.1+cpu"]\n')
-                else:
-                    requirements = fixture / "requirements-cuda.txt"
-                    requirements.write_text("torch==2.14.1+cu132\n")
-                command = [sys.executable, str(checker), "1.0.0", variant]
-                env = {"PYTHONPATH": directory}
-                matched = subprocess.run(command, cwd=fixture, env=env, capture_output=True, text=True)
-                self.assertEqual(matched.returncode, 0, matched.stderr)
-                requirements.write_text(requirements.read_text().replace("2.14.1", "2.15.0"))
-                stale = subprocess.run(command, cwd=fixture, env=env, capture_output=True, text=True)
-                self.assertNotEqual(stale.returncode, 0)
-                self.assertIn("expected Torch 2.15.0", stale.stderr)
 
     def test_version_check_accepts_match_and_rejects_mismatch(self):
         checker = ROOT / "timestral/check_version.py"
