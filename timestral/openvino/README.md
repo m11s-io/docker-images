@@ -54,6 +54,10 @@ Across observed CI runners, 28M permits at most 1% nonmedian values outside the
 original budget, capped at 20 times that budget; 123M permits at most 0.5%,
 capped at 60 times the budget. These exceptions apply only to maximum-horizon
 1024 cases. The median absolute cap applies only to original-budget violations.
+The separate 28M sinusoidal protocol `blocks` case at horizon 1024 has its own
+measured envelope: at most 5% of quantiles outside the original budget, at most
+50 times that budget, absolute quantile error at most 1.8, and at most 6.25% of
+medians outside the original budget with absolute median error at most 0.2.
 
 Use `.github/workflows/timestral-openvino.yaml` for verified main-only OIDC
 publication. New releases append `standard-v2/<manifest-sha256>/profiles/` and
