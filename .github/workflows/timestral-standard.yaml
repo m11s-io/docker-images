@@ -1,21 +1,11 @@
 name: Timestral standard-serving acceptance
 
 on:
-  pull_request:
-    paths:
-      - "timestral/**"
-      - "scripts/*timestral*"
-      - ".github/workflows/build.yaml"
-      - ".github/workflows/timestral-standard.yaml"
   workflow_dispatch:
   workflow_call:
 
 permissions:
   contents: read
-
-concurrency:
-  group: timestral-standard-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   unit:
@@ -26,7 +16,7 @@ jobs:
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
         with:
           version: 0.13.6
-          python-version: "3.12"
+          python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: "timestral/**/uv.lock"
       - name: Check packaging and tag routing
@@ -38,7 +28,7 @@ jobs:
           done
       - name: Artifact publication guard tests
         run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s timestral/openvino/export/tests
-      - name: Unit and legacy regression tests
+      - name: Shared KServe regression tests
         env:
           PYTHONPATH: timestral
         run: uv run --frozen --project timestral/dependencies/cpu python -m pytest timestral/tests timestral/openvino/tests -q -o asyncio_default_fixture_loop_scope=function
@@ -50,10 +40,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        model: [5M, 209M]
+        model: [5M, 28M, 123M, 209M]
         include:
           - model: 5M
             revision: bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f
+          - model: 28M
+            revision: 49b26409ac87b5935539a5d8ffe7f397b720db47
+          - model: 123M
+            revision: 5a147287addda85f6acd8da3fb8858fe9af7e8f7
           - model: 209M
             revision: 9874d252ab0aae16f7f7c999f98f98d6ad7d8365
     env:
@@ -67,7 +61,7 @@ jobs:
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
         with:
           version: 0.13.6
-          python-version: "3.12"
+          python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: timestral/dependencies/cpu/uv.lock
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
@@ -82,51 +76,49 @@ jobs:
           tags: timestral-standard:candidate
           cache-from: type=gha,scope=timestral-standard-cpu
           cache-to: type=gha,scope=timestral-standard-cpu,mode=max
-      - name: Check both profiles against independent upstream using the same image
+      - name: Check default forecasts against independent upstream
         run: |
           mkdir -p "$RUNNER_TEMP/model-cache" "$RUNNER_TEMP/evidence"
           chmod 0777 "$RUNNER_TEMP/model-cache"
           docker image inspect timestral-standard:candidate > "$RUNNER_TEMP/evidence/image-inspect.json"
-          for profile in upstream-default bounded-v1; do
-            export TIMESTRAL_FORECAST_PROFILE="$profile"
-            docker run -d --name timestral-standard \
-              -p 127.0.0.1:18080:8080 -p 127.0.0.1:18081:8081 \
-              --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
-              --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
-              -e MODEL_ID -e MODEL_REVISION -e TIMESTRAL_FORECAST_PROFILE timestral-standard:candidate
-            ready=false
-            for attempt in $(seq 1 180); do
-              if curl --fail --silent http://localhost:18080/v2/models/timestral/ready; then
-                ready=true
-                break
-              fi
-              if [[ $(docker inspect --format '{{.State.Running}}' timestral-standard) != true ]]; then
-                docker logs timestral-standard
-                exit 1
-              fi
-              sleep 2
-            done
-            if [[ "$ready" != true ]]; then
+
+          docker run -d --name timestral-standard \
+            -p 127.0.0.1:18080:8080 -p 127.0.0.1:18081:8081 \
+            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
+            -e MODEL_ID -e MODEL_REVISION timestral-standard:candidate
+          ready=false
+          for attempt in $(seq 1 180); do
+            if curl --fail --silent http://localhost:18080/v2/models/timestral/ready; then
+              ready=true
+              break
+            fi
+            if [[ $(docker inspect --format '{{.State.Running}}' timestral-standard) != true ]]; then
               docker logs timestral-standard
               exit 1
             fi
-            export TIMESTRAL_REFERENCE_DIR="$RUNNER_TEMP/reference-$profile"
-            mkdir -p "$TIMESTRAL_REFERENCE_DIR"
-            chmod 0777 "$TIMESTRAL_REFERENCE_DIR"
-            docker run --rm --entrypoint python \
-              --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
-              --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
-              --mount "type=bind,src=$TIMESTRAL_REFERENCE_DIR,dst=/reference" \
-              --mount "type=bind,src=$GITHUB_WORKSPACE/timestral/tests/integration,dst=/diagnostics,readonly" \
-              -e MODEL_ID -e MODEL_REVISION -e TIMESTRAL_FORECAST_PROFILE timestral-standard:candidate /diagnostics/reference.py
-            uv run --frozen --project timestral/dependencies/cpu python -m pytest \
-              timestral/tests/integration/test_triton_client.py -q \
-              -o asyncio_default_fixture_loop_scope=function \
-              --junitxml="$RUNNER_TEMP/evidence/forecast-parity-$profile.xml"
-            cp -a "$TIMESTRAL_REFERENCE_DIR" "$RUNNER_TEMP/evidence/reference-$profile"
-            docker logs timestral-standard > "$RUNNER_TEMP/evidence/server-$profile.log" 2>&1
-            docker rm -f timestral-standard
+            sleep 2
           done
+          if [[ "$ready" != true ]]; then
+            docker logs timestral-standard
+            exit 1
+          fi
+          export TIMESTRAL_REFERENCE_DIR="$RUNNER_TEMP/reference"
+          mkdir -p "$TIMESTRAL_REFERENCE_DIR"
+          chmod 0777 "$TIMESTRAL_REFERENCE_DIR"
+          docker run --rm --entrypoint python \
+            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
+            --mount "type=bind,src=$TIMESTRAL_REFERENCE_DIR,dst=/reference" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/timestral/tests/integration,dst=/diagnostics,readonly" \
+            -e MODEL_ID -e MODEL_REVISION timestral-standard:candidate /diagnostics/reference.py
+          uv run --frozen --project timestral/dependencies/cpu python -m pytest \
+            timestral/tests/integration/test_triton_client.py -q \
+            -o asyncio_default_fixture_loop_scope=function \
+            --junitxml="$RUNNER_TEMP/evidence/forecast-parity.xml"
+          cp -a "$TIMESTRAL_REFERENCE_DIR" "$RUNNER_TEMP/evidence/reference"
+          docker logs timestral-standard > "$RUNNER_TEMP/evidence/server.log" 2>&1
+          docker rm -f timestral-standard
       - name: Save logs and remove test container
         if: always()
         run: |
@@ -148,6 +140,10 @@ jobs:
         include:
           - model: 5M
             revision: bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f
+          - model: 28M
+            revision: 49b26409ac87b5935539a5d8ffe7f397b720db47
+          - model: 123M
+            revision: 5a147287addda85f6acd8da3fb8858fe9af7e8f7
           - model: 209M
             revision: 9874d252ab0aae16f7f7c999f98f98d6ad7d8365
     runs-on: ubuntu-26.04
@@ -158,13 +154,13 @@ jobs:
       MODEL_REVISION: ${{ matrix.revision }}
       TIMESTRAL_TEST_HTTP_URL: localhost:18080
       TIMESTRAL_TEST_GRPC_URL: localhost:18081
-      TIMESTRAL_TEST_PREVIEW: "1"
+      TIMESTRAL_TEST_BACKEND: openvino
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
         with:
           version: 0.13.6
-          python-version: "3.12"
+          python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: "timestral/openvino/**/uv.lock"
       - name: Check direct runtime and export guards
@@ -208,7 +204,7 @@ jobs:
             sleep 2
           done
           exit 1
-      - name: Verify shared REST/gRPC inference and unsupported capability errors
+      - name: Verify CPU-equivalent REST/gRPC inference and invalid request errors
         run: |
           uv run --frozen --project timestral/openvino python -m pytest \
             timestral/tests/integration/test_triton_client.py -q \

@@ -10,7 +10,7 @@ CPU/GPU final-forecast parity at the full supported horizon remains a blocker.
 | ROCm / gfx1201 | 5M | 27 / 30 | horizon 1024, all transports |
 | ROCm / gfx1201 | 209M | 27 / 30 | horizon 1024, all transports |
 
-The [raw report](2026-11-01-hardware-acceptance.json) records immutable image,
+The [raw report](archived-details.md) records immutable image,
 source, model and probe identities, all measured errors, serial timings and
 failed cases. Timings are diagnostic, not a sustained performance benchmark.
 
@@ -33,7 +33,7 @@ Actual hardware testing exposed and fixed missing runtime dependencies:
 ROCm requires libatomic1; accelerator Triton JIT requires gcc/libc6-dev and
 writable compilation caches. Those fixes are merged in PR #138. The corrected
 candidate images were published by run 41243130854 from source
-`016f45ff0ccb8213c282606be102de5efaa7161c`. CPU 5M/209M and experimental bounded
+`016f45ff0ccb8213c282606be102de5efaa7161c`. CPU 5M/209M and bounded OpenVINO
 OpenVINO native acceptance passed independently in run 41241482093. The CPU
 transport reference uses direct upstream forecasting with exact saved inputs
 in the same image userland; the adapter and worker-thread diagnostic were

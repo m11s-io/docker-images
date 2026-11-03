@@ -171,24 +171,15 @@ def test_packaged_variant_cannot_be_changed_by_runtime_environment(monkeypatch,t
 
 
 @pytest.mark.asyncio
-async def test_preview_response_declares_its_distinct_forecast_configuration(tmp_path):
-    m=TimestralModel(Settings(model_revision='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f',
-        model_id='mistralai/Timestral-5M',backend='openvino'),loader=lambda _:BlockingBackend())
+async def test_openvino_response_reports_actual_cpu_equivalent_defaults(tmp_path):
+    backend=BlockingBackend()
+    backend.forecaster=SimpleNamespace(max_context=32768,per_shot_horizon_patches=32)
+    m=TimestralModel(Settings(model_revision=REVISION,backend='openvino'),loader=lambda _:backend)
     m.load()
     response=await m.predict(request())
-    assert response.parameters['experimental'] is True
-    assert response.parameters['max_context']==256
-    assert response.parameters['per_shot_horizon_patches']==5
-
-
-@pytest.mark.asyncio
-async def test_bounded_comparison_metadata_records_resolved_operation(tmp_path):
-    m=TimestralModel(Settings(model_revision=REVISION,hf_home=str(tmp_path),forecast_profile='bounded-v1'),loader=lambda _:BlockingBackend())
-    m.load()
-    response=await m.predict(request())
-    assert response.parameters['forecast_profile']=='bounded-v1'
-    assert response.parameters['max_context']==256
-    assert response.parameters['per_shot_horizon_patches']==5
+    assert response.parameters['forecast_profile']=='upstream-default'
+    assert response.parameters['max_context']==32768
+    assert response.parameters['per_shot_horizon_patches']==32
 
 
 @pytest.mark.asyncio

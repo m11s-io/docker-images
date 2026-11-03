@@ -60,15 +60,22 @@ def row():
     return dict(id='cpu-5M',endpoint='localhost:8080',backend='cpu',
         model_id='mistralai/Timestral-5M',model_revision='bdd20cfc15a3fea0e4cb5ccef37f8d3ca7aa335f',
         image='m11s/timestral@sha256:'+'a'*64,actual_image_id='docker.io/m11s/timestral@sha256:'+'a'*64,
-        source='b'*40,forecast_profile='bounded-v1',hardware='test-cpu')
+        source='b'*40,forecast_profile='upstream-default',max_context=32768,per_shot_horizon_patches=32,hardware='test-cpu')
 
 
 def test_wrong_loaded_revision_or_profile_stops_comparison():
     r=row();identity={k:r[k] for k in ('backend','model_id','model_revision','forecast_profile')}
-    identity.update(max_context=256,per_shot_horizon_patches=5)
+    identity.update(max_context=32768,per_shot_horizon_patches=32)
     compare.check_identity(r,identity)
-    for change in ({'model_revision':'c'*40},{'per_shot_horizon_patches':32}):
+    for change in ({'model_revision':'c'*40},{'per_shot_horizon_patches':5}):
         with pytest.raises(ValueError):compare.check_identity(r,identity|change)
+
+
+def test_default_profile_rejects_bounded_endpoint_and_accepts_actual_settings():
+    r=row()|dict(forecast_profile='upstream-default',max_context=32768,per_shot_horizon_patches=32)
+    identity={k:r[k] for k in ('backend','model_id','model_revision','forecast_profile','max_context','per_shot_horizon_patches')}
+    compare.check_identity(r,identity)
+    with pytest.raises(ValueError):compare.check_identity(r,identity|dict(forecast_profile='bounded-v1',max_context=256,per_shot_horizon_patches=5))
 
 
 def test_failed_case_is_retained_and_request_never_sees_truth(monkeypatch):

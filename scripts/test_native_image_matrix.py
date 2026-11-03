@@ -7,7 +7,7 @@ from native_image_matrix import build_matrix
 
 IMAGES = [
     {"context": "deepseek-harness", "repository": "m11s/deepseek-harness", "version": "0.2.0-rc.2", "latest": "latest"},
-    {"context": "chromium-cdp", "repository": "m11s/chromium-cdp", "version": "bookworm-20261005", "latest": "latest"},
+    {"context": "chromium", "repository": "m11s/chromium", "version": "bookworm-20261005", "latest": "latest"},
     {"context": "comfy-mcp", "repository": "m11s/comfy-mcp", "version": "0.2.3", "latest": "latest"},
 ]
 SHA = "494d7fbb6b32003ec4dbcabdaef93e07a033817e"
@@ -18,8 +18,8 @@ class NativeImageMatrixTest(unittest.TestCase):
         return build_matrix(IMAGES, event, selected, changed or {}, SHA)["include"]
 
     def test_push_builds_only_changed_images(self):
-        rows = self.matrix(changed={"chromium-cdp": "true", "deepseek-harness": "false"})
-        self.assertEqual([row["context"] for row in rows], ["chromium-cdp"])
+        rows = self.matrix(changed={"chromium": "true", "deepseek-harness": "false"})
+        self.assertEqual([row["context"] for row in rows], ["chromium"])
 
     def test_workflow_only_push_has_empty_matrix(self):
         self.assertEqual(self.matrix(), [])

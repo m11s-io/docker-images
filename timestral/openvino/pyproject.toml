@@ -1,7 +1,7 @@
 [project]
 name = "timestral-standard-openvino"
 version = "0.1.0"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
   "kserve @ git+https://github.com/kserve/kserve.git@abc6c47ab4af588e40c67372b4835122234f6f74#subdirectory=python/kserve",
   "timestral @ git+https://github.com/mistralai/timestral.git@a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff",
@@ -11,11 +11,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pydantic-settings==2.16.0", "pytest==9.1.1", "pytest-asyncio==1.4.0", "tritonclient[http,grpc]==2.73.0"]
+dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "tritonclient[http,grpc]==2.73.0"]
 
 [tool.uv]
 package = false
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+# The pinned KServe commit caps PyJWT below the security-fixed release.
+override-dependencies = ["pyjwt>=2.15.0"]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

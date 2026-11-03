@@ -5,7 +5,7 @@ client cutover authorized.
 
 This reuses the image and profile publication receipts in
 [2026-11-01-published-candidates.json](2026-11-01-published-candidates.json).
-The [target report](2026-11-01-published-target-validation.json) separately records
+The [target report](archived-details.md) separately records
 actual Pod image IDs, model revisions, backend/device, probe identity, test run,
 profile initialization identity and protocol results. Publication receipts remain
 unchanged. No candidate was rebuilt or republished.
