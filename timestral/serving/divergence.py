@@ -35,8 +35,10 @@ def assess(actual,reference,*,model_id,case):
     # Run 41659716804: identical HTTP JSON/binary and gRPC results for
     # sinusoidal 28M blocks: 996/21504 outside, ratio 46.79752;
     # median 64/1024 outside, max error .18524170; max quantile error 1.71290.
+    # User accepted expanded envelope after run 41671193145: 1115/21504
+    # outside (5.185%), ratio 141.17811; retain existing absolute/median caps.
     if not strict and model_id=='mistralai/Timestral-28M' and case=='blocks':
-        if (actual.shape[-2]==1024 and count/actual.size<=.05 and ratio<=50
+        if (actual.shape[-2]==1024 and count/actual.size<=.055 and ratio<=150
             and outside[...,10].mean()<=.0625 and delta[...,10].max()<=.2
             and delta.max()<=1.8):
             exception=True

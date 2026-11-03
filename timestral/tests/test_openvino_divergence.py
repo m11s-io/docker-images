@@ -80,8 +80,9 @@ def test_median_absolute_cap_only_applies_to_strict_violations():
 
 def test_28m_protocol_blocks_exception_limits():
     e=np.ones((1,1,1024,21),np.float32)
-    a=e.copy();a[0,0,:996,0]+=.009
-    a[0,0,:64,10]+=.009
+    a=e.copy();a[0,0,:,0]+=.0283
+    a[0,0,:27,1]+=.0283
+    a[0,0,:64,10]+=.0283
     def accepted(a,e=e,case='blocks'):
         return m.assess(a,e,model_id='mistralai/Timestral-28M',case=case)['accepted']
     assert accepted(a)
@@ -89,7 +90,7 @@ def test_28m_protocol_blocks_exception_limits():
     assert not accepted(a[...,:32,:],e[...,:32,:])
     b=a.copy();b[0,0,64,10]+=.009
     assert not accepted(b)
-    b=a.copy();b[0,0,0,0]+=.1
+    b=a.copy();b[0,0,0,0]+=.002
     assert not accepted(b)
     b=a.copy();b[0,0,:,1]+=.009
     assert not accepted(b)
