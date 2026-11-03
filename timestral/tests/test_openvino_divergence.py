@@ -35,3 +35,22 @@ def test_reviewed_ci_tail_envelope():
         r=m.assess(a,e,model_id='mistralai/Timestral-5M',case='blocks')
         assert not r['strict_passed']
         assert r['accepted']==accepted
+
+
+@pytest.mark.parametrize('size,ratio,count', [('28M',11.2046292154,20),('123M',53.1673180042,70)])
+def test_larger_model_reviewed_horizon_limits(size,ratio,count):
+    e=np.ones((1,1,1024,21),np.float32)
+    def forecast(n, budget_ratio):
+        a=e.copy()
+        # Only nonmedian quantiles may use the exception.
+        a[0,0,:n,0]+=np.float32(.0002*budget_ratio)
+        return a
+    model='mistralai/Timestral-'+size
+    a=forecast(count,ratio)
+    r=m.assess(a,e,model_id=model,case='maximum-horizon')
+    assert r['accepted'] and not r['strict_passed'] and r['exception']
+    assert not m.assess(a,e,model_id=model,case='blocks')['accepted']
+    assert not m.assess(forecast(count+1,ratio),e,model_id=model,case='maximum-horizon')['accepted']
+    assert not m.assess(forecast(1,ratio+1),e,model_id=model,case='maximum-horizon')['accepted']
+    a[...,10]+=.0003
+    assert not m.assess(a,e,model_id=model,case='maximum-horizon')['accepted']

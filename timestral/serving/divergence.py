@@ -1,10 +1,17 @@
-"""Recorded 5M long-horizon exception; strict error measurements remain intact."""
+"""Recorded model-specific horizon exceptions; strict measurements remain intact."""
 import numpy as np
 
 EXCEPTION='5m-long-horizon-tails-2026-11-02'
 CASES={'maximum-horizon','blocks','decode-blocks','periodic-1024'}
 MAX_BUDGET_RATIO=2.30
 MAX_OUTSIDE_FRACTION=.005
+# PR 173, Actions run 41639780870, evidence/parity.json: maximum-horizon
+# 28M: <=20/21504 outside, ratio <=11.2046292154.
+# 123M: <=70/21504 outside, ratio <=53.1673180042.
+REVIEWED_HORIZON_LIMITS={
+    'mistralai/Timestral-28M': (11.21,20/21504,'28m-maximum-horizon-tails-2026-11-03'),
+    'mistralai/Timestral-123M': (53.18,70/21504,'123m-maximum-horizon-tails-2026-11-03'),
+}
 
 
 def assess(actual,reference,*,model_id,case):
@@ -21,7 +28,14 @@ def assess(actual,reference,*,model_id,case):
     exception=(not strict and model_id=='mistralai/Timestral-5M' and case in CASES
         and actual.shape[-2]==1024 and count/actual.size<=MAX_OUTSIDE_FRACTION and ratio<=MAX_BUDGET_RATIO
         and not outside[...,10].any())
+    exception_name=EXCEPTION if exception else None
+    if not strict and model_id in REVIEWED_HORIZON_LIMITS and case=='maximum-horizon':
+        max_ratio,max_fraction,name=REVIEWED_HORIZON_LIMITS[model_id]
+        if (actual.shape[-2]==1024 and count/actual.size<=max_fraction
+            and ratio<=max_ratio and not outside[...,10].any()):
+            exception=True
+            exception_name=name
     return dict(strict_passed=strict,accepted=strict or exception,
-        exception=EXCEPTION if exception else None,values=actual.size,
+        exception=exception_name,values=actual.size,
         outside_original_tolerance=count,max_original_budget_ratio=ratio,
         max_absolute_error=float(delta.max()),rtol=1e-4,atol=1e-4)
