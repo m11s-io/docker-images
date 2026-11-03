@@ -3,9 +3,8 @@
 [![Build and push](https://github.com/m11s-io/docker-images/actions/workflows/build.yaml/badge.svg)](https://github.com/m11s-io/docker-images/actions/workflows/build.yaml)
 [![Docker Hub](https://img.shields.io/badge/Docker_Hub-m11s-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/u/m11s)
 [![Lint](https://github.com/m11s-io/docker-images/actions/workflows/lint.yaml/badge.svg)](https://github.com/m11s-io/docker-images/actions/workflows/lint.yaml)
+[![MCP catalog](https://img.shields.io/badge/MCP-Catalog-7C3AED)](docs/mcp-catalog.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-## Available Images
 
 | Image | Description | Version |
 |-------|-------------|---------|
@@ -20,7 +19,3 @@
 | [chromium](chromium/README.md) | Headless Chromium with remote control | [![Version](https://img.shields.io/docker/v/m11s/chromium/latest-cdp?label=)](https://hub.docker.com/r/m11s/chromium) |
 | [vllm&#8209;openai](vllm-openai/README.md) | vLLM with orjson for JSON serialization | [![Version](https://img.shields.io/docker/v/m11s/vllm-openai/latest-orjson?label=)](https://hub.docker.com/r/m11s/vllm-openai) |
 | [timestral](timestral/README.md) | Time-series forecasting server | [![cpu](https://img.shields.io/docker/v/m11s/timestral/latest-cpu?label=CPU)](https://hub.docker.com/r/m11s/timestral) <br> [![cuda](https://img.shields.io/docker/v/m11s/timestral/latest-cuda?label=CUDA)](https://hub.docker.com/r/m11s/timestral) <br> [![rocm](https://img.shields.io/docker/v/m11s/timestral/latest-rocm?label=ROCm)](https://hub.docker.com/r/m11s/timestral) <br> [![openvino](https://img.shields.io/docker/v/m11s/timestral/latest-openvino?label=OpenVINO)](https://hub.docker.com/r/m11s/timestral) |
-
-Select an image for usage and configuration, or a version badge to view it on Docker Hub.
-
-[MCP catalog](docs/mcp-catalog.md)
