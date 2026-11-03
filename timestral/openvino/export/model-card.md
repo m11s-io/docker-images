@@ -1,12 +1,22 @@
 ---
-license: apache-2.0
-tags: [timestral, openvino]
+license: other
+license_name: Modified MIT License
+license_link: https://huggingface.co/mistralai/Timestral-209M/blob/main/LICENSE
+library_name: openvino
+pipeline_tag: time-series-forecasting
+tags:
+  - timestral
+  - openvino
+  - time-series
+  - forecasting
+  - foundation-model
 ---
 # Timestral direct OpenVINO profiles
 
 Model-specific FP32 neural graphs for unchanged upstream source
-`a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff`. The exact 5M or 209M checkpoint
-and immutable revision are recorded below and in the verified manifest.
+`a534bdbd244d64f3d9d743f46c7bf6fc330ed4ff`. The exact 5M, 28M, 123M, or
+209M checkpoint and immutable revision are recorded below and in the verified
+manifest.
 
 The v2 adapter uses normal upstream forecasting defaults and the same supported
 request capabilities as the CPU image: batches, grouped variables, longer

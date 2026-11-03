@@ -45,7 +45,8 @@ Missing accelerators, wrong vendor/framework, unsupported architectures and devi
 mismatches fail startup. There is no automatic CPU fallback. One worker and one
 model inference slot are enforced; a cancelled caller cannot oversubscribe it.
 
-OpenVINO selects `MODEL_ID=mistralai/Timestral-5M` or `mistralai/Timestral-209M`, its matching documented
+OpenVINO selects `MODEL_ID=mistralai/Timestral-5M`, `mistralai/Timestral-28M`,
+`mistralai/Timestral-123M`, or `mistralai/Timestral-209M`, with its matching documented
 revision, `TIMESTRAL_FORECAST_ARTIFACTS` pointing to a read-only profile bundle and
 `TIMESTRAL_ARTIFACT_MANIFEST_SHA256` from its independently pinned publication.
 OpenVINO export and publication live under `openvino/export/`; the legacy
@@ -73,9 +74,10 @@ beyond the tested standard inference operations are not promised.
 
 Earlier image digests and the two model-specific OpenVINO HF bundle
 revisions are recorded in [publication receipts](docs/verification/2026-11-01-published-candidates.json).
-The OpenVINO image supports either 5M or 209M with its matching verified bundle;
-both passed native export, final-forecast and JSON/binary REST/gRPC checks.
-Those v1 receipts describe the older bounded runtime; see the OpenVINO v2 documentation for the expanded implementation.
+Those v1 receipts cover the earlier 5M and 209M bounded runtime only. The current
+OpenVINO v2 workflow covers 5M, 28M, 123M, and 209M with matching per-model
+bundles; each must pass native export, final-forecast, and JSON/binary REST/gRPC
+checks before publication. See the OpenVINO v2 documentation for details.
 These receipts describe earlier acceptance builds; current tags follow the release scheme above.
 
 The previous bounded-image comparison is retained in the

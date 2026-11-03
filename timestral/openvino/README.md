@@ -1,6 +1,6 @@
 # Direct OpenVINO serving
 
-Timestral-5M and Timestral-209M use the same KServe V2 API, supported requests
+Timestral-5M, Timestral-28M, Timestral-123M, and Timestral-209M use the same KServe V2 API, supported requests
 and upstream-default forecasting configuration as the normal CPU image.
 OpenVINO executes the learned neural operations. Scaling (including FP64
 statistics), categorical encoding, refinement and forecast loops remain unchanged
@@ -11,8 +11,8 @@ no-covariate restrictions. Batches, grouped variables, missing observations,
 numeric/categorical past and known-future covariates and both forecast options
 are supported wherever the selected checkpoint supports them. The existing
 shared CPU API budgets still apply; see [protocol](../docs/protocol.md).
-Defaults come from the checkpoint (currently context 32768 and up to 32 horizon
-patches for both pinned models). There is no bounded compatibility preset.
+Defaults come from each checkpoint (currently context 32768 and up to 32 horizon
+patches). There is no bounded compatibility preset.
 
 ## Artifacts
 
@@ -35,10 +35,10 @@ receipts. No deployment or caller cutover follows from artifact publication.
 
 ## Validation and publication
 
-Run `export/profiles.py --model-size 5M|209M --output DIR` in the frozen
+Run `export/profiles.py --model-size 5M|28M|123M|209M --output DIR` in the frozen
 `openvino/export` environment on native amd64. Conversion uses a fresh isolated
 source copy with guarded rewrites; independent reference/runtime workers import
-unchanged pinned upstream. Both models must pass full-default final forecasts,
+unchanged pinned upstream. All four models must pass full-default final forecasts,
 including batches, grouped variables, long contexts/horizons, numeric/categorical
 covariates, missingness and forecast options at the established conversion
 tolerance (rtol=atol=1e-4). Actual images must then pass HTTP JSON/binary and gRPC

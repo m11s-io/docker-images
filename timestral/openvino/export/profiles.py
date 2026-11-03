@@ -198,7 +198,7 @@ def export(output,model_size='5M'):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--model-size',choices=['5M','209M'],default='5M')
+    parser.add_argument('--model-size',choices=['5M','28M','123M','209M'],default='5M')
     parser.add_argument('--worker',choices=['reference','convert','runtime'])
     parser.add_argument('--source'); parser.add_argument('--checkpoint')
     args=parser.parse_args()
