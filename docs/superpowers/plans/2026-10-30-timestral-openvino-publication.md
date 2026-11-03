@@ -71,14 +71,6 @@ Registry installation, private model repo, exact trusted publisher and Actions v
 
 The user authorized workflow preparation and a first validated upload. Review this implementation plan before beginning the new exporter/serving implementation. No renewed approval is needed for already-authorized HF setup or temporary token use; CI uses OIDC.
 
-## Execution ledger
+## Completed execution
 
-- 2026-10-30: Isolated branch created from origin/main; all 38 baseline tests pass outside sandbox.
-- Task1 red: four exporter safety tests fail for missing functions. Green: guarded rewrites, synthetic missing-data fixtures and numerical gate pass.
-- Task2 red: OVMS response and bundle integrity tests fail for missing functions. Green: response shape/type/finiteness and manifest corruption/missing/extra/symlink/traversal tests pass.
-- Task3 red: workflow and publish environment tests fail for missing functionality. Green: main-dispatch-only publication and exact OIDC destination tests pass; nine total new tests.
-- Ruling: Move full conversion/OVMS execution to GitHub CI at user direction. Local ARM emulation is redundant; CI will supply the actual integration evidence before merge/publication. No successful export or model upload is claimed yet.
-- Heavy checks will run on the PR through the new workflow, with no HF write credentials.
-
-- CI run40978091619: real conversion and all upstream parity checks passed; OVMS loaded the model but rejected inference because the serialized context tensor name was numeric. Fixed by explicitly naming both tensors, checking the reloaded IR contract and checking OVMS metadata before requests. Regression metadata test watched fail then pass.
-- Fresh whole-change review found one important issue: remote inventory was checked after mutation. Fixed with a preflight inventory at the observed parent SHA and upload parent_commit enforcement. Regression verifies unexpected files prevent upload and the inspected parent is used. Eleven total tests now pass. No other critical/important findings.
+PR125 merged as 4e7a8cec2d8d6f7e974f6193db341e5041b81d1e. CI run40978358665 passed upstream parity and real OVMS inference on all five cases (max absolute error 1.0013580322265625e-05). Fresh review approved the input-name and publication preflight fixes. Main dispatch40978663074 passed validation and OIDC publication, downloading and checksum-verifying every remote artifact at immutable HF revision 5a75e75af606f8385573f2c14ed24ba7ec9ca86a. No persistent token was used for publication; no full forecasting service or cluster deployment was performed.
