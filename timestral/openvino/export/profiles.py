@@ -143,6 +143,7 @@ def worker(args):
                 arrays['levels']=levels
             else:
                 from serving.divergence import assess
+                arrays[key]=q
                 results[key]=assess(q,reference[key],model_id='mistralai/Timestral-'+args.model_size,case=name)
                 np.testing.assert_array_equal(levels,reference['levels'])
                 # assess includes the median's reference parity limits. Verify
@@ -152,9 +153,11 @@ def worker(args):
     if reference is None:
         np.savez(evidence/'reference.npz',**arrays)
     else:
+        np.savez(evidence/'runtime.npz',**arrays)
         report={'passed':all(r['accepted'] for r in results.values()),'cases':results,'neural_backend':'openvino',
                 'reference_weights_loaded_in_runtime_worker':False,
                 'packages':{p:importlib.metadata.version(p) for p in ('torch','openvino','numpy')},
+                'forecast_evidence_sha256':{name:hashlib.sha256((evidence/name).read_bytes()).hexdigest() for name in ('reference.npz','runtime.npz')},
                 'architecture':platform.machine(),'github_run':os.environ.get('GITHUB_RUN_ID')}
         (evidence/'parity.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
         if not report['passed']:raise AssertionError('forecast divergence exceeds accepted evidence')

@@ -42,7 +42,7 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-STANDARD_PATTERN=re.compile(r'(?:standard-v1/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|block-[1-5]\.(?:xml|bin))|evidence/(?:parity\.json|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt))|standard-v2/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|(?:context|covariates)\.(?:xml|bin))|evidence/(?:parity\.json|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt)))')
+STANDARD_PATTERN=re.compile(r'(?:standard-v1/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|block-[1-5]\.(?:xml|bin))|evidence/(?:parity\.json|reference\.npz|runtime\.npz|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt))|standard-v2/[0-9a-f]{64}/(?:profiles/(?:manifest\.json|config\.json|LICENSE|README\.md|(?:context|covariates)\.(?:xml|bin))|evidence/(?:parity\.json|reference\.npz|runtime\.npz|protocol-parity\.xml|provenance\.json|manifest-sha256\.txt)))')
 
 
 def is_standard_file(name):
@@ -58,7 +58,7 @@ def validate_remote_inventory(names):
         raise ValueError('remote repository contains unexpected files; refusing to publish')
 
 
-EVIDENCE={'parity.json','protocol-parity.xml','provenance.json','manifest-sha256.txt'}
+EVIDENCE={'reference.npz','runtime.npz','parity.json','protocol-parity.xml','provenance.json','manifest-sha256.txt'}
 
 
 def verify_protocol(path,model_id=None,model_revision=None):
@@ -95,9 +95,16 @@ def verify_bundle(bundle):
         parity.get('reference_weights_loaded_in_runtime_worker') is not False or
         str(parity.get('github_run'))!=os.environ['GITHUB_RUN_ID']):
         raise ValueError('complete same-run OpenVINO parity evidence is required')
-    from serving.divergence import report_accepted
+    if parity.get('forecast_evidence_sha256')!={name:digest(bundle/'evidence'/name) for name in ('reference.npz','runtime.npz')}:
+        raise ValueError('forecast evidence checksum mismatch')
+    from serving.divergence import assess
+    import numpy as np
+    with np.load(bundle/'evidence/reference.npz',allow_pickle=False) as refs, np.load(bundle/'evidence/runtime.npz',allow_pickle=False) as runtime:
+        if set(refs.files)!=expected_cases|{'levels'} or set(runtime.files)!=expected_cases:
+            raise ValueError('incomplete forecast evidence')
+        recomputed={name:assess(runtime[name],refs[name],model_id=model_id,case=name.rsplit('-s',1)[0]) for name in expected_cases}
     for name,case in parity['cases'].items():
-        if not report_accepted(case,model_id=model_id,case=name.rsplit('-s',1)[0]):
+        if case != recomputed[name] or recomputed[name]['accepted'] is not True:
             raise ValueError('unaccepted numerical divergence')
         if (case.get('rtol')!=1e-4 or case.get('atol')!=1e-4 or
             not isinstance(case.get('max_absolute_error'),(int,float)) or

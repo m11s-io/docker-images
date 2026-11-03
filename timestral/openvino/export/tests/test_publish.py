@@ -74,6 +74,9 @@ class StandardPublishTest(unittest.TestCase):
                     actual.flat[0]+={'mistralai/Timestral-5M':.0003,
                         'mistralai/Timestral-28M':.002,'mistralai/Timestral-123M':.01}[model_id]
                     parity['cases']['maximum-horizon-s0-c0']=assess(actual,reference,model_id=model_id,case='maximum-horizon')
+                np.savez(evidence/'reference.npz',levels=np.arange(21,dtype=np.float32),**{k:reference for k in keys})
+                np.savez(evidence/'runtime.npz',**{k:(actual if k=='maximum-horizon-s0-c0' and model_id!='mistralai/Timestral-209M' else reference) for k in keys})
+                parity['forecast_evidence_sha256']={name:p.digest(evidence/name) for name in ('reference.npz','runtime.npz')}
                 (evidence/'parity.json').write_text(json.dumps(parity))
                 manifest=dict(format='timestral-openvino-profiles-v2',model_id=model_id,model_revision=revision,source_revision=SOURCE_REVISION,precision='FP32',parity_report_sha256=p.digest(evidence/'parity.json'),files={name:p.digest(profiles/name) for name in PROFILE_FILES})
                 (profiles/'manifest.json').write_text(json.dumps(manifest))
@@ -83,6 +86,13 @@ class StandardPublishTest(unittest.TestCase):
                 (evidence/'provenance.json').write_text(json.dumps(dict(source='a'*40,run='42')))
                 with patch.dict(os.environ,dict(GITHUB_SHA='a'*40,GITHUB_RUN_ID='42')):
                     self.assertEqual(p.verify_bundle(root)[0],expected)
+                    original=(evidence/'parity.json').read_text()
+                    parity['cases']['maximum-horizon-s0-c0']['max_absolute_error']+=1
+                    (evidence/'parity.json').write_text(json.dumps(parity))
+                    manifest['parity_report_sha256']=p.digest(evidence/'parity.json')
+                    (profiles/'manifest.json').write_text(json.dumps(manifest))
+                    (evidence/'manifest-sha256.txt').write_text(p.digest(profiles/'manifest.json'))
+                    with self.assertRaisesRegex(ValueError,'unaccepted numerical divergence'):p.verify_bundle(root)
                     (evidence/'provenance.json').write_text('{}')
                     with self.assertRaises(ValueError):p.verify_bundle(root)
 
