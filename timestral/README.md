@@ -24,6 +24,14 @@ These images use KServe V2, replacing the old `/forecast` API. See the
 [V2 contract](docs/protocol.md), [runtime matrix](docs/runtime-matrix.md), and
 [validation results](benchmarks/README.md) for configuration and device behavior.
 
+## Published candidates
+
+Use the [published tags and immutable digests](docs/verification/2026-11-01-published-candidates.json)
+for CPU, CUDA, ROCm and OpenVINO, plus the matching model/artifact revisions.
+`candidate-standard-v1-*` names are local CI build labels, not published release
+aliases. These images remain experimental candidates; legacy `latest-cpu` and
+`latest-cuda` retain the old `/forecast` contract.
+
 ## Configuration
 
 Set `MODEL_ID` explicitly when selecting a model other than the preserved default
