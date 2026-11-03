@@ -34,7 +34,9 @@ class StandardImageTest(unittest.TestCase):
                 kserve=next(p for p in lock['package'] if p['name']=='kserve')
                 self.assertIn('abc6c47ab4af588e40c67372b4835122234f6f74', kserve['source']['git'])
                 self.assertEqual(project['project']['requires-python'],'>=3.13,<3.14')
-                self.assertNotIn('override-dependencies',project['tool']['uv'])
+                # Permit only the intentional KServe PyJWT security override.
+                self.assertEqual(project['tool']['uv']['override-dependencies'],
+                                 ['pyjwt>=2.15.0'])
 
 if __name__ == '__main__': unittest.main()
 
