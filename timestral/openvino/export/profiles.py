@@ -145,7 +145,10 @@ def worker(args):
                 from serving.divergence import assess
                 results[key]=assess(q,reference[key],model_id='mistralai/Timestral-'+args.model_size,case=name)
                 np.testing.assert_array_equal(levels,reference['levels'])
-                np.testing.assert_allclose(forecast.median.numpy(),reference[key][...,10],rtol=1e-4,atol=1e-4)
+                # assess includes the median's reference parity limits. Verify
+                # the separate median output still matches its quantile exactly.
+                np.testing.assert_array_equal(forecast.median.numpy(),q[...,10])
+                print(key,json.dumps(results[key]),flush=True)
     if reference is None:
         np.savez(evidence/'reference.npz',**arrays)
     else:

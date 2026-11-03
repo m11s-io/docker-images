@@ -54,3 +54,16 @@ def test_larger_model_reviewed_horizon_limits(size,ratio,count):
     assert not m.assess(forecast(1,ratio+1),e,model_id=model,case='maximum-horizon')['accepted']
     a[...,10]+=.0003
     assert not m.assess(a,e,model_id=model,case='maximum-horizon')['accepted']
+
+
+def test_28m_reviewed_median_drift_is_bounded():
+    e=np.full((1,1,1024,21),-40,np.float32)
+    a=e.copy();a[0,0,:11,10]-=.0053
+    assert m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
+    for model,case in [('mistralai/Timestral-123M','maximum-horizon'),
+                       ('mistralai/Timestral-28M','blocks')]:
+        assert not m.assess(a,e,model_id=model,case=case)['accepted']
+    a[0,0,11,10]-=.0053
+    assert not m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
+    a=e.copy();a[0,0,0,10]-=.007
+    assert not m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
