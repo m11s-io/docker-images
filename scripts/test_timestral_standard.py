@@ -1,8 +1,9 @@
 """Packaging boundary checks; actual inference and device acceptance run in CI."""
 import pathlib
-import re
 import tomllib
 import unittest
+
+from image_matrix import build_matrix
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -42,27 +43,20 @@ if __name__ == '__main__': unittest.main()
 
 
 class VariantRoutingTest(unittest.TestCase):
-    def selected(self,path):
-        import fnmatch
-        text=(ROOT/'.github/workflows/build.yaml').read_text()
-        section=text.split('            timestral-cpu:\n',1)[1].split('\n  # Preserve legacy',1)[0]
-        section='            timestral-cpu:\n'+section
-        selected=set()
-        for variant in ('cpu','cuda','rocm','openvino'):
-            match=re.search(rf'^            timestral-{variant}:\n((?:              .*\n)*)',section,re.MULTILINE)
-            self.assertIsNotNone(match)
-            patterns=re.findall(r"- '([^']+)'",match.group(1))
-            if any(fnmatch.fnmatchcase(path,pattern) for pattern in patterns): selected.add(variant)
-        return selected
+    def selected(self, path):
+        result = build_matrix(ROOT, 'push', 'all', 'a' * 40, changed_paths=[path])
+        return set(result['selected_ids'])
 
-    def test_shared_contract_context_and_fixtures_validate_every_consumer(self):
-        for path in ('.github/workflows/build.yaml','timestral/serving/contract.py','timestral/.dockerignore','timestral/tests/fixtures/forecast-v1.json'):
-            with self.subTest(path=path): self.assertEqual(self.selected(path),{'cpu','cuda','rocm','openvino'})
+    def test_shared_contract_context_and_fixtures_select_every_consumer(self):
+        expected = {'timestral-cpu', 'timestral-cuda', 'timestral-rocm', 'timestral-openvino'}
+        for path in ('timestral/serving/contract.py', 'timestral/.dockerignore',
+                     'timestral/tests/fixtures/forecast-v1.json'):
+            with self.subTest(path=path): self.assertEqual(self.selected(path), expected)
 
     def test_backend_locks_dockerfiles_and_export_profiles_select_their_consumer(self):
-        for path,expected in [('timestral/openvino/backend.py','openvino'),
-                              ('timestral/openvino/export/profiles.json','openvino'),
-                              ('timestral/dependencies/cpu/uv.lock','cpu'),
-                              ('timestral/Dockerfile.cuda','cuda'),
-                              ('timestral/dependencies/rocm/pyproject.toml','rocm')]:
-            with self.subTest(path=path): self.assertEqual(self.selected(path),{expected})
+        for path, expected in [('timestral/openvino/backend.py', {'timestral-openvino'}),
+                               ('timestral/openvino/export/profiles.json', {'timestral-openvino'}),
+                               ('timestral/dependencies/cpu/uv.lock', {'timestral-cpu'}),
+                               ('timestral/Dockerfile.cuda', {'timestral-cuda'}),
+                               ('timestral/dependencies/rocm/pyproject.toml', {'timestral-rocm'})]:
+            with self.subTest(path=path): self.assertEqual(self.selected(path), expected)

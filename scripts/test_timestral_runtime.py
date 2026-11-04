@@ -30,9 +30,8 @@ class TimestralRuntimeTest(unittest.TestCase):
         self.assertNotIn('\nconcurrency:',acceptance)
         self.assertNotIn('tests/test_api.py',job)
         self.assertIn('--project timestral/dependencies/cpu',acceptance)
-        for variant in ('cpu','cuda','rocm','openvino'):
-            self.assertIn('needs.changes.outputs.timestral-'+variant,job)
-        build=workflow.split('  build:',1)[1].split('  native-prepare:',1)[0]
+        self.assertIn("needs.changes.outputs.timestral-required == 'true'",job)
+        build=workflow.split('  build-standard:',1)[1].split('  native-build:',1)[0]
         self.assertIn('needs: [changes, timestral-tests]',build)
 
     def test_cpu_uses_frozen_lock_and_cuda_uses_same_torch_release(self):

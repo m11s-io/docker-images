@@ -70,16 +70,12 @@ class ImageTagsTest(unittest.TestCase):
                     f"m11s/example:sha-494d7fbb6b32-{variant}",
                 ])
 
-    def test_timestral_variants_are_manual_and_path_selected_in_existing_build_workflow(self):
+    def test_timestral_variants_are_discovered_and_acceptance_is_selector_gated(self):
         workflow = (pathlib.Path(__file__).parents[1] / ".github" / "workflows" /
                     "build.yaml").read_text()
-        self.assertIn("- timestral-cpu", workflow)
-        self.assertIn("- timestral-cuda", workflow)
-        self.assertIn('"timestral/**"', workflow)
-        self.assertIn("timestral/Dockerfile.cpu", workflow)
-        self.assertIn("timestral/Dockerfile.cuda", workflow)
-        self.assertIn("latest-cpu", workflow)
-        self.assertIn("latest-cuda", workflow)
+        self.assertIn("needs.changes.outputs.timestral-required == 'true'", workflow)
+        self.assertIn("python3 scripts/image_matrix.py", workflow)
+        self.assertIn("matrix-standard", workflow)
         self.assertIn("timestral-tests:", workflow)
         self.assertIn("uses: ./.github/workflows/timestral-standard.yaml", workflow)
 

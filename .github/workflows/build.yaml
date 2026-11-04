@@ -3,510 +3,131 @@ name: Build and push
 on:
   push:
     branches: [main]
-    paths:
-      - "rclone/**"
-      - "decap-cms/**"
-      - "s3-upload-proxy/**"
-      - "comfyui/**"
-      - "comfy-mcp/**"
-      - "deepseek-harness/**"
-      - "chromium/**"
-      - ".github/workflows/build.yaml"
-      - ".github/workflows/timestral-openvino.yaml"
-      - "caddy/**"
-      - "vllm-openai/**"
-      - "timestral/**"
-      - "scripts/image_tags.py"
-      - "scripts/native_image_matrix.py"
-      - "scripts/test_native_image_matrix.py"
-      - "scripts/test_timestral_runtime.py"
-      - "scripts/test_comfyui_validation.py"
-      # Deployment examples and docs do not change the published images.
-      - "!**/compose*.yaml"
-      - "!**/compose*.yml"
-      - "!**/docker-compose*.yaml"
-      - "!**/docker-compose*.yml"
-      - "!**/*.md"
-      - "!**/docs/**"
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       image:
-        description: 'Image to build'
+        description: Image ID to build, or all
         required: false
-        type: choice
+        type: string
         default: all
-        options:
-          - all
-          - decap-cms
-          - rclone
-          - s3-upload-proxy
-          - comfyui-cuda
-          - comfyui-rocm
-          - comfy-mcp
-          - deepseek-harness
-          - chromium
-          - caddy
-          - vllm-openai
-          - timestral-cpu
-          - timestral-cuda
-          - timestral-rocm
-          - timestral-openvino
       skip_push:
-        description: 'Dry-run: build without pushing to Docker Hub'
+        description: Build without publishing
         required: false
         type: boolean
         default: false
 
-jobs:
-  timestral-tests:
-    needs: [changes]
-    if: ${{ !failure() && !cancelled() && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || startsWith(inputs.image, 'timestral-'))) || needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true' || needs.changes.outputs.timestral-rocm == 'true' || needs.changes.outputs.timestral-openvino == 'true') }}
-    uses: ./.github/workflows/timestral-standard.yaml
+permissions:
+  contents: read
 
+jobs:
   changes:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read
       pull-requests: read
     outputs:
-      rclone: ${{ steps.filter.outputs.rclone }}
-      decap-cms: ${{ steps.filter.outputs.decap-cms }}
-      s3-upload-proxy: ${{ steps.filter.outputs.s3-upload-proxy }}
-      comfyui-rocm: ${{ steps.filter.outputs.comfyui-rocm }}
-      comfyui-cuda: ${{ steps.filter.outputs.comfyui-cuda }}
-      comfy-mcp: ${{ steps.filter.outputs.comfy-mcp }}
-      deepseek-harness: ${{ steps.filter.outputs.deepseek-harness }}
-      chromium: ${{ steps.filter.outputs.chromium }}
-      caddy: ${{ steps.filter.outputs.caddy }}
-      vllm-openai: ${{ steps.filter.outputs.vllm-openai }}
-      timestral-cpu: ${{ steps.filter.outputs.timestral-cpu }}
-      timestral-cuda: ${{ steps.filter.outputs.timestral-cuda }}
-      timestral-rocm: ${{ steps.filter.outputs.timestral-rocm }}
-      timestral-openvino: ${{ steps.filter.outputs.timestral-openvino }}
+      standard: ${{ steps.select.outputs.matrix-standard }}
+      native: ${{ steps.select.outputs.matrix-native }}
+      has-standard: ${{ steps.select.outputs.has-standard }}
+      has-native: ${{ steps.select.outputs.has-native }}
+      selected-ids: ${{ steps.select.outputs.selected-ids }}
+      timestral-required: ${{ steps.select.outputs.timestral-required }}
+      comfy-mcp-selected: ${{ steps.select.outputs.comfy-mcp-selected }}
+      timestral-openvino-selected: ${{ steps.select.outputs.timestral-openvino-selected }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-
-      - name: Check image tag resolver
+      - name: Checkout full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate selector and image contracts
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python3 -m unittest discover -s scripts -p 'test_*.py'
-
-      - name: Filter changed paths
-        id: filter
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d  # v4.0.3
-        with:
-          # Keep OR matching for shared scripts while honoring exclusions.
-          predicate-quantifier: some-with-excludes
-          filters: |
-            rclone:
-              - 'scripts/image_tags.py'
-              - 'rclone/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            decap-cms:
-              - 'scripts/image_tags.py'
-              - 'decap-cms/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            s3-upload-proxy:
-              - 'scripts/image_tags.py'
-              - 's3-upload-proxy/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            comfyui-cuda:
-              - '.github/workflows/build.yaml'
-              - 'scripts/image_tags.py'
-              - 'comfyui/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-              - '!comfyui/Dockerfile.rocm'
-              - '!comfyui/requirements-rocm.txt'
-            comfyui-rocm:
-              - '.github/workflows/build.yaml'
-              - 'comfyui/Dockerfile.rocm'
-              - 'comfyui/requirements-rocm.txt'
-              - 'comfyui/verify_image.py'
-              - 'scripts/test_comfyui_validation.py'
-            comfy-mcp:
-              - 'scripts/native_image_matrix.py'
-              - 'scripts/image_tags.py'
-              - 'comfy-mcp/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            deepseek-harness:
-              - 'scripts/native_image_matrix.py'
-              - 'scripts/image_tags.py'
-              - 'deepseek-harness/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            chromium:
-              - 'scripts/native_image_matrix.py'
-              - 'scripts/image_tags.py'
-              - 'chromium/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            caddy:
-              - 'scripts/image_tags.py'
-              - 'caddy/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            vllm-openai:
-              - 'scripts/image_tags.py'
-              - 'vllm-openai/**'
-              - '!**/compose*.yaml'
-              - '!**/compose*.yml'
-              - '!**/docker-compose*.yaml'
-              - '!**/docker-compose*.yml'
-              - '!**/*.md'
-              - '!**/docs/**'
-            timestral-cpu:
-              - 'scripts/test_timestral_runtime.py'
-              - 'scripts/image_tags.py'
-              - 'scripts/test_timestral_standard.py'
-              - '.github/workflows/timestral-standard.yaml'
-              - '.github/workflows/build.yaml'
-              - 'timestral/serving/**'
-              - 'timestral/tests/**'
-              - 'timestral/.dockerignore'
-              - 'timestral/check_version.py'
-              - 'timestral/Dockerfile.cpu'
-              - 'timestral/dependencies/cpu/**'
-            timestral-cuda:
-              - 'scripts/test_timestral_runtime.py'
-              - 'scripts/image_tags.py'
-              - 'scripts/test_timestral_standard.py'
-              - '.github/workflows/timestral-standard.yaml'
-              - '.github/workflows/build.yaml'
-              - 'timestral/serving/**'
-              - 'timestral/tests/**'
-              - 'timestral/.dockerignore'
-              - 'timestral/check_version.py'
-              - 'timestral/Dockerfile.cuda'
-              - 'timestral/dependencies/cuda/**'
-            timestral-rocm:
-              - 'scripts/image_tags.py'
-              - 'scripts/test_timestral_standard.py'
-              - '.github/workflows/timestral-standard.yaml'
-              - '.github/workflows/build.yaml'
-              - 'timestral/serving/**'
-              - 'timestral/tests/**'
-              - 'timestral/.dockerignore'
-              - 'timestral/check_version.py'
-              - 'timestral/Dockerfile.rocm'
-              - 'timestral/dependencies/rocm/**'
-            timestral-openvino:
-              - 'scripts/image_tags.py'
-              - 'scripts/test_timestral_standard.py'
-              - '.github/workflows/timestral-standard.yaml'
-              - '.github/workflows/build.yaml'
-              - '.github/workflows/timestral-openvino.yaml'
-              - 'timestral/serving/**'
-              - 'timestral/tests/**'
-              - 'timestral/.dockerignore'
-              - 'timestral/check_version.py'
-              - 'timestral/Dockerfile.openvino'
-              - 'timestral/openvino/**'
-
-  # Publish each runtime with version, flavor, and source commit tags.
-  build:
-    needs: [changes, timestral-tests]
-    if: ${{ !failure() && !cancelled() }}
-    runs-on: ubuntu-26.04
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        include:
-          - context: rclone
-            repository: m11s/rclone
-            description: rclone with inotify-tools for filesystem event monitoring.
-            version_source: base-image
-            version_ref: rclone/rclone
-            tag_suffix: -inotify
-            latest: latest-inotify
-          - context: decap-cms
-            repository: m11s/decap-cms
-            description: Decap CMS with an S3-compatible media library.
-            version: 0.2.11
-            tag_suffix: -s3
-            latest: latest-s3
-          - context: s3-upload-proxy
-            repository: m11s/s3-upload-proxy
-            description: Multipart upload proxy for S3-compatible object storage.
-            version_source: version-arg
-            version_ref: S3_UPLOAD_PROXY_VERSION
-            latest: latest
-          - context: comfyui-cuda
-            build_context: comfyui
-            dockerfile: comfyui/Dockerfile
-            readme_file: comfyui/README.md
-            repository: m11s/comfyui
-            description: CUDA-enabled ComfyUI image with externally managed custom nodes.
-            version_source: version-arg
-            version_ref: COMFYUI_REF
-            strip_prefix: v
-            tag_suffix: -cuda
-            latest: latest-cuda
-          - context: comfyui-rocm
-            build_context: comfyui
-            dockerfile: comfyui/Dockerfile.rocm
-            readme_file: comfyui/README.md
-            repository: m11s/comfyui
-            description: AMD ROCm ComfyUI image with externally managed custom nodes.
-            version_source: version-arg
-            version_ref: COMFYUI_REF
-            strip_prefix: v
-            tag_suffix: -rocm
-            latest: latest-rocm
-            cache_mode: min
-          - context: caddy
-            repository: m11s/caddy
-            description: Caddy with the Cloudflare DNS-01 provider module.
-            version_source: base-arg
-            version_ref: CADDY_BASE_IMAGE
-            strip_suffix: -alpine
-            tag_suffix: -cloudflare
-            latest: latest-cloudflare
-          - context: vllm-openai
-            repository: m11s/vllm-openai
-            description: vLLM OpenAI server image with faster orjson serialization.
-            version_source: base-arg
-            version_ref: VLLM_BASE_IMAGE
-            strip_suffix: -x86_64
-            tag_suffix: -orjson
-            latest: latest-orjson
-          - context: timestral-cpu
-            build_context: timestral
-            dockerfile: timestral/Dockerfile.cpu
-            readme_file: timestral/README.md
-            repository: m11s/timestral
-            description: Timestral forecasting server with the cpu runtime.
-            version_source: version-arg
-            version_ref: TIMESTRAL_VERSION
-            tag_suffix: -cpu
-            latest: latest-cpu
-          - context: timestral-cuda
-            build_context: timestral
-            dockerfile: timestral/Dockerfile.cuda
-            readme_file: timestral/README.md
-            repository: m11s/timestral
-            description: Timestral forecasting server with the cuda runtime.
-            version_source: version-arg
-            version_ref: TIMESTRAL_VERSION
-            tag_suffix: -cuda
-            latest: latest-cuda
-          - context: timestral-rocm
-            build_context: timestral
-            dockerfile: timestral/Dockerfile.rocm
-            readme_file: timestral/README.md
-            repository: m11s/timestral
-            description: Timestral forecasting server with the rocm runtime.
-            version_source: version-arg
-            version_ref: TIMESTRAL_VERSION
-            tag_suffix: -rocm
-            latest: latest-rocm
-            cache_mode: min
-          - context: timestral-openvino
-            build_context: timestral
-            dockerfile: timestral/Dockerfile.openvino
-            readme_file: timestral/README.md
-            repository: m11s/timestral
-            description: Timestral forecasting server with the openvino runtime.
-            version_source: version-arg
-            version_ref: TIMESTRAL_VERSION
-            tag_suffix: -openvino
-            latest: latest-openvino
-    steps:
-      - name: Checkout
-        id: checkout
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-
-      - name: Resolve image tags
-        id: image-tags
-        if: ${{ steps.checkout.outcome == 'success' }}
-        env:
-          IMAGE_CONTEXT: ${{ matrix.context }}
-          IMAGE_DOCKERFILE: ${{ matrix.dockerfile }}
-          IMAGE_REPOSITORY: ${{ matrix.repository }}
-          IMAGE_VERSION: ${{ matrix.version }}
-          VERSION_SOURCE: ${{ matrix.version_source }}
-          VERSION_REF: ${{ matrix.version_ref }}
-          STRIP_PREFIX: ${{ matrix.strip_prefix }}
-          STRIP_SUFFIX: ${{ matrix.strip_suffix }}
-          TAG_SUFFIX: ${{ matrix.tag_suffix }}
-          LATEST_TAG: ${{ matrix.latest }}
-        run: |
-          args=(--repository "$IMAGE_REPOSITORY" --sha "$GITHUB_SHA"
-                --strip-prefix "$STRIP_PREFIX" --strip-suffix="$STRIP_SUFFIX")
-          if [[ -n "$VERSION_SOURCE" ]]; then
-            dockerfile=${IMAGE_DOCKERFILE:-$IMAGE_CONTEXT/Dockerfile}
-            args+=("--$VERSION_SOURCE" "$VERSION_REF" --dockerfile "$dockerfile")
-          else
-            args+=(--version "$IMAGE_VERSION")
-          fi
-          tags=$(python3 scripts/image_tags.py "${args[@]}" --latest "$LATEST_TAG" --suffix="$TAG_SUFFIX")
-          {
-            echo "image=${tags%%$'\n'*}"
-            echo "local-image=${tags##*$'\n'}"
-            echo 'tags<<IMAGE_TAGS'
-            echo "$tags"
-            echo 'IMAGE_TAGS'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Log in to Docker Hub
-        if: ${{ github.event_name != 'pull_request' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASS }}
-
-      - name: Free space for large accelerator builds
-        if: ${{ steps.checkout.outcome == 'success' && (matrix.context == 'comfyui-rocm' || matrix.context == 'timestral-cuda' || matrix.context == 'timestral-rocm') }}
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          df -h /
-
-      - name: Set up Docker Buildx
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
-
-      - name: Build and push
-        if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true') }}
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
-        with:
-          context: ${{ matrix.build_context || matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
-          tags: ${{ steps.image-tags.outputs.tags }}
-          cache-from: type=gha,scope=${{ matrix.context }}
-          cache-to: type=gha,scope=${{ matrix.context }},mode=${{ matrix.cache_mode || 'max' }}
-
-      - name: Update Docker Hub repository overview
-        if: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' && ((github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == matrix.context)) || (github.event_name != 'workflow_dispatch' && needs.changes.outputs[matrix.context] == 'true')) }}
-        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASS }}
-          repository: ${{ matrix.repository }}
-          short-description: ${{ matrix.description }}
-          readme-filepath: ./${{ matrix.readme_file || format('{0}/README.md', matrix.context) }}
-          enable-url-completion: true
-
-  native-prepare:
-    needs: [changes]
-    if: ${{ !failure() && !cancelled() }}
-    runs-on: ubuntu-26.04
-    permissions:
-      contents: read
-    outputs:
-      matrix: ${{ steps.matrix.outputs.matrix }}
-      has-images: ${{ steps.matrix.outputs.has-images }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - name: Check image selection and tags
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: python3 -m unittest discover -s scripts -p 'test_*.py'
-      - name: Select native multi-platform builds
-        id: matrix
+      - name: Select changed images
+        id: select
         env:
           EVENT_NAME: ${{ github.event_name }}
           SELECTED_IMAGE: ${{ inputs.image || 'all' }}
-          CHANGED_IMAGES: |
-            {"deepseek-harness":"${{ needs.changes.outputs.deepseek-harness }}",
-             "chromium":"${{ needs.changes.outputs.chromium }}",
-             "comfy-mcp":"${{ needs.changes.outputs.comfy-mcp }}"}
-          NATIVE_IMAGES: |
-            [{"context":"deepseek-harness","repository":"m11s/deepseek-harness",
-              "version_source":"version-arg","version_ref":"DSH_REF",
-              "strip_prefix":"dsh-v","latest":"latest",
-              "description":"DeepSeek Harness web runtime with an optional remote browser provider."},
-             {"context":"chromium","repository":"m11s/chromium",
-              "version_source":"deb-package","version_ref":"chromium",
-              "tag_suffix":"-cdp","latest":"latest-cdp",
-              "description":"Headless Chromium browser with a Chrome DevTools Protocol listener."},
-             {"context":"comfy-mcp","repository":"m11s/comfy-mcp",
-              "version_source":"version-arg","version_ref":"COMFY_MCP_REF",
-              "strip_prefix":"v","latest":"latest",
-              "description":"Comfy MCP server with stdio and native Streamable HTTP transports."}]
+          PUSH_BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          python3 scripts/native_image_matrix.py --images "$NATIVE_IMAGES" \
-            --event "$EVENT_NAME" --selected "$SELECTED_IMAGE" \
-            --changed "$CHANGED_IMAGES" --sha "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          args=(--event "$EVENT_NAME" --selected "$SELECTED_IMAGE" --sha "$GITHUB_SHA")
+          if [[ "$EVENT_NAME" == push ]]; then
+            args+=(--base "$PUSH_BEFORE" --head "$GITHUB_SHA")
+          elif [[ "$EVENT_NAME" == pull_request ]]; then
+            args+=(--base "$PR_BASE" --head "$PR_HEAD")
+          fi
+          python3 scripts/image_matrix.py "${args[@]}" >> "$GITHUB_OUTPUT"
 
-  native-build:
-    needs: [native-prepare]
-    if: ${{ !failure() && !cancelled() && needs.native-prepare.outputs.has-images == 'true' }}
+  timestral-tests:
+    needs: [changes]
+    if: ${{ !failure() && !cancelled() && needs.changes.outputs.timestral-required == 'true' }}
+    uses: ./.github/workflows/timestral-standard.yaml
+
+  build-standard:
+    needs: [changes, timestral-tests]
+    if: ${{ !failure() && !cancelled() && needs.changes.outputs.has-standard == 'true' }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.native-prepare.outputs.matrix) }}
-    uses: docker/github-builder/.github/workflows/build.yml@cbc9d42f8c89a55623392aadd03600965b80e963  # v1
+      matrix: ${{ fromJSON(needs.changes.outputs.standard) }}
+    uses: m11s-io/.github/.github/workflows/container-image.yml@main
+    permissions:
+      contents: read
+    with:
+      source-ref: ${{ github.sha }}
+      context: ${{ matrix.build_context }}
+      dockerfile: ${{ matrix.dockerfile }}
+      repository: ${{ matrix.repository }}
+      tags: ${{ join(matrix.tags, ',') }}
+      platforms: ${{ matrix.platforms }}
+      cache-scope: ${{ matrix.id }}
+      cache-mode: ${{ matrix.cache_mode }}
+      free-space: ${{ matrix.free_space }}
+      description: ${{ matrix.description }}
+      readme-file: ${{ matrix.readme_file }}
+      push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.skip_push) }}
+    secrets:
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+
+  native-build:
+    needs: [changes]
+    if: ${{ !failure() && !cancelled() && needs.changes.outputs.has-native == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.native) }}
+    uses: docker/github-builder/.github/workflows/build.yml@cbc9d42f8c89a55623392aadd03600965b80e963 # v1
     permissions:
       contents: read
       id-token: write
     with:
-      job-name-prefix: ${{ matrix.context }}
-      context: ${{ matrix.context }}
+      job-name-prefix: ${{ matrix.id }}
+      context: ${{ matrix.build_context }}
       output: image
-      push: ${{ github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
-      platforms: linux/amd64,linux/arm64
+      push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.skip_push) }}
+      platforms: ${{ matrix.platforms }}
       distribute: true
       runner: |
         default=ubuntu-24.04
         linux/arm64=ubuntu-24.04-arm
       cache: true
-      cache-scope: ${{ matrix.context }}
-      cache-mode: min
+      cache-scope: ${{ matrix.id }}
+      cache-mode: ${{ matrix.cache_mode }}
       sign: 'false'
       meta-images: ${{ matrix.repository }}
-      meta-tags: ${{ matrix.meta-tags }}
+      meta-tags: ${{ matrix['meta-tags'] }}
     secrets:
       registry-auths: |
         - registry: docker.io
-          username: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USER || '' }}
-          password: ${{ github.event_name != 'pull_request' && secrets.DOCKER_PASS || '' }}
+          username: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.skip_push)) && secrets.DOCKER_USER || '' }}
+          password: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.skip_push)) && secrets.DOCKER_PASS || '' }}
 
   image-checks:
-    needs: [changes, build, native-prepare, native-build, timestral-tests]
+    needs: [changes, build-standard, native-build, timestral-tests]
     if: ${{ always() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-26.04
     permissions: {}
@@ -514,39 +135,33 @@ jobs:
       - name: Require successful image validation
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
-          BUILD_RESULT: ${{ needs.build.result }}
-          NATIVE_PREPARE_RESULT: ${{ needs.native-prepare.result }}
-          NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
-          HAS_NATIVE_IMAGES: ${{ needs.native-prepare.outputs.has-images }}
-          TIMESTRAL_REQUIRED: ${{ needs.changes.outputs.timestral-cpu == 'true' || needs.changes.outputs.timestral-cuda == 'true' || needs.changes.outputs.timestral-rocm == 'true' || needs.changes.outputs.timestral-openvino == 'true' }}
-          TIMESTRAL_TESTS_RESULT: ${{ needs.timestral-tests.result }}
+          STANDARD_RESULT: ${{ needs.build-standard.result }}
+          HAS_STANDARD: ${{ needs.changes.outputs.has-standard }}
+          NATIVE_RESULT: ${{ needs.native-build.result }}
+          HAS_NATIVE: ${{ needs.changes.outputs.has-native }}
+          TIMESTRAL_RESULT: ${{ needs.timestral-tests.result }}
+          TIMESTRAL_REQUIRED: ${{ needs.changes.outputs.timestral-required }}
         run: |
           test "$CHANGES_RESULT" = success
-          test "$BUILD_RESULT" = success
-          test "$NATIVE_PREPARE_RESULT" = success
-          if [[ "$TIMESTRAL_REQUIRED" == true ]]; then
-            test "$TIMESTRAL_TESTS_RESULT" = success
-          else
-            test "$TIMESTRAL_TESTS_RESULT" = skipped
-          fi
-          if [[ "$HAS_NATIVE_IMAGES" == true ]]; then
-            test "$NATIVE_BUILD_RESULT" = success
-          else
-            test "$HAS_NATIVE_IMAGES" = false
-            test "$NATIVE_BUILD_RESULT" = skipped
-          fi
+          if [[ "$HAS_STANDARD" == true ]]; then test "$STANDARD_RESULT" = success; else test "$HAS_STANDARD" = false && test "$STANDARD_RESULT" = skipped; fi
+          if [[ "$HAS_NATIVE" == true ]]; then test "$NATIVE_RESULT" = success; else test "$HAS_NATIVE" = false && test "$NATIVE_RESULT" = skipped; fi
+          if [[ "$TIMESTRAL_REQUIRED" == true ]]; then test "$TIMESTRAL_RESULT" = success; else test "$TIMESTRAL_RESULT" = skipped; fi
 
   native-description:
-    needs: [native-prepare, native-build]
-    if: ${{ !failure() && !cancelled() && needs.native-build.result == 'success' && github.event_name != 'pull_request' && github.event.inputs.skip_push != 'true' }}
+    needs: [changes, native-build]
+    if: ${{ !failure() && !cancelled() && needs.native-build.result == 'success' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.skip_push)) }}
     strategy:
-      matrix: ${{ fromJSON(needs.native-prepare.outputs.matrix) }}
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.native) }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Update Docker Hub repository overview
         uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
         with:
@@ -554,48 +169,39 @@ jobs:
           password: ${{ secrets.DOCKER_PASS }}
           repository: ${{ matrix.repository }}
           short-description: ${{ matrix.description }}
-          readme-filepath: ./${{ matrix.context }}/README.md
+          readme-filepath: ./${{ matrix.readme_file }}
           enable-url-completion: true
 
   publish-mcp-catalog:
-    needs: [changes, build, native-build]
+    needs: [changes, build-standard, native-build]
     if: >-
-      ${{
-        always() &&
-        needs.build.result == 'success' &&
-        needs.native-build.result == 'success' &&
-        github.event_name != 'pull_request' &&
-        github.event.inputs.skip_push != 'true' &&
-        (
-          (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'comfy-mcp')) ||
-          (github.event_name != 'workflow_dispatch' && needs.changes.outputs.comfy-mcp == 'true')
-        )
-      }}
+      ${{ always() && (needs.changes.outputs.has-standard == 'false' || needs.build-standard.result == 'success') && needs.native-build.result == 'success' &&
+          needs.changes.outputs.comfy-mcp-selected == 'true' &&
+          (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && !inputs.skip_push)) }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Log in to Docker Hub
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
-
       - name: Install Docker MCP CLI
         env:
           DOCKER_MCP_VERSION: v0.43.3
         run: |
-          curl --fail --location --show-error --silent \
-            --output /tmp/docker-mcp.tar.gz \
+          curl --fail --location --show-error --silent --output /tmp/docker-mcp.tar.gz \
             "https://github.com/docker/mcp-gateway/releases/download/${DOCKER_MCP_VERSION}/docker-mcp-linux-amd64.tar.gz"
           tar --extract --gzip --file /tmp/docker-mcp.tar.gz --directory /tmp
           install --directory "$HOME/.docker/cli-plugins"
           install --mode 0755 /tmp/docker-mcp "$HOME/.docker/cli-plugins/docker-mcp"
           docker mcp version
-
       - name: Publish MCP catalog
         env:
           DOCKER_MCP_IN_CONTAINER: "1"
@@ -606,22 +212,18 @@ jobs:
             --latest latest --sha "$GITHUB_SHA")
           image=${tags%%$'\n'*}
           sed "s|^image: .*|image: $image|" comfy-mcp/server.yaml > "$HOME/.docker/mcp/catalogs/comfy-mcp.yaml"
-          docker mcp catalog create m11s/mcp-catalog:0.1.0 \
-            --title "m11s MCP Catalog" \
-            --server file://comfy-mcp.yaml
+          docker mcp catalog create m11s/mcp-catalog:0.1.0 --title "m11s MCP Catalog" --server file://comfy-mcp.yaml
           docker mcp catalog push m11s/mcp-catalog:0.1.0
           docker mcp catalog tag m11s/mcp-catalog:0.1.0 m11s/mcp-catalog:latest
           docker mcp catalog push m11s/mcp-catalog:latest
 
   publish-timestral-profiles:
-    needs: [changes, timestral-tests, build]
+    needs: [changes, timestral-tests, build-standard]
     if: >-
       ${{ !cancelled() && github.ref == 'refs/heads/main' &&
           (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-          github.event.inputs.skip_push != 'true' &&
-          needs.build.result == 'success' && needs.timestral-tests.result == 'success' &&
-          (needs.changes.outputs.timestral-openvino == 'true' ||
-           (github.event_name == 'workflow_dispatch' && (inputs.image == 'all' || inputs.image == 'timestral-openvino'))) }}
+          !inputs.skip_push && needs.build-standard.result == 'success' && needs.timestral-tests.result == 'success' &&
+          needs.changes.outputs.timestral-openvino-selected == 'true' }}
     permissions:
       contents: read
       id-token: write
