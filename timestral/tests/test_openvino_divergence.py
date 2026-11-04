@@ -90,7 +90,26 @@ def test_28m_protocol_blocks_exception_limits():
     assert not accepted(a[...,:32,:],e[...,:32,:])
     b=a.copy();b[0,0,64,10]+=.009
     assert not accepted(b)
-    b=a.copy();b[0,0,0,0]+=.002
+    b=a.copy();b[0,0,0,0]=e[0,0,0,0]+.064
+    assert accepted(b)  # Reviewed ratio approximately 320.
+    b=a.copy();b[0,0,0,0]=e[0,0,0,0]+.071
     assert not accepted(b)
     b=a.copy();b[0,0,:,1]+=.009
     assert not accepted(b)
+
+@pytest.mark.parametrize('size,case,change', [
+    ('5M','maximum-horizon',.0003),
+    ('28M','maximum-horizon',.002),
+    ('123M','maximum-horizon',.01),
+    ('28M','blocks',.02),
+])
+def test_publication_rechecks_shared_policy(size,case,change):
+    e=np.ones((1,1,1024,21),np.float32);a=e.copy();a.flat[0]+=change
+    report=m.assess(a,e,model_id='mistralai/Timestral-'+size,case=case)
+    assert report['accepted']
+    assert m.report_accepted(report,model_id='mistralai/Timestral-'+size,case=case)
+    for key,value in [('exception','forged'),('max_original_budget_ratio',1e6),
+                      ('outside_original_tolerance',report['values']),
+                      ('max_absolute_error',float('nan')),('horizon',32)]:
+        invalid=dict(report,**{key:value})
+        assert not m.report_accepted(invalid,model_id='mistralai/Timestral-'+size,case=case)

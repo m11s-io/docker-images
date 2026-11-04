@@ -13,6 +13,21 @@ class StandardPublishTest(unittest.TestCase):
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         return module
 
+    def test_environment_only_authorizes_main_release_events(self):
+        import os
+        from unittest.mock import patch
+        p=self.module()
+        env=dict(GITHUB_ACTIONS='true',GITHUB_REF='refs/heads/main',
+            GITHUB_REPOSITORY='m11s-io/docker-images',HF_OIDC_RESOURCE=p.DESTINATION)
+        for event in ('push','workflow_dispatch'):
+            with patch.dict(os.environ,dict(env,GITHUB_EVENT_NAME=event),clear=True):
+                p.validate_environment()
+        for key,value in [('GITHUB_EVENT_NAME','pull_request'),('GITHUB_REF','refs/heads/untrusted'),
+                          ('GITHUB_REPOSITORY','fork/docker-images')]:
+            with patch.dict(os.environ,dict(env,GITHUB_EVENT_NAME='push',**({key:value} if key!='GITHUB_EVENT_NAME' else {})),clear=True):
+                os.environ[key]=value
+                with self.assertRaises(ValueError):p.validate_environment()
+
     def test_allowlist_preserves_legacy_and_rejects_arbitrary_remote_files(self):
         p=self.module()
         good='standard-v2/'+'a'*64+'/profiles/context.bin'
@@ -49,13 +64,19 @@ class StandardPublishTest(unittest.TestCase):
                 for name in PROFILE_FILES:(profiles/name).write_bytes(b'fixture')
                 from profiles import cases,case_options
                 keys={f'{name}-s{int(s)}-c{int(c)}' for name in cases() for s,c in case_options(name)}
-                parity=dict(passed=True,cases={k:dict(rtol=1e-4,atol=1e-4,max_absolute_error=0,strict_passed=True,accepted=True) for k in keys},neural_backend='openvino',reference_weights_loaded_in_runtime_worker=False,github_run='42')
-                if model_id=='mistralai/Timestral-5M':
-                    from serving.divergence import EXCEPTION
-                    parity['cases']['maximum-horizon-s0-c0'].update(
-                        strict_passed=False,exception=EXCEPTION,values=21504,
-                        outside_original_tolerance=88,max_original_budget_ratio=2.2982514,
-                        max_absolute_error=.300293)
+                import numpy as np
+                from serving.divergence import assess
+                reference=np.ones((1,1,1024,21),np.float32)
+                strict=assess(reference,reference,model_id=model_id,case='maximum-horizon')
+                parity=dict(passed=True,cases={k:dict(strict) for k in keys},neural_backend='openvino',reference_weights_loaded_in_runtime_worker=False,github_run='42')
+                if model_id!='mistralai/Timestral-209M':
+                    actual=reference.copy()
+                    actual.flat[0]+={'mistralai/Timestral-5M':.0003,
+                        'mistralai/Timestral-28M':.002,'mistralai/Timestral-123M':.01}[model_id]
+                    parity['cases']['maximum-horizon-s0-c0']=assess(actual,reference,model_id=model_id,case='maximum-horizon')
+                np.savez(evidence/'reference.npz',levels=np.arange(21,dtype=np.float32),**{k:reference for k in keys})
+                np.savez(evidence/'runtime.npz',**{k:(actual if k=='maximum-horizon-s0-c0' and model_id!='mistralai/Timestral-209M' else reference) for k in keys})
+                parity['forecast_evidence_sha256']={name:p.digest(evidence/name) for name in ('reference.npz','runtime.npz')}
                 (evidence/'parity.json').write_text(json.dumps(parity))
                 manifest=dict(format='timestral-openvino-profiles-v2',model_id=model_id,model_revision=revision,source_revision=SOURCE_REVISION,precision='FP32',parity_report_sha256=p.digest(evidence/'parity.json'),files={name:p.digest(profiles/name) for name in PROFILE_FILES})
                 (profiles/'manifest.json').write_text(json.dumps(manifest))
@@ -65,6 +86,13 @@ class StandardPublishTest(unittest.TestCase):
                 (evidence/'provenance.json').write_text(json.dumps(dict(source='a'*40,run='42')))
                 with patch.dict(os.environ,dict(GITHUB_SHA='a'*40,GITHUB_RUN_ID='42')):
                     self.assertEqual(p.verify_bundle(root)[0],expected)
+                    original=(evidence/'parity.json').read_text()
+                    parity['cases']['maximum-horizon-s0-c0']['max_absolute_error']+=1
+                    (evidence/'parity.json').write_text(json.dumps(parity))
+                    manifest['parity_report_sha256']=p.digest(evidence/'parity.json')
+                    (profiles/'manifest.json').write_text(json.dumps(manifest))
+                    (evidence/'manifest-sha256.txt').write_text(p.digest(profiles/'manifest.json'))
+                    with self.assertRaisesRegex(ValueError,'unaccepted numerical divergence'):p.verify_bundle(root)
                     (evidence/'provenance.json').write_text('{}')
                     with self.assertRaises(ValueError):p.verify_bundle(root)
 
@@ -85,17 +113,20 @@ class StandardPublishTest(unittest.TestCase):
             root=Path(tmp);bundle=root/'bundle'
             names={'profiles/manifest.json',*(f'evidence/{name}' for name in p.EVIDENCE)}
             for name in names:
-                path=bundle/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps({'model_id':'mistralai/Timestral-5M'}) if name=='profiles/manifest.json' else name)
+                path=bundle/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps({'model_id':'mistralai/Timestral-5M','model_revision':'c'*40}) if name=='profiles/manifest.json' else name)
             api=API();downloads=[]
             def download(repo,filename,revision):
                 self.assertEqual(revision,'verified-commit')
                 downloads.append(filename);path=root/'remote'/filename
                 path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(api.files[filename]);return str(path)
             sdk=types.SimpleNamespace(HfApi=lambda:api,hf_hub_download=download)
-            env=dict(GITHUB_SHA='a'*40,GITHUB_RUN_ID='42')
+            env=dict(GITHUB_SHA='a'*40,GITHUB_RUN_ID='42',TIMESTRAL_RELEASE_IMAGE='m11s/timestral@sha256:'+'d'*64)
             with patch.object(p,'validate_environment'),patch.object(p,'verify_bundle',return_value=('b'*64,{'manifest.json'})),patch.dict(sys.modules,{'huggingface_hub':sdk}),patch.dict(os.environ,env,clear=True):
                 result=p.publish(bundle)
                 self.assertEqual(result['revision'],'verified-commit')
+                self.assertEqual(result['image'],env['TIMESTRAL_RELEASE_IMAGE'])
+                self.assertEqual(result['model_revision'],'c'*40)
+                self.assertEqual(result['profiles_path'],'standard-v2/'+'b'*64+'/profiles')
                 self.assertEqual(api.uploads[0]['parent_commit'],'parent')
                 self.assertEqual(api.files['model/1/model.bin'],b'legacy')
                 self.assertEqual(set(downloads),{'standard-v2/'+'b'*64+'/'+name for name in names})
