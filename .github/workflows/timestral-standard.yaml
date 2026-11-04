@@ -19,19 +19,8 @@ jobs:
           python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: "timestral/**/uv.lock"
-      - name: Check packaging and tag routing
-        run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s scripts -p 'test_*.py'
-      - name: Verify all candidate frozen locks
-        run: |
-          for project in timestral/dependencies/{cpu,cuda,rocm} timestral/openvino timestral/openvino/export; do
-            python3 scripts/check_uv_lock.py "$project"
-          done
-      - name: Artifact publication guard tests
-        run: uv run --frozen --project timestral/dependencies/cpu python -m unittest discover -s timestral/openvino/export/tests
-      - name: Shared KServe regression tests
-        env:
-          PYTHONPATH: timestral
-        run: uv run --frozen --project timestral/dependencies/cpu python -m pytest timestral/tests timestral/openvino/tests -q -o asyncio_default_fixture_loop_scope=function
+      - name: Check Timestral dependencies, guards and regressions
+        run: bash timestral/ci/check-unit.sh
 
   cpu-image:
     needs: unit
@@ -77,54 +66,10 @@ jobs:
           cache-from: type=gha,scope=timestral-standard-cpu
           cache-to: type=gha,scope=timestral-standard-cpu,mode=max
       - name: Check default forecasts against independent upstream
-        run: |
-          mkdir -p "$RUNNER_TEMP/model-cache" "$RUNNER_TEMP/evidence"
-          chmod 0777 "$RUNNER_TEMP/model-cache"
-          docker image inspect timestral-standard:candidate > "$RUNNER_TEMP/evidence/image-inspect.json"
-
-          docker run -d --name timestral-standard \
-            -p 127.0.0.1:18080:8080 -p 127.0.0.1:18081:8081 \
-            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
-            --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
-            -e MODEL_ID -e MODEL_REVISION timestral-standard:candidate
-          ready=false
-          for attempt in $(seq 1 180); do
-            if curl --fail --silent http://localhost:18080/v2/models/timestral/ready; then
-              ready=true
-              break
-            fi
-            if [[ $(docker inspect --format '{{.State.Running}}' timestral-standard) != true ]]; then
-              docker logs timestral-standard
-              exit 1
-            fi
-            sleep 2
-          done
-          if [[ "$ready" != true ]]; then
-            docker logs timestral-standard
-            exit 1
-          fi
-          export TIMESTRAL_REFERENCE_DIR="$RUNNER_TEMP/reference"
-          mkdir -p "$TIMESTRAL_REFERENCE_DIR"
-          chmod 0777 "$TIMESTRAL_REFERENCE_DIR"
-          docker run --rm --entrypoint python \
-            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
-            --mount "type=bind,src=$RUNNER_TEMP/model-cache,dst=/models" \
-            --mount "type=bind,src=$TIMESTRAL_REFERENCE_DIR,dst=/reference" \
-            --mount "type=bind,src=$GITHUB_WORKSPACE/timestral/tests/integration,dst=/diagnostics,readonly" \
-            -e MODEL_ID -e MODEL_REVISION timestral-standard:candidate /diagnostics/reference.py
-          uv run --frozen --project timestral/dependencies/cpu python -m pytest \
-            timestral/tests/integration/test_triton_client.py -q \
-            -o asyncio_default_fixture_loop_scope=function \
-            --junitxml="$RUNNER_TEMP/evidence/forecast-parity.xml"
-          cp -a "$TIMESTRAL_REFERENCE_DIR" "$RUNNER_TEMP/evidence/reference"
-          docker logs timestral-standard > "$RUNNER_TEMP/evidence/server.log" 2>&1
-          docker rm -f timestral-standard
+        run: bash timestral/ci/test-cpu.sh
       - name: Save logs and remove test container
         if: always()
-        run: |
-          mkdir -p "$RUNNER_TEMP/evidence"
-          docker logs timestral-standard > "$RUNNER_TEMP/evidence/server.log" 2>&1 || true
-          docker rm -f timestral-standard || true
+        run: bash timestral/ci/cleanup-cpu.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -185,25 +130,7 @@ jobs:
           cache-from: type=gha,scope=timestral-standard-openvino
           cache-to: type=gha,scope=timestral-standard-openvino,mode=max
       - name: Start preview with read-only verified profiles
-        run: |
-          digest=$(cat "$RUNNER_TEMP/openvino-candidate/evidence/manifest-sha256.txt")
-          docker run -d --name timestral-openvino-standard \
-            -p 127.0.0.1:18080:8080 -p 127.0.0.1:18081:8081 \
-            --read-only --tmpfs /tmp:rw,nosuid,nodev,size=256m \
-            --mount "type=bind,src=$RUNNER_TEMP/openvino-candidate/profiles,dst=/profiles,readonly" \
-            -e MODEL_ID -e MODEL_REVISION -e TIMESTRAL_FORECAST_ARTIFACTS=/profiles \
-            -e "TIMESTRAL_ARTIFACT_MANIFEST_SHA256=$digest" timestral-standard:openvino-preview
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent http://localhost:18080/v2/models/timestral/ready; then
-              exit 0
-            fi
-            if [[ $(docker inspect --format '{{.State.Running}}' timestral-openvino-standard) != true ]]; then
-              docker logs timestral-openvino-standard
-              exit 1
-            fi
-            sleep 2
-          done
-          exit 1
+        run: bash timestral/ci/start-openvino.sh
       - name: Verify CPU-equivalent REST/gRPC inference and invalid request errors
         run: |
           uv run --frozen --project timestral/openvino python -m pytest \
@@ -212,11 +139,7 @@ jobs:
             --junitxml="$RUNNER_TEMP/openvino-candidate/evidence/protocol-parity.xml"
       - name: Save image evidence and remove preview container
         if: always()
-        run: |
-          mkdir -p "$RUNNER_TEMP/openvino-candidate/evidence"
-          docker image inspect timestral-standard:openvino-preview > "$RUNNER_TEMP/openvino-candidate/evidence/image-inspect.json" || true
-          docker logs timestral-openvino-standard > "$RUNNER_TEMP/openvino-candidate/evidence/server.log" 2>&1 || true
-          docker rm -f timestral-openvino-standard || true
+        run: bash timestral/ci/cleanup-openvino.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

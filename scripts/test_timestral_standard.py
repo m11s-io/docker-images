@@ -50,11 +50,13 @@ class VariantRoutingTest(unittest.TestCase):
     def test_shared_contract_context_and_fixtures_select_every_consumer(self):
         expected = {'timestral-cpu', 'timestral-cuda', 'timestral-rocm', 'timestral-openvino'}
         for path in ('timestral/serving/contract.py', 'timestral/.dockerignore',
+                     'timestral/ci/test-cpu.sh',
                      'timestral/tests/fixtures/forecast-v1.json'):
             with self.subTest(path=path): self.assertEqual(self.selected(path), expected)
 
     def test_backend_locks_dockerfiles_and_export_profiles_select_their_consumer(self):
         for path, expected in [('timestral/openvino/backend.py', {'timestral-openvino'}),
+                               ('timestral/openvino/ci/collect-release.py', {'timestral-openvino'}),
                                ('timestral/openvino/export/profiles.json', {'timestral-openvino'}),
                                ('timestral/dependencies/cpu/uv.lock', {'timestral-cpu'}),
                                ('timestral/Dockerfile.cuda', {'timestral-cuda'}),

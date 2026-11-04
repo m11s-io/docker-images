@@ -6,6 +6,16 @@
 [![MCP catalog](https://img.shields.io/badge/MCP-Catalog-7C3AED)](docs/mcp-catalog.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+## CI layout
+
+Each image's `image.json` defines its build variants, tags and watched paths.
+GitHub workflow entry points stay in `.github/workflows/`; image-specific
+procedures live beside their images in `ci/` directories. Run these scripts from
+the repository root. The workflows retain job dependencies, permissions, tool
+setup and artifact upload/download steps; ordinary builds use the organization's
+shared container workflow. When adding a CI script, include its path in the
+image manifest's `watch` patterns so changes trigger the relevant checks.
+
 | Image | Description | Version |
 |-------|-------------|---------|
 | [rclone](rclone/README.md) | rclone with filesystem event monitoring | [![Version](https://img.shields.io/docker/v/m11s/rclone/latest-inotify?label=)](https://hub.docker.com/r/m11s/rclone) |

@@ -32,8 +32,6 @@ class WorkflowTest(unittest.TestCase):
         download=next(s for s in steps if s.get('uses','').startswith('actions/download-artifact@'))
         self.assertEqual(download['with']['name'],'timestral-openvino-preview-${{ matrix.model }}-${{ github.sha }}')
         commands='\n'.join(s.get('run','') for s in steps)
-        self.assertIn('sha-${GITHUB_SHA:0:12}-openvino',commands)
-        self.assertIn('TIMESTRAL_RELEASE_IMAGE=m11s/timestral@$digest',commands)
         self.assertIn('timestral/openvino/export/publish.py --bundle',commands)
         self.assertNotIn('secrets.HF',text)
 
@@ -59,13 +57,34 @@ class WorkflowTest(unittest.TestCase):
 if __name__=='__main__':unittest.main()
 
 class ReleaseReceiptTest(unittest.TestCase):
+    def test_release_image_requires_a_valid_digest_from_the_current_source_tag(self):
+        import os,tempfile
+        for digest,status in [('sha256:'+'b'*64,0),('latest',0),('',0),('sha256:'+'b'*64,7)]:
+            with self.subTest(digest=digest,status=status),tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)
+                docker=root/'docker'
+                docker.write_text('#!/bin/sh\n'
+                    '[ "$4" = "m11s/timestral:sha-aaaaaaaaaaaa-openvino" ] || exit 8\n'
+                    'printf "%s\\n" "$TEST_DIGEST"\nexit "$TEST_STATUS"\n')
+                docker.chmod(0o755)
+                env=dict(os.environ,PATH=str(root)+os.pathsep+os.environ['PATH'],
+                    TEST_DIGEST=digest,TEST_STATUS=str(status),GITHUB_SHA='a'*40,
+                    GITHUB_ENV=str(root/'environment'))
+                result=subprocess.run(['bash',str(ROOT/'timestral/openvino/ci/resolve-image.sh')],
+                    cwd=root,env=env,capture_output=True,text=True)
+                valid=digest=='sha256:'+'b'*64 and status==0
+                self.assertEqual(result.returncode==0,valid,result.stderr)
+                if valid:
+                    self.assertEqual((root/'environment').read_text(),
+                        'TIMESTRAL_RELEASE_IMAGE=m11s/timestral@sha256:'+'b'*64+'\n')
+                else:
+                    self.assertFalse((root/'environment').exists())
+
     def test_combined_release_rejects_missing_or_mismatched_receipts(self):
         import json,os,subprocess,sys,tempfile
         workflow=yaml.safe_load((ROOT/'.github/workflows/timestral-openvino.yaml').read_text())
         release=workflow['jobs']['release']
         self.assertEqual(release['needs'],['publish'])
-        command=next(s['run'] for s in release['steps'] if s.get('name')=='Collect immutable deployment references')
-        code=command.split("<<'PYTHON'\n",1)[1].rsplit('\nPYTHON',1)[0]
         records=[dict(model_id='mistralai/Timestral-'+size,source='a'*40,run='42',
                       image='m11s/timestral@sha256:'+'b'*64,revision='c'*40,
                       profiles_path='standard-v2/'+'d'*64+'/profiles',manifest_sha256='d'*64)
@@ -81,7 +100,7 @@ class ReleaseReceiptTest(unittest.TestCase):
                 for index,record in enumerate(current):
                     p=root/'receipts'/str(index)/'standard-publication.json'
                     p.parent.mkdir(parents=True);p.write_text(json.dumps(record))
-                result=subprocess.run([sys.executable,'-c',code],cwd=root,
+                result=subprocess.run([sys.executable,str(ROOT/'timestral/openvino/ci/collect-release.py')],cwd=root,
                     env=dict(os.environ,GITHUB_SHA='a'*40,GITHUB_RUN_ID='42',GITHUB_STEP_SUMMARY=str(root/'summary')),
                     capture_output=True,text=True)
                 self.assertEqual(result.returncode==0,invalid is None,result.stderr)

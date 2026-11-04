@@ -29,7 +29,8 @@ class TimestralRuntimeTest(unittest.TestCase):
         # A reusable run must not cancel another caller's required acceptance.
         self.assertNotIn('\nconcurrency:',acceptance)
         self.assertNotIn('tests/test_api.py',job)
-        self.assertIn('--project timestral/dependencies/cpu',acceptance)
+        self.assertIn('--project timestral/dependencies/cpu',
+                      (ROOT/'timestral/ci/check-unit.sh').read_text())
         self.assertIn("needs.changes.outputs.timestral-required == 'true'",job)
         build=workflow.split('  build-standard:',1)[1].split('  native-build:',1)[0]
         self.assertIn('needs: [changes, timestral-tests]',build)
