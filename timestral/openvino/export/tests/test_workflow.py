@@ -1,5 +1,8 @@
 """Guard automatic release wiring, publication authorization and same-run evidence."""
 from pathlib import Path
+import json
+import subprocess
+import sys
 import unittest
 import yaml
 
@@ -38,14 +41,20 @@ class WorkflowTest(unittest.TestCase):
         workflow=yaml.safe_load((ROOT/'.github/workflows/build.yaml').read_text())
         job=workflow['jobs']['publish-timestral-profiles']
         self.assertEqual(job['uses'],'./.github/workflows/timestral-openvino.yaml')
-        self.assertEqual(job['needs'],['changes','timestral-tests','build'])
+        self.assertEqual(job['needs'],['changes','timestral-tests','build-standard'])
         self.assertTrue(job['with']['reuse-validation'])
         for condition in ("github.ref == 'refs/heads/main'", "github.event_name == 'push'",
-                          "github.event.inputs.skip_push != 'true'", "needs.build.result == 'success'",
-                          "needs.timestral-tests.result == 'success'", "needs.changes.outputs.timestral-openvino == 'true'"):
+                          "!inputs.skip_push", "needs.build-standard.result == 'success'",
+                          "needs.timestral-tests.result == 'success'",
+                          "needs.changes.outputs.timestral-openvino-selected == 'true'"):
             self.assertIn(condition,job['if'])
-        triggers=workflow.get('on',workflow.get(True))
-        self.assertIn('.github/workflows/timestral-openvino.yaml',triggers['push']['paths'])
+        selected=subprocess.run(
+            [sys.executable,str(ROOT/'scripts/image_matrix.py'),'--event','push','--sha','a'*40,
+             '--changed-json','[".github/workflows/timestral-openvino.yaml"]'],
+            cwd=ROOT,capture_output=True,text=True,check=True)
+        outputs=dict(line.split('=',1) for line in selected.stdout.splitlines())
+        self.assertEqual(json.loads(outputs['selected-ids']),['timestral-openvino'])
+        self.assertEqual(outputs['timestral-openvino-selected'],'true')
 
 if __name__=='__main__':unittest.main()
 
