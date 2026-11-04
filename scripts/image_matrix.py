@@ -116,6 +116,8 @@ def _append_image(root, item, images, ids):
 
 
 def _paths_from_git(root, event, base, head):
+    if not base or not head:
+        return None
     try:
         if event == "pull_request":
             merge = subprocess.check_output(["git", "merge-base", base, head], cwd=root, text=True, stderr=subprocess.DEVNULL).strip()
@@ -193,6 +195,10 @@ def build_matrix(root, event, selected="all", sha="", base=None, head=None, chan
         changed_paths = []
     if not isinstance(changed_paths, list) or not all(isinstance(p, str) and p for p in changed_paths):
         _fail("changed paths must be an array of non-empty repository paths")
+    for path in changed_paths:
+        parsed = PurePosixPath(path)
+        if parsed.is_absolute() or ".." in parsed.parts:
+            _fail(f"changed path must be repository-relative and cannot traverse parents: {path!r}")
     current_manifests = {f"{image['folder']}/image.json" for image in images}
     for path in changed_paths:
         if PurePosixPath(path).name == "image.json" and path not in current_manifests and not (root / path).exists():
@@ -200,7 +206,8 @@ def build_matrix(root, event, selected="all", sha="", base=None, head=None, chan
     resolved_tags = {image["id"]: _resolve_tags(root, image, sha) for image in images}
     shared_scripts = {"scripts/image_matrix.py", "scripts/test_image_matrix.py", "scripts/image_tags.py",
                       "scripts/test_image_tags.py", "scripts/native_image_matrix.py", "scripts/test_native_image_matrix.py"}
-    global_change = all_paths or any(p in shared_scripts or p.startswith(".github/workflows/") for p in changed_paths)
+    shared_workflows = {".github/workflows/build.yaml", ".github/workflows/lint.yaml"}
+    global_change = all_paths or any(p in shared_scripts or p in shared_workflows for p in changed_paths)
     standard, native, selected_ids = [], [], []
     for image in images:
         ident, folder = image["id"], image["folder"]

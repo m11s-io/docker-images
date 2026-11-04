@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 import subprocess
+from unittest.mock import patch
 
 from image_matrix import _paths_from_git, build_matrix, discover_images
 
@@ -77,6 +78,30 @@ class ImageMatrixTest(unittest.TestCase):
         self.image("plain", {"version": "1"})
         result = build_matrix(self.root, "push", "all", SHA, changed_paths=None)
         self.assertEqual([r["id"] for r in result["standard"]["include"]], ["plain"])
+
+    def test_missing_base_and_head_select_everything(self):
+        self.image("plain", {"version": "1"})
+        result = build_matrix(self.root, "push", "all", SHA, base=None, head=None)
+        self.assertEqual([r["id"] for r in result["standard"]["include"]], ["plain"])
+
+    def test_missing_git_refs_skip_subprocess_diff(self):
+        with patch("image_matrix.subprocess.check_output", side_effect=AssertionError("git must not run without refs")):
+            self.assertIsNone(_paths_from_git(self.root, "push", None, None))
+
+    def test_changed_paths_must_be_repository_relative(self):
+        self.image("plain", {"version": "1"})
+        for invalid_path in ("/plain/Dockerfile", "../plain/Dockerfile", "plain/../other/Dockerfile"):
+            with self.subTest(path=invalid_path), self.assertRaisesRegex(ValueError, "repository-relative"):
+                build_matrix(self.root, "push", "all", SHA, changed_paths=[invalid_path])
+
+    def test_timestral_openvino_workflow_selects_only_its_watched_image(self):
+        self.image("timestral", {"variants": {
+            "openvino": {"version": "1", "watch": [".github/workflows/timestral-openvino.yaml"]},
+        }})
+        self.image("caddy", {"version": "1"})
+        result = build_matrix(self.root, "push", "all", SHA,
+                              changed_paths=[".github/workflows/timestral-openvino.yaml"])
+        self.assertEqual(result["selected_ids"], ["timestral-openvino"])
 
     def test_docs_only_and_deleted_renamed_paths(self):
         self.image("plain", {"version": "1"})
