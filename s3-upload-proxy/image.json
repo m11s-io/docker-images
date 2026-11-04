@@ -1,0 +1,8 @@
+{
+  "description": "Multipart upload proxy for S3-compatible object storage.",
+  "version_source": "version-arg",
+  "version_ref": "S3_UPLOAD_PROXY_VERSION",
+  "latest": "latest",
+  "watch": ["s3-upload-proxy/**"],
+  "ignore": ["s3-upload-proxy/**/*.md", "s3-upload-proxy/**/docs/**", "s3-upload-proxy/**/compose*.yaml", "s3-upload-proxy/**/compose*.yml", "s3-upload-proxy/**/docker-compose*.yaml", "s3-upload-proxy/**/docker-compose*.yml"]
+}

@@ -1,0 +1,9 @@
+{
+  "description": "rclone with inotify-tools for filesystem event monitoring.",
+  "version_source": "base-image",
+  "version_ref": "rclone/rclone",
+  "tag_suffix": "-inotify",
+  "latest": "latest-inotify",
+  "watch": ["rclone/**"],
+  "ignore": ["rclone/**/*.md", "rclone/**/docs/**", "rclone/**/compose*.yaml", "rclone/**/compose*.yml", "rclone/**/docker-compose*.yaml", "rclone/**/docker-compose*.yml"]
+}

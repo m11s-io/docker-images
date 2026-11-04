@@ -1,0 +1,25 @@
+{
+  "variants": {
+    "cuda": {
+      "description": "CUDA-enabled ComfyUI image with externally managed custom nodes.",
+      "version_source": "version-arg",
+      "version_ref": "COMFYUI_REF",
+      "strip_prefix": "v",
+      "tag_suffix": "-cuda",
+      "latest": "latest-cuda",
+      "watch": [".github/workflows/build.yaml", "scripts/image_tags.py", "comfyui/**"],
+      "ignore": ["comfyui/Dockerfile.rocm", "comfyui/requirements-rocm.txt", "**/*.md", "**/docs/**", "**/compose*.yaml", "**/compose*.yml", "**/docker-compose*.yaml", "**/docker-compose*.yml"]
+    },
+    "rocm": {
+      "description": "AMD ROCm ComfyUI image with externally managed custom nodes.",
+      "version_source": "version-arg",
+      "version_ref": "COMFYUI_REF",
+      "dockerfile": "comfyui/Dockerfile.rocm",
+      "strip_prefix": "v",
+      "tag_suffix": "-rocm",
+      "latest": "latest-rocm",
+      "cache_mode": "min",
+      "watch": [".github/workflows/build.yaml", "comfyui/Dockerfile.rocm", "comfyui/requirements-rocm.txt", "comfyui/verify_image.py", "scripts/test_comfyui_validation.py"]
+    }
+  }
+}

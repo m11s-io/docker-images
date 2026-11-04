@@ -1,0 +1,8 @@
+{
+  "description": "Decap CMS with an S3-compatible media library.",
+  "version": "0.2.11",
+  "tag_suffix": "-s3",
+  "latest": "latest-s3",
+  "watch": ["decap-cms/**"],
+  "ignore": ["decap-cms/**/*.md", "decap-cms/**/docs/**", "decap-cms/**/compose*.yaml", "decap-cms/**/compose*.yml", "decap-cms/**/docker-compose*.yaml", "decap-cms/**/docker-compose*.yml"]
+}

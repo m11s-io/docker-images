@@ -1,0 +1,10 @@
+{
+  "description": "Caddy with the Cloudflare DNS-01 provider module.",
+  "version_source": "base-arg",
+  "version_ref": "CADDY_BASE_IMAGE",
+  "strip_suffix": "-alpine",
+  "tag_suffix": "-cloudflare",
+  "latest": "latest-cloudflare",
+  "watch": ["scripts/image_tags.py", "caddy/**"],
+  "ignore": ["caddy/**/*.md", "caddy/**/docs/**", "caddy/**/compose*.yaml", "caddy/**/compose*.yml", "caddy/**/docker-compose*.yaml", "caddy/**/docker-compose*.yml"]
+}

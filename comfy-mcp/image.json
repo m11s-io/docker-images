@@ -1,0 +1,9 @@
+{
+  "description": "Comfy MCP server with stdio and native Streamable HTTP transports.",
+  "version_source": "version-arg",
+  "version_ref": "COMFY_MCP_REF",
+  "strip_prefix": "v",
+  "builder": "native",
+  "watch": ["scripts/native_image_matrix.py", "scripts/image_tags.py", "comfy-mcp/**"],
+  "ignore": ["comfy-mcp/**/*.md", "comfy-mcp/**/docs/**", "comfy-mcp/**/compose*.yaml", "comfy-mcp/**/compose*.yml", "comfy-mcp/**/docker-compose*.yaml", "comfy-mcp/**/docker-compose*.yml"]
+}

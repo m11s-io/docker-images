@@ -1,0 +1,10 @@
+{
+  "description": "vLLM OpenAI server image with faster orjson serialization.",
+  "version_source": "base-arg",
+  "version_ref": "VLLM_BASE_IMAGE",
+  "strip_suffix": "-x86_64",
+  "tag_suffix": "-orjson",
+  "latest": "latest-orjson",
+  "watch": ["scripts/image_tags.py", "vllm-openai/**"],
+  "ignore": ["vllm-openai/**/*.md", "vllm-openai/**/docs/**", "vllm-openai/**/compose*.yaml", "vllm-openai/**/compose*.yml", "vllm-openai/**/docker-compose*.yaml", "vllm-openai/**/docker-compose*.yml"]
+}
