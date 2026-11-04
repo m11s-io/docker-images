@@ -59,8 +59,21 @@ measured envelope: at most 5% of quantiles outside the original budget, at most
 50 times that budget, absolute quantile error at most 1.8, and at most 6.25% of
 medians outside the original budget with absolute median error at most 0.2.
 
-Use `.github/workflows/timestral-openvino.yaml` for verified main-only OIDC
-publication. New releases append `standard-v2/<manifest-sha256>/profiles/` and
+Successful main-branch OpenVINO image builds automatically call
+`.github/workflows/timestral-openvino.yaml` for verified OIDC profile publication.
+The publisher reuses the same run's successful forecast and protocol evidence,
+rechecks the shared numerical policy, and resolves the image using its source
+commit tag. PRs and `skip_push` builds do not publish profiles. Manual publication
+remains available on `main` when an image exists for that commit; alternatively,
+dispatch Build and push with `image=timestral-openvino` and `skip_push=false` to
+build and publish the image and profiles together.
+
+Each `timestral-standard-publication-<size>` artifact records the image digest,
+model revision, HF commit, profiles path and manifest checksum. After all four
+models publish, `timestral-openvino-release-<source-sha>` collects those receipts
+in `timestral-openvino-release.json` for deployment. A model publication failure
+fails the release while allowing the other models to finish; existing remote
+bundles are never overwritten. New releases append `standard-v2/<manifest-sha256>/profiles/` and
 matching evidence. Existing remote v1/legacy files are preserved. The historical
 HF repository name remains for trust compatibility; each manifest records its
 actual model identity. Refresh the speed/accuracy report for matching default
