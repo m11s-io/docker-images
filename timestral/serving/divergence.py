@@ -47,8 +47,11 @@ def _exception(r,model_id,case):
         and count/values<=MAX_OUTSIDE_FRACTION and ratio<=MAX_BUDGET_RATIO):
         return EXCEPTION
     # Run 41659716804 and reviewed expanded envelope from 41671193145.
+    # PR 179: reviewed blocks evidence had ratio 319.8994203, 1062/21504
+    # outside, 63/1024 median outside, median error .16614, max error 1.51978.
+    # User accepted this deviation; retain the count and absolute-error bounds.
     if (model_id=='mistralai/Timestral-28M' and case=='blocks'
-        and count/values<=.055 and ratio<=150 and median/(values/21)<=.0625
+        and count/values<=.055 and ratio<=350 and median/(values/21)<=.0625
         and r['max_median_absolute_error']<=.2 and r['max_absolute_error']<=1.8):
         return '28m-protocol-blocks-2026-11-03'
     if model_id in REVIEWED_HORIZON_LIMITS and case=='maximum-horizon':

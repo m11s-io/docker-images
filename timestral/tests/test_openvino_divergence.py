@@ -90,7 +90,9 @@ def test_28m_protocol_blocks_exception_limits():
     assert not accepted(a[...,:32,:],e[...,:32,:])
     b=a.copy();b[0,0,64,10]+=.009
     assert not accepted(b)
-    b=a.copy();b[0,0,0,0]+=.002
+    b=a.copy();b[0,0,0,0]=e[0,0,0,0]+.064
+    assert accepted(b)  # Reviewed ratio approximately 320.
+    b=a.copy();b[0,0,0,0]=e[0,0,0,0]+.071
     assert not accepted(b)
     b=a.copy();b[0,0,:,1]+=.009
     assert not accepted(b)
