@@ -22,9 +22,9 @@ concurrency:
 
 jobs:
   maintenance:
-    uses: m11s-io/.github/.github/workflows/maintenance.yml@3c526268857210cc39f2d502c2000d4a0ea975b1
+    uses: m11s-io/.github/.github/workflows/maintenance.yml@main
     with:
-      host-ref: 3c526268857210cc39f2d502c2000d4a0ea975b1
+      host-ref: main
       live: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry-run }}
     secrets:
       RENOVATE_APP_PRIVATE_KEY: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
