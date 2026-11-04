@@ -12,17 +12,19 @@ on:
         default: true
 
 permissions:
+  actions: read
   contents: read
+  security-events: write
 
 concurrency:
   group: renovate
   cancel-in-progress: false
 
 jobs:
-  renovate:
-    uses: m11s-io/.github/.github/workflows/maintenance.yml@9a8af8571ce84d504e63ef665dca3c0359b9d96e
+  maintenance:
+    uses: m11s-io/.github/.github/workflows/maintenance.yml@3c526268857210cc39f2d502c2000d4a0ea975b1
     with:
-      host-ref: 9a8af8571ce84d504e63ef665dca3c0359b9d96e
+      host-ref: 3c526268857210cc39f2d502c2000d4a0ea975b1
       live: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry-run }}
     secrets:
       RENOVATE_APP_PRIVATE_KEY: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
