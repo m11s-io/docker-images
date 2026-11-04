@@ -1,9 +1,9 @@
 # Managed by infra/github; edit the shared workflow or its OpenTofu settings.
-name: Renovate
+name: Maintenance
 
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 6 * * *'
   workflow_dispatch:
     inputs:
       dry-run:
@@ -20,10 +20,9 @@ concurrency:
 
 jobs:
   renovate:
-    if: ${{ github.event_name == 'workflow_dispatch' || true }}
-    uses: m11s-io/.github/.github/workflows/renovate-run.yml@main
+    uses: m11s-io/.github/.github/workflows/maintenance.yml@9a8af8571ce84d504e63ef665dca3c0359b9d96e
     with:
-      host-ref: main
-      live: ${{ true && (github.event_name != 'workflow_dispatch' || !inputs.dry-run) }}
+      host-ref: 9a8af8571ce84d504e63ef665dca3c0359b9d96e
+      live: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry-run }}
     secrets:
       RENOVATE_APP_PRIVATE_KEY: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
