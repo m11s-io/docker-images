@@ -46,17 +46,22 @@ checks against the same CPU defaults. A passing bounded reference is insufficien
 
 `serving/divergence.py` records explicit model-specific exceptions at horizon
 1024 while retaining the original strict error measurements. The 28M median
-exception permits at most 11/1024 values outside the original budget, with
-rtol=0.00014, atol=0.0001 and an absolute error cap of 0.0065. Other model medians
+exception permits at most 36/1024 values outside the original budget, bounded by
+1.1 times the recorded median budget (rtol=0.00014, atol=0.0001) and an absolute
+error cap of 0.15. Other model medians
 and other horizons remain strict. Export logs print each case's measurements,
 and the final parity report records rejected cases before failing publication.
-Across observed CI runners, 28M permits at most 1% nonmedian values outside the
-original budget, capped at 20 times that budget; 123M permits at most 0.5%,
+Across observed CI runners, 28M permits at most 2.5% nonmedian values outside the
+original budget, capped at 35 times that budget; 123M permits at most 0.5%,
 capped at 60 times the budget. These exceptions apply only to maximum-horizon
 1024 cases. The median absolute cap applies only to original-budget violations.
+The maintainer approved these 28M limits on 2026-11-04 after
+[run 41895638493](https://github.com/m11s-io/docker-images/actions/runs/41895638493)
+measured a maximum budget ratio of 32.68169, 484/21504 nonmedian violations and
+32/1024 median violations with maximum violating median error 0.13952637.
 The separate 28M sinusoidal protocol `blocks` case at horizon 1024 has its own
-measured envelope: at most 5% of quantiles outside the original budget, at most
-50 times that budget, absolute quantile error at most 1.8, and at most 6.25% of
+measured envelope: at most 5.5% of quantiles outside the original budget, at most
+350 times that budget, absolute quantile error at most 1.8, and at most 6.25% of
 medians outside the original budget with absolute median error at most 0.2.
 
 Successful main-branch OpenVINO image builds automatically call

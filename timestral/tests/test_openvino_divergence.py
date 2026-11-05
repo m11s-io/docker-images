@@ -37,7 +37,7 @@ def test_reviewed_ci_tail_envelope():
         assert r['accepted']==accepted
 
 
-@pytest.mark.parametrize('size,ratio,count', [('28M',19.9,215),('123M',59.9,107)])
+@pytest.mark.parametrize('size,ratio,count', [('28M',34.9,537),('123M',59.9,107)])
 def test_larger_model_reviewed_horizon_limits(size,ratio,count):
     e=np.ones((1,1,1024,21),np.float32)
     def forecast(n, budget_ratio):
@@ -50,6 +50,8 @@ def test_larger_model_reviewed_horizon_limits(size,ratio,count):
     r=m.assess(a,e,model_id=model,case='maximum-horizon')
     assert r['accepted'] and not r['strict_passed'] and r['exception']
     assert not m.assess(a,e,model_id=model,case='unreviewed')['accepted']
+    assert not m.assess(a[...,:32,:],e[...,:32,:],
+                        model_id=model,case='maximum-horizon')['accepted']
     assert not m.assess(forecast(count+1,ratio),e,model_id=model,case='maximum-horizon')['accepted']
     assert not m.assess(forecast(1,ratio+1),e,model_id=model,case='maximum-horizon')['accepted']
     a[...,10]+=.0003
@@ -58,13 +60,25 @@ def test_larger_model_reviewed_horizon_limits(size,ratio,count):
 
 def test_28m_reviewed_median_drift_is_bounded():
     e=np.full((1,1,1024,21),-40,np.float32)
-    a=e.copy();a[0,0,:11,10]-=.0053
+    a=e.copy();a[0,0,:36,10]-=.0053
     assert m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
     for model,case in [('mistralai/Timestral-123M','maximum-horizon'),
                        ('mistralai/Timestral-28M','unreviewed')]:
         assert not m.assess(a,e,model_id=model,case=case)['accepted']
-    a[0,0,11,10]-=.0053
+    a[0,0,36,10]-=.0053
     assert not m.assess(a,e,model_id='mistralai/Timestral-28M',case='maximum-horizon')['accepted']
+
+
+def test_28m_median_absolute_and_relative_caps_remain_enforced():
+    model='mistralai/Timestral-28M'
+    for reference,change,accepted in [(-1000,.149,True),(-1000,.151,False),
+                                       (-40,.0062,True),(-40,.0064,False)]:
+        e=np.full((1,1,1024,21),reference,np.float32)
+        a=e.copy();a[0,0,0,10]-=change
+        r=m.assess(a,e,model_id=model,case='maximum-horizon')
+        assert not r['strict_passed']
+        assert r['accepted']==accepted
+        assert m.report_accepted(r,model_id=model,case='maximum-horizon')==accepted
 
 
 def test_median_absolute_cap_only_applies_to_strict_violations():

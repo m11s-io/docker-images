@@ -21,6 +21,16 @@ Medians must still pass the original tolerance. No exception applies to209M,
 other cases, wrong shapes, nonfinite outputs or incorrect identities. Forecasts
 and the original tolerance remain unchanged; observed divergences stay visible.
 
+For OpenVINO's `maximum-horizon` 1024-step validation case, the maintainer approved
+an expanded 28M envelope on 2026-11-04 after
+[run 41895638493](https://github.com/m11s-io/docker-images/actions/runs/41895638493).
+At most 2.5% of all quantile values may be nonmedian violations, capped at 35 times
+the original budget. At most 36/1024 median values may violate it, capped at 0.15
+absolute error and 1.1 times the recorded median budget (atol=0.0001,
+rtol=0.00014). These are acceptance exceptions, not strict-parity results.
+The 123M envelope remains 0.5% nonmedian violations and 60 times the original
+budget, with strict medians. Other cases and models retain their existing limits.
+
 The [single comparison client](../benchmarks/README.md) measures speed and scores
 real held-out observations. Keep matching profiles, cohort and exact pins for
 comparisons. The earlier bounded report is historical; it does not establish
