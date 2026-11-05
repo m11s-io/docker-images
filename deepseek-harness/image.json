@@ -4,6 +4,6 @@
   "version_ref": "DSH_REF",
   "strip_prefix": "dsh-v",
   "builder": "native",
-  "watch": ["scripts/native_image_matrix.py", "scripts/image_tags.py", "deepseek-harness/**"],
+  "watch": ["scripts/image_tags.py", "deepseek-harness/**"],
   "ignore": ["deepseek-harness/**/*.md", "deepseek-harness/**/docs/**", "deepseek-harness/**/compose*.yaml", "deepseek-harness/**/compose*.yml", "deepseek-harness/**/docker-compose*.yaml", "deepseek-harness/**/docker-compose*.yml"]
 }

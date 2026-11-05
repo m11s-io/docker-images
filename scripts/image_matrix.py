@@ -205,7 +205,7 @@ def build_matrix(root, event, selected="all", sha="", base=None, head=None, chan
             _fail(f"enrolled image manifest {path} was removed; explicitly retire the image target before deleting it")
     resolved_tags = {image["id"]: _resolve_tags(root, image, sha) for image in images}
     shared_scripts = {"scripts/image_matrix.py", "scripts/test_image_matrix.py", "scripts/image_tags.py",
-                      "scripts/test_image_tags.py", "scripts/native_image_matrix.py", "scripts/test_native_image_matrix.py"}
+                      "scripts/test_image_tags.py"}
     shared_workflows = {".github/workflows/build.yaml", ".github/workflows/lint.yaml"}
     global_change = all_paths or any(p in shared_scripts or p in shared_workflows for p in changed_paths)
     standard, native, selected_ids = [], [], []

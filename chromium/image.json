@@ -5,6 +5,6 @@
   "tag_suffix": "-cdp",
   "latest": "latest-cdp",
   "builder": "native",
-  "watch": ["scripts/native_image_matrix.py", "scripts/image_tags.py", "chromium/**"],
+  "watch": ["scripts/image_tags.py", "chromium/**"],
   "ignore": ["chromium/**/*.md", "chromium/**/docs/**", "chromium/**/compose*.yaml", "chromium/**/compose*.yml", "chromium/**/docker-compose*.yaml", "chromium/**/docker-compose*.yml"]
 }
