@@ -9,7 +9,7 @@
 FROM rocm/pytorch:rocm10.1.0_ubuntu26.04_py3.14_pytorch_release_2.14.0@sha256:68295d40dcdcb53d9b50828f30017faad8cf5ad9a8c7923c5a815b414b45e3e6 AS runtime
 
 # renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
-ARG COMFYUI_REF=v0.43.0
+ARG COMFYUI_REF=v0.43.2
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
