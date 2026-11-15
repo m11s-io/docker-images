@@ -10,7 +10,7 @@
 FROM python:3.14.9-slim-bookworm@sha256:945c2676dc2b18e0c1f16879244122c57c0ffede60006bf3df159c507a31bcae AS runtime
 
 # renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
-ARG COMFYUI_REF=v0.43.1
+ARG COMFYUI_REF=v0.43.2
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
