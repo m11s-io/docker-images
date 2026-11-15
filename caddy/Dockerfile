@@ -9,7 +9,7 @@
 # Upstream reference: github.com/caddy-dns/cloudflare
 
 ARG CADDY_BASE_IMAGE=caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
-FROM caddy:2.11.7-builder-alpine@sha256:ef9b65adf9a224770c6d5f6d1ae1bf99bc3caaa78d8c4bae3ea949ee6984f301 AS builder
+FROM caddy:2.11.7-builder-alpine@sha256:95a5e7e2692b5eb9545aadc5b90a39f6f509bee59c9508a493f83ee902eaef63 AS builder
 
 ARG CADDY_BASE_IMAGE
 # renovate: datasource=github-tags depName=caddy-dns/cloudflare
