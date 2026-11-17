@@ -1,6 +1,6 @@
 services:
   dsh:
-    image: m11s/deepseek-harness:0.2.0-rc.2@sha256:5561073721f34f9f5724ab44b4581fa9dcde906df79e88e5c5a967dbe8f695d8
+    image: m11s/deepseek-harness:0.2.0-rc.2@sha256:3b2a7d6f4e7954f121dd9cdab3b2634aaed45f2b64e60fe12e428dcf034c89f3
     environment:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?set DEEPSEEK_API_KEY in the environment}
       DSH_BIND_HOST: ${DSH_BIND_HOST:-}
