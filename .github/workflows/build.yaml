@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changes.outputs.standard) }}
-    uses: m11s-io/.github/.github/workflows/container-image.yml@main
+    uses: m11s-io/.github/.github/workflows/container-image.yml@fd30388e2c4782d08d8a92ae8e48884cf1a280d8 # main
     permissions:
       contents: read
     with:
