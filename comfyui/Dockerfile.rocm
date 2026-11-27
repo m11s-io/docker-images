@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28.0@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
+# syntax=docker/dockerfile:1.29.0@sha256:572cebbc2b15e6f84c077742952674889cb63cd5e9b80abdffcbe587b6f19183
 #
 # ComfyUI on AMD's validated ROCm 10.1 / PyTorch 2.14 / Python 3.14 image.
 # The host supplies amdgpu; the image retains AMD's packaged userspace stack.
@@ -9,7 +9,7 @@
 FROM rocm/pytorch:rocm10.1.0_ubuntu26.04_py3.14_pytorch_release_2.14.0@sha256:68295d40dcdcb53d9b50828f30017faad8cf5ad9a8c7923c5a815b414b45e3e6 AS runtime
 
 # renovate: datasource=github-tags depName=Comfy-Org/ComfyUI
-ARG COMFYUI_REF=v0.43.0
+ARG COMFYUI_REF=v0.45.3
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
